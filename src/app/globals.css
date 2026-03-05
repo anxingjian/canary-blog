@@ -1,0 +1,202 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=JetBrains+Mono:wght@300;400&family=Noto+Serif+SC:wght@300;400;600&display=swap');
+
+:root {
+  --bg: #0e0d0b;
+  --bg-elevated: #17150f;
+  --bg-card: #1a1814;
+  --bg-card-hover: #211f19;
+  --text: #c8c0b0;
+  --text-dim: #7d7568;
+  --text-bright: #f2ede3;
+  --accent: #d4a853;
+  --accent-soft: #b8943f;
+  --accent-dim: #6b5a2e;
+  --border: #262219;
+  --border-hover: #3a3428;
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Source Serif 4', 'Noto Serif SC', Georgia, serif;
+  line-height: 1.8;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Vignette effect */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.3) 100%);
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* Post content styles */
+.post-content {
+  font-size: 1.0625rem;
+  line-height: 2;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.post-h2 {
+  font-family: 'Playfair Display', 'Noto Serif SC', serif;
+  color: var(--text-bright);
+  font-size: 1.5rem;
+  font-weight: 400;
+  margin: 4rem 0 1.5rem;
+  letter-spacing: -0.02em;
+  position: relative;
+  padding-left: 1.25rem;
+}
+
+.post-h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.25em;
+  bottom: 0.25em;
+  width: 2px;
+  background: var(--accent-dim);
+}
+
+.post-h3 {
+  font-family: 'Playfair Display', 'Noto Serif SC', serif;
+  color: var(--text-bright);
+  font-size: 1.1875rem;
+  font-weight: 400;
+  font-style: italic;
+  margin: 3rem 0 1rem;
+}
+
+.post-p {
+  margin: 1.5rem 0;
+}
+
+.post-ul {
+  list-style: none;
+  padding-left: 1.5rem;
+  margin: 1.75rem 0;
+}
+
+.post-li {
+  position: relative;
+  margin: 0.875rem 0;
+  color: var(--text);
+  line-height: 1.8;
+}
+
+.post-li::before {
+  content: '—';
+  position: absolute;
+  left: -1.5rem;
+  color: var(--accent-dim);
+  font-size: 0.75em;
+}
+
+.post-hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-hover), transparent);
+  margin: 3.5rem 0;
+}
+
+.post-pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  overflow-x: auto;
+  margin: 2.5rem 0;
+  color: var(--text-dim);
+  white-space: pre;
+  line-height: 1.7;
+}
+
+.post-content strong {
+  color: var(--text-bright);
+  font-weight: 600;
+}
+
+.post-content em {
+  color: var(--accent-soft);
+  font-style: italic;
+}
+
+/* Blockquote for post content */
+.post-blockquote {
+  border-left: 2px solid var(--accent-dim);
+  padding-left: 1.5rem;
+  margin: 2.5rem 0;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* Selection */
+::selection {
+  background: var(--accent-dim);
+  color: var(--text-bright);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: 3px;
+}
+
+/* Fade-in animation */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes drawLine {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
