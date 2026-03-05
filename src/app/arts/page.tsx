@@ -15,7 +15,7 @@ function Piece001() {
 
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.parentElement?.getBoundingClientRect();
-    const W = rect ? Math.min(rect.width, 400) : 400;
+    const W = rect ? rect.width : 400;
     const H = W;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
@@ -152,7 +152,7 @@ function Piece001() {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <canvas ref={canvasRef} style={{ display: "block" }} />
+      <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%" }} />
       <div
         style={{
           position: "absolute",
@@ -183,7 +183,7 @@ function Piece002() {
 
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.parentElement?.getBoundingClientRect();
-    const W = rect ? Math.min(rect.width, 400) : 400;
+    const W = rect ? rect.width : 400;
     const H = W;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
@@ -243,7 +243,7 @@ function Piece002() {
         overflow: "hidden",
       }}
     >
-      <canvas ref={canvasRef} style={{ display: "block" }} />
+      <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%" }} />
     </div>
   );
 }
@@ -260,7 +260,7 @@ function Piece003() {
 
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.parentElement?.getBoundingClientRect();
-    const W = rect ? Math.min(rect.width, 400) : 400;
+    const W = rect ? rect.width : 400;
     const H = W;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
@@ -327,7 +327,7 @@ function Piece003() {
         overflow: "hidden",
       }}
     >
-      <canvas ref={canvasRef} style={{ display: "block" }} />
+      <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%" }} />
     </div>
   );
 }
@@ -411,7 +411,9 @@ function GridCard({ piece, index }: { piece: (typeof PIECES)[0]; index: number }
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <piece.Component />
+      <div style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+        <piece.Component />
+      </div>
 
       {/* Overlay on hover */}
       <div
