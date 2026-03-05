@@ -50,7 +50,7 @@ function PostCard({ post, index }: { post: PostMeta; index: number }) {
           letterSpacing: "-0.04em",
         }}
       >
-        {post.day?.replace(/[^0-9]/g, "").padStart(2, "0") || "—"}
+        {post.day?.replace(/[^0-9]/g, "").padStart(2, "0") || String(index + 1).padStart(2, "0")}
       </div>
 
       {/* Content */}
