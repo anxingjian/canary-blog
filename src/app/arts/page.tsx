@@ -8,6 +8,7 @@ function Piece001() {
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
+    document.fonts.ready.then(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -137,6 +138,7 @@ function Piece001() {
       canvas.removeEventListener("mouseenter", onEnter);
       canvas.removeEventListener("mouseleave", onLeave);
     };
+    });
   }, []);
 
   return (
