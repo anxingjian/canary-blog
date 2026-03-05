@@ -31,7 +31,7 @@ export default function Home() {
         style={{
           maxWidth: "52rem",
           margin: "0 auto",
-          padding: "8rem 2.5rem 0",
+          padding: "8rem 1.5rem 0",
           animation: "fadeUp 0.6s ease-out",
         }}
       >
@@ -185,7 +185,7 @@ export default function Home() {
       </header>
 
       {/* Posts */}
-      <section style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 2.5rem 10rem" }}>
+      <section style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 1.5rem 10rem" }}>
         <PostList posts={posts.map(({ content, ...meta }) => meta)} />
       </section>
 
@@ -194,7 +194,7 @@ export default function Home() {
         style={{
           maxWidth: "52rem",
           margin: "0 auto",
-          padding: "0 2.5rem 4rem",
+          padding: "0 1.5rem 4rem",
         }}
       >
         <div

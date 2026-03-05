@@ -25,8 +25,8 @@ function PostCard({ post, index }: { post: PostMeta; index: number }) {
       href={`/post/${post.slug}`}
       style={{
         display: "grid",
-        gridTemplateColumns: "4rem 1fr auto",
-        gap: "1.5rem",
+        gridTemplateColumns: "3rem 1fr",
+        gap: "1rem",
         alignItems: "baseline",
         padding: "1.75rem 0",
         borderBottom: "1px solid var(--border)",
@@ -52,56 +52,41 @@ function PostCard({ post, index }: { post: PostMeta; index: number }) {
 
       {/* Content */}
       <div>
-        <h2
-          style={{
-            color: hovered ? "var(--text-bright)" : "var(--text)",
-            fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
-            fontSize: "1.25rem",
-            fontWeight: 400,
-            marginBottom: "0.375rem",
-            transition: "color 0.2s",
-            lineHeight: 1.4,
-          }}
-        >
-          {post.title}
-        </h2>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "0.375rem" }}>
+          <h2
+            style={{
+              color: hovered ? "var(--text-bright)" : "var(--text)",
+              fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
+              fontSize: "1.25rem",
+              fontWeight: 400,
+              transition: "color 0.2s",
+              lineHeight: 1.4,
+            }}
+          >
+            {post.title}
+          </h2>
+          <span
+            style={{
+              color: "var(--text-dim)",
+              fontSize: "0.625rem",
+              fontFamily: "'Space Mono', monospace",
+              letterSpacing: "0.05em",
+              flexShrink: 0,
+              marginLeft: "1rem",
+            }}
+          >
+            {post.date}
+          </span>
+        </div>
         <p
           style={{
             color: "var(--text-dim)",
             fontSize: "0.8125rem",
             lineHeight: 1.7,
-            maxWidth: "36rem",
           }}
         >
           {post.excerpt}
         </p>
-      </div>
-
-      {/* Date + arrow */}
-      <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-        <span
-          style={{
-            color: "var(--text-dim)",
-            fontSize: "0.625rem",
-            fontFamily: "'Space Mono', monospace",
-            letterSpacing: "0.05em",
-          }}
-        >
-          {post.date}
-        </span>
-        <div
-          style={{
-            marginTop: "0.25rem",
-            opacity: hovered ? 1 : 0,
-            transform: hovered ? "translateX(0)" : "translateX(-4px)",
-            transition: "all 0.2s",
-            color: "var(--accent)",
-            fontSize: "0.625rem",
-            fontFamily: "'Space Mono', monospace",
-          }}
-        >
-          →
-        </div>
       </div>
     </Link>
   );
