@@ -422,13 +422,13 @@ function GridView({ pieces }: { pieces: typeof PIECES }) {
       }}
     >
       {pieces.map((piece, i) => (
-        <GridCard key={piece.id} piece={piece} index={i} />
+        <GridCard key={piece.id} piece={piece} index={i} size={rowHeight} />
       ))}
     </div>
   );
 }
 
-function GridCard({ piece, index }: { piece: (typeof PIECES)[0]; index: number }) {
+function GridCard({ piece, index, size }: { piece: (typeof PIECES)[0]; index: number; size: number }) {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -437,7 +437,7 @@ function GridCard({ piece, index }: { piece: (typeof PIECES)[0]; index: number }
       style={{
         position: "relative",
         width: "100%",
-        height: "100%",
+        height: size > 0 ? `${size}px` : "100%",
         overflow: "hidden",
         animation: `fadeUp 0.5s ease-out ${index * 0.1}s both`,
         cursor: "pointer",
