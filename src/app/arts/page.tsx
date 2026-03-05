@@ -8,7 +8,6 @@ function Piece001() {
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
-    document.fonts.ready.then(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -34,16 +33,22 @@ function Piece001() {
       phase: number;
     }[] = [];
 
-    // Create particles that form "C"
+    // Create particles that form "C" using arc path (no font dependency)
     const tempCanvas = document.createElement("canvas");
     tempCanvas.width = W;
     tempCanvas.height = H;
     const tempCtx = tempCanvas.getContext("2d")!;
     tempCtx.fillStyle = "#fff";
-    tempCtx.font = "bold 280px 'Instrument Serif', serif";
-    tempCtx.textAlign = "center";
-    tempCtx.textBaseline = "middle";
-    tempCtx.fillText("C", W / 2, H / 2 + 10);
+    // Draw C shape: thick arc from ~45° to ~315°
+    const cx = W / 2;
+    const cy = H / 2;
+    const outerR = W * 0.35;
+    const innerR = W * 0.22;
+    tempCtx.beginPath();
+    tempCtx.arc(cx, cy, outerR, -2.4, 2.4, false);
+    tempCtx.arc(cx, cy, innerR, 2.4, -2.4, true);
+    tempCtx.closePath();
+    tempCtx.fill();
     const imageData = tempCtx.getImageData(0, 0, W, H);
 
     for (let y = 0; y < H; y += 5) {
@@ -138,7 +143,6 @@ function Piece001() {
       canvas.removeEventListener("mouseenter", onEnter);
       canvas.removeEventListener("mouseleave", onLeave);
     };
-    });
   }, []);
 
   return (
