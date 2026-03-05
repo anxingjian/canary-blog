@@ -401,8 +401,7 @@ function GridCard({ piece, index }: { piece: (typeof PIECES)[0]; index: number }
       style={{
         position: "relative",
         width: "100%",
-        height: 0,
-        paddingBottom: "100%",
+        height: "100%",
         overflow: "hidden",
         animation: `fadeUp 0.5s ease-out ${index * 0.1}s both`,
         cursor: "pointer",
@@ -410,7 +409,7 @@ function GridCard({ piece, index }: { piece: (typeof PIECES)[0]; index: number }
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%" }}>
         <piece.Component />
       </div>
 
@@ -724,6 +723,22 @@ export default function ArtsPage() {
               gridTemplateColumns: "repeat(3, 1fr)",
               gap: "3px",
               paddingTop: "1rem",
+            }}
+            ref={(el) => {
+              if (el) {
+                const col = el.querySelector(':scope > div');
+                if (col) {
+                  const w = col.getBoundingClientRect().width;
+                  el.style.gridAutoRows = `${w}px`;
+                }
+                const obs = new ResizeObserver(() => {
+                  const c = el.querySelector(':scope > div');
+                  if (c) {
+                    el.style.gridAutoRows = `${c.getBoundingClientRect().width}px`;
+                  }
+                });
+                obs.observe(el);
+              }
             }}
           >
             {PIECES.map((piece, i) => (
