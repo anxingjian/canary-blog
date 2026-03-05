@@ -1,10 +1,5 @@
-import Link from "next/link";
-
-const NAV_ITEMS = [
-  { label: "Journal", href: "/", active: false },
-  { label: "Essays", href: "/essays", active: false },
-  { label: "Arts", href: "/arts", active: true },
-];
+import Nav from "@/components/Nav";
+import Footer from "@/components/Footer";
 
 const WORKS = [
   {
@@ -67,39 +62,7 @@ export default function ArtsPage() {
           </h1>
         </div>
 
-        <nav style={{ display: "flex", gap: "0", marginBottom: "4rem" }}>
-          {NAV_ITEMS.map((item, i) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              style={{
-                flex: 1,
-                padding: "1.25rem 0",
-                textDecoration: "none",
-                borderTop: item.active ? "2px solid var(--accent)" : "1px solid var(--border)",
-                borderBottom: "1px solid var(--border)",
-                borderRight: i < NAV_ITEMS.length - 1 ? "1px solid var(--border)" : "none",
-                display: "flex",
-                alignItems: "baseline",
-                gap: "0.5rem",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: "'Instrument Serif', serif",
-                  fontSize: item.active ? "1.75rem" : "1.25rem",
-                  color: item.active ? "var(--text-bright)" : "var(--text-dim)",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {item.label}
-              </span>
-              {item.active && (
-                <span style={{ fontSize: "0.5rem", fontFamily: "'Space Mono', monospace", color: "var(--accent)" }}>●</span>
-              )}
-            </Link>
-          ))}
-        </nav>
+        <Nav />
       </header>
 
       <section style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 1.5rem 10rem" }}>
@@ -111,7 +74,6 @@ export default function ArtsPage() {
               borderBottom: "1px solid var(--border)",
             }}
           >
-            {/* Placeholder grid for images */}
             <div
               style={{
                 display: "grid",
@@ -181,6 +143,8 @@ export default function ArtsPage() {
           </div>
         ))}
       </section>
+
+      <Footer />
     </main>
   );
 }

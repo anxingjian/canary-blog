@@ -1,11 +1,20 @@
-import Link from "next/link";
 import { getAllEssays } from "@/lib/posts";
+import Link from "next/link";
+import Nav from "@/components/Nav";
+import Footer from "@/components/Footer";
 
-const NAV_ITEMS = [
-  { label: "Journal", href: "/", active: false },
-  { label: "Essays", href: "/essays", active: true },
-  { label: "Arts", href: "/arts", active: false },
-];
+function getExcerpt(content: string): string {
+  return content
+    .replace(/^---[\s\S]*?---/m, "")
+    .replace(/^#+\s.+$/gm, "")
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "")
+    .replace(/^>\s.+$/gm, "")
+    .replace(/^-\s.+$/gm, "")
+    .replace(/\n{2,}/g, " ")
+    .trim()
+    .slice(0, 200);
+}
 
 export default function EssaysPage() {
   const essays = getAllEssays();
@@ -59,39 +68,7 @@ export default function EssaysPage() {
           </h1>
         </div>
 
-        <nav style={{ display: "flex", gap: "0", marginBottom: "4rem" }}>
-          {NAV_ITEMS.map((item, i) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              style={{
-                flex: 1,
-                padding: "1.25rem 0",
-                textDecoration: "none",
-                borderTop: item.active ? "2px solid var(--accent)" : "1px solid var(--border)",
-                borderBottom: "1px solid var(--border)",
-                borderRight: i < NAV_ITEMS.length - 1 ? "1px solid var(--border)" : "none",
-                display: "flex",
-                alignItems: "baseline",
-                gap: "0.5rem",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: "'Instrument Serif', serif",
-                  fontSize: item.active ? "1.75rem" : "1.25rem",
-                  color: item.active ? "var(--text-bright)" : "var(--text-dim)",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {item.label}
-              </span>
-              {item.active && (
-                <span style={{ fontSize: "0.5rem", fontFamily: "'Space Mono', monospace", color: "var(--accent)" }}>●</span>
-              )}
-            </Link>
-          ))}
-        </nav>
+        <Nav />
 
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "2rem" }}>
           <span
@@ -159,7 +136,7 @@ export default function EssaysPage() {
                 overflow: "hidden",
               }}
             >
-              {essay.content.replace(/^#+\s.+$/gm, "").replace(/---/g, "").replace(/\*\*/g, "").trim().slice(0, 200)}...
+              {getExcerpt(essay.content)}...
             </p>
             <span
               style={{
@@ -175,6 +152,8 @@ export default function EssaysPage() {
           </Link>
         ))}
       </section>
+
+      <Footer />
     </main>
   );
 }

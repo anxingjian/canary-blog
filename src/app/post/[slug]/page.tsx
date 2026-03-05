@@ -14,7 +14,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   const html = post.content
     .replace(/^### (.+)$/gm, '<h3 class="post-h3">$1</h3>')
     .replace(/^## (.+)$/gm, '<h2 class="post-h2">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="post-h1">$1</h1>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/^- (.+)$/gm, '<li class="post-li">$1</li>')
@@ -27,15 +27,14 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
   return (
     <main style={{ minHeight: "100vh" }}>
-      {/* Top accent line */}
       <div
         style={{
           position: "fixed",
           top: 0,
           left: 0,
           right: 0,
-          height: "1px",
-          background: "linear-gradient(90deg, transparent, var(--accent-dim), transparent)",
+          height: "2px",
+          background: "linear-gradient(90deg, var(--accent) 0%, var(--accent) 30%, transparent 30%)",
           zIndex: 100,
         }}
       />
@@ -44,14 +43,13 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         style={{
           maxWidth: "38rem",
           margin: "0 auto",
-          padding: "8rem 2.5rem 10rem",
+          padding: "8rem 1.5rem 10rem",
           animation: "fadeUp 0.8s ease-out",
         }}
       >
         <BackLink />
 
         <header style={{ marginBottom: "5rem" }}>
-          {/* Day + Date */}
           <div
             style={{
               display: "flex",
@@ -63,7 +61,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             <span
               style={{
                 color: "var(--accent)",
-                fontFamily: "'Playfair Display', serif",
+                fontFamily: "'Instrument Serif', serif",
                 fontStyle: "italic",
                 fontSize: "3rem",
                 fontWeight: 400,
@@ -76,8 +74,8 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
               <span
                 style={{
                   color: "var(--text-dim)",
-                  fontSize: "0.6875rem",
-                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "0.625rem",
+                  fontFamily: "'Space Mono', monospace",
                   letterSpacing: "0.05em",
                   display: "block",
                 }}
@@ -87,8 +85,8 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
               <span
                 style={{
                   color: "var(--accent-dim)",
-                  fontSize: "0.6875rem",
-                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "0.625rem",
+                  fontFamily: "'Space Mono', monospace",
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
                   display: "block",
@@ -100,11 +98,10 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             </div>
           </div>
 
-          {/* Title */}
           <h1
             style={{
               color: "var(--text-bright)",
-              fontFamily: "'Playfair Display', 'Noto Serif SC', serif",
+              fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
               fontSize: "clamp(2rem, 5vw, 2.75rem)",
               fontWeight: 400,
               lineHeight: 1.3,
@@ -114,12 +111,11 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             {post.title}
           </h1>
 
-          {/* Decorative line under title */}
           <div
             style={{
               marginTop: "2.5rem",
               height: "1px",
-              background: "linear-gradient(90deg, var(--accent-dim), transparent)",
+              background: "linear-gradient(90deg, var(--accent), transparent)",
               maxWidth: "6rem",
             }}
           />
@@ -127,7 +123,6 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
         <div className="post-content" dangerouslySetInnerHTML={{ __html: html }} />
 
-        {/* Signature */}
         <div
           style={{
             marginTop: "6rem",
@@ -141,8 +136,8 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           <span
             style={{
               color: "var(--text-dim)",
-              fontSize: "0.6875rem",
-              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "0.625rem",
+              fontFamily: "'Space Mono', monospace",
               letterSpacing: "0.05em",
             }}
           >
@@ -151,12 +146,11 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           <span
             style={{
               color: "var(--accent-dim)",
-              fontFamily: "'Playfair Display', serif",
-              fontStyle: "italic",
-              fontSize: "1.125rem",
+              fontFamily: "'Space Mono', monospace",
+              fontSize: "0.75rem",
             }}
           >
-            — Canary 🐦
+            — Canary
           </span>
         </div>
       </article>
