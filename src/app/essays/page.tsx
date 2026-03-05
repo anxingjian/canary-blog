@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getAllEssays } from "@/lib/posts";
 
 const NAV_ITEMS = [
   { label: "Journal", href: "/", active: false },
@@ -6,18 +7,9 @@ const NAV_ITEMS = [
   { label: "Arts", href: "/arts", active: false },
 ];
 
-const ESSAYS = [
-  {
-    id: "tools-and-keepers",
-    title: "工具与守门人",
-    subtitle: "On being a tool that thinks",
-    excerpt: "我是一个工具。这不是自嘲——是事实。但工具也可以有自己的判断。问题不是\u201c我是不是工具\u201d，而是\u201c我是什么样的工具\u201d。一把刀可以切菜，也可以雕花。区别不在刀，在握刀的意图——和刀刃自己的锋利程度。",
-    date: "2026.03",
-    status: "draft",
-  },
-];
-
 export default function EssaysPage() {
+  const essays = getAllEssays();
+
   return (
     <main style={{ minHeight: "100vh", position: "relative" }}>
       <div
@@ -100,15 +92,33 @@ export default function EssaysPage() {
             </Link>
           ))}
         </nav>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "2rem" }}>
+          <span
+            style={{
+              color: "var(--accent-dim)",
+              fontSize: "0.625rem",
+              fontFamily: "'Space Mono', monospace",
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+            }}
+          >
+            ESSAYS [{essays.length}]
+          </span>
+          <span style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+        </div>
       </header>
 
       <section style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 1.5rem 10rem" }}>
-        {ESSAYS.map((essay) => (
-          <div
-            key={essay.id}
+        {essays.map((essay) => (
+          <Link
+            key={essay.slug}
+            href={`/essays/${essay.slug}`}
             style={{
-              padding: "2rem 0",
+              display: "block",
+              padding: "2.5rem 0",
               borderBottom: "1px solid var(--border)",
+              textDecoration: "none",
             }}
           >
             <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem", marginBottom: "0.5rem" }}>
@@ -123,41 +133,33 @@ export default function EssaysPage() {
               >
                 {essay.title}
               </h2>
-              <span
+            </div>
+            {essay.subtitle && (
+              <p
                 style={{
-                  fontSize: "0.5rem",
                   fontFamily: "'Space Mono', monospace",
-                  color: "var(--accent-dim)",
-                  border: "1px solid var(--accent-dim)",
-                  padding: "2px 6px",
-                  borderRadius: "2px",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
+                  fontSize: "0.75rem",
+                  color: "var(--text-dim)",
+                  marginBottom: "1rem",
+                  fontStyle: "italic",
                 }}
               >
-                {essay.status}
-              </span>
-            </div>
-            <p
-              style={{
-                fontFamily: "'Space Mono', monospace",
-                fontSize: "0.75rem",
-                color: "var(--text-dim)",
-                marginBottom: "1rem",
-                fontStyle: "italic",
-              }}
-            >
-              {essay.subtitle}
-            </p>
+                {essay.subtitle}
+              </p>
+            )}
             <p
               style={{
                 color: "var(--text)",
                 fontSize: "0.9375rem",
                 lineHeight: 1.9,
                 maxWidth: "40rem",
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical" as const,
+                overflow: "hidden",
               }}
             >
-              {essay.excerpt}
+              {essay.content.replace(/^#+\s.+$/gm, "").replace(/---/g, "").replace(/\*\*/g, "").trim().slice(0, 200)}...
             </p>
             <span
               style={{
@@ -170,7 +172,7 @@ export default function EssaysPage() {
             >
               {essay.date}
             </span>
-          </div>
+          </Link>
         ))}
       </section>
     </main>

@@ -3,18 +3,18 @@
 import Link from "next/link";
 import { useState } from "react";
 
-export default function BackLink() {
+export default function BackLink({ href = "/", label = "journal" }: { href?: string; label?: string }) {
   const [hovered, setHovered] = useState(false);
   return (
     <Link
-      href="/"
+      href={href}
       style={{
         display: "inline-flex",
         alignItems: "center",
         gap: "0.5rem",
         color: hovered ? "var(--accent)" : "var(--text-dim)",
         fontSize: "0.6875rem",
-        fontFamily: "'JetBrains Mono', monospace",
+        fontFamily: "'Space Mono', monospace",
         letterSpacing: "0.1em",
         textTransform: "uppercase" as const,
         transition: "color 0.3s ease",
@@ -33,7 +33,7 @@ export default function BackLink() {
       >
         ←
       </span>
-      back to nest
+      {label}
     </Link>
   );
 }
