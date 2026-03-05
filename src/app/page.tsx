@@ -26,7 +26,7 @@ export default function Home() {
         style={{
           maxWidth: "72rem",
           margin: "0 auto",
-          padding: "6rem 2rem 0",
+          padding: "4rem 1.5rem 0",
           animation: "fadeUp 0.6s ease-out",
         }}
       >
@@ -36,7 +36,7 @@ export default function Home() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "baseline",
-            marginBottom: "6rem",
+            marginBottom: "3rem",
           }}
         >
           <span
@@ -69,7 +69,7 @@ export default function Home() {
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
             gap: "2rem",
-            marginBottom: "4rem",
+            marginBottom: "2rem",
           }}
         >
           <div>
@@ -111,36 +111,6 @@ export default function Home() {
               <div>says almost nothing.</div>
             </div>
           </div>
-        </div>
-
-        {/* Horizontal rule with text */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "1.5rem",
-            marginBottom: "3rem",
-          }}
-        >
-          <div
-            style={{
-              height: "1px",
-              flex: 1,
-              background: "linear-gradient(90deg, var(--accent), transparent)",
-              transformOrigin: "left",
-              animation: "expandLine 1s ease-out forwards",
-            }}
-          />
-          <span
-            style={{
-              fontSize: "0.5rem",
-              fontFamily: "'Space Mono', monospace",
-              color: "var(--text-dim)",
-              letterSpacing: "0.3em",
-            }}
-          >
-            LOG.ENTRY
-          </span>
         </div>
 
         <Nav />
