@@ -55,8 +55,8 @@ function Piece001() {
       for (let x = 0; x < W; x += 5) {
         if (imageData.data[(y * W + x) * 4 + 3] > 128) {
           particles.push({
-            x: Math.random() * W,
-            y: Math.random() * H,
+            x: x,
+            y: y,
             vx: 0,
             vy: 0,
             targetX: x,
