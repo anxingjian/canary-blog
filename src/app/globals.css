@@ -236,4 +236,55 @@ body::after {
     font-size: 1.125rem;
     margin: 2rem 0 0.75rem;
   }
+
+  /* Hide top status bar on mobile */
+  .top-status-bar {
+    display: none !important;
+  }
+
+  /* Hide view toggle on mobile */
+  .view-toggle-row {
+    display: none !important;
+  }
+
+  /* Arts list: stack vertically */
+  .arts-list-item {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+    padding: 2.5rem 0 !important;
+  }
+
+  /* Page headers */
+  .page-header {
+    padding: 3rem 1.25rem 0 !important;
+  }
+  .page-header-spacing {
+    margin-bottom: 2.5rem !important;
+  }
+  .page-title {
+    font-size: clamp(2.5rem, 10vw, 4rem) !important;
+    margin-bottom: 1rem !important;
+  }
+  .page-subtitle {
+    font-size: 0.75rem !important;
+    margin-bottom: 2.5rem !important;
+  }
+  .page-section {
+    padding: 0 1.25rem 6rem !important;
+  }
+
+  /* Mobile typography */
+  .piece-number {
+    font-size: 1.5rem !important;
+    margin-bottom: 1rem !important;
+  }
+  .piece-title {
+    font-size: 1.25rem !important;
+  }
+  .piece-description {
+    font-size: 0.8125rem !important;
+  }
+  .piece-meta {
+    font-size: 0.5rem !important;
+  }
 }

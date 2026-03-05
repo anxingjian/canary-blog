@@ -489,6 +489,7 @@ export default function ArtsPage() {
       />
 
       <header
+        className="page-header"
         style={{
           maxWidth: "72rem",
           margin: "0 auto",
@@ -497,6 +498,7 @@ export default function ArtsPage() {
         }}
       >
         <div
+          className="top-status-bar"
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -533,6 +535,7 @@ export default function ArtsPage() {
         </div>
 
         <h1
+            className="page-title"
             style={{
               fontFamily: "'Instrument Serif', serif",
               color: "var(--text-bright)",
@@ -547,6 +550,7 @@ export default function ArtsPage() {
           </h1>
 
         <p
+          className="page-subtitle"
           style={{
             fontSize: "0.8125rem",
             fontFamily: "'Space Mono', monospace",
@@ -604,13 +608,13 @@ export default function ArtsPage() {
           </span>
         </nav>
 
-        {/* View toggle — below nav, right-aligned */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "2rem" }}>
+        <div className="view-toggle-row" style={{ display: "flex", justifyContent: "flex-end", marginBottom: "2rem" }}>
           <ViewToggle view={view} onToggle={setView} />
         </div>
       </header>
 
       <section
+        className="page-section"
         style={{
           maxWidth: "72rem",
           margin: "0 auto",
@@ -623,6 +627,7 @@ export default function ArtsPage() {
             {PIECES.map((piece, i) => (
               <div
                 key={piece.id}
+                className="arts-list-item"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "400px 1fr",
@@ -637,6 +642,7 @@ export default function ArtsPage() {
 
                 <div style={{ paddingTop: "1rem" }}>
                   <span
+                    className="piece-number"
                     style={{
                       fontFamily: "'Instrument Serif', serif",
                       fontSize: "2rem",
@@ -651,6 +657,7 @@ export default function ArtsPage() {
                   </span>
 
                   <h2
+                    className="piece-title"
                     style={{
                       fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
                       fontSize: "1.5rem",

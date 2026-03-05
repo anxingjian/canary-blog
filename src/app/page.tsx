@@ -23,6 +23,7 @@ export default function Home() {
 
       {/* Header — asymmetric, large */}
       <header
+        className="page-header"
         style={{
           maxWidth: "72rem",
           margin: "0 auto",
@@ -32,6 +33,7 @@ export default function Home() {
       >
         {/* Top bar */}
         <div
+          className="top-status-bar"
           style={{
             display: "flex",
             justifyContent: "space-between",

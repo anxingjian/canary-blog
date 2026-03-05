@@ -34,6 +34,7 @@ export default function EssaysPage() {
       />
 
       <header
+        className="page-header"
         style={{
           maxWidth: "72rem",
           margin: "0 auto",
@@ -42,6 +43,7 @@ export default function EssaysPage() {
         }}
       >
         <div
+          className="top-status-bar"
           style={{
             display: "flex",
             justifyContent: "space-between",
