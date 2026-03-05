@@ -88,7 +88,7 @@ function Piece001() {
 
     function animate() {
       time += 0.01;
-      ctx!.fillStyle = "rgba(5, 5, 5, 0.15)";
+      ctx!.fillStyle = "rgba(5, 5, 5, 0.08)";
       ctx!.fillRect(0, 0, W, H);
 
       for (const p of particles) {
@@ -127,9 +127,9 @@ function Piece001() {
         const isScattered = distToTarget > 20;
 
         ctx!.fillStyle = isScattered
-          ? `rgba(196, 255, 0, ${brightness * 0.6})`
-          : `rgba(184, 184, 184, ${brightness * 0.5})`;
-        ctx!.fillRect(p.x, p.y, p.size, p.size);
+          ? `rgba(196, 255, 0, ${brightness * 0.9})`
+          : `rgba(184, 184, 184, ${brightness * 0.8})`;
+        ctx!.fillRect(p.x, p.y, p.size + 1, p.size + 1);
       }
 
       animFrame = requestAnimationFrame(animate);
