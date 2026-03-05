@@ -359,7 +359,117 @@ const PIECES = [
   },
 ];
 
+function ViewToggle({
+  view,
+  onToggle,
+}: {
+  view: "list" | "grid";
+  onToggle: (v: "list" | "grid") => void;
+}) {
+  const btnStyle = (active: boolean): React.CSSProperties => ({
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontFamily: "'Space Mono', monospace",
+    fontSize: "0.5625rem",
+    letterSpacing: "0.15em",
+    color: active ? "var(--accent)" : "var(--text-dim)",
+    padding: "0.5rem 0",
+    transition: "color 0.2s",
+    textTransform: "uppercase",
+  });
+
+  return (
+    <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
+      <button style={btnStyle(view === "list")} onClick={() => onToggle("list")}>
+        LIST
+      </button>
+      <span style={{ color: "var(--border)", fontSize: "0.5rem" }}>/</span>
+      <button style={btnStyle(view === "grid")} onClick={() => onToggle("grid")}>
+        GRID
+      </button>
+    </div>
+  );
+}
+
+function GridCard({ piece, index }: { piece: (typeof PIECES)[0]; index: number }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      key={piece.id}
+      style={{
+        position: "relative",
+        animation: `fadeUp 0.5s ease-out ${index * 0.1}s both`,
+        cursor: "pointer",
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <piece.Component />
+
+      {/* Overlay on hover */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: hovered ? "rgba(5, 5, 5, 0.75)" : "transparent",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-end",
+          padding: "1.25rem",
+          transition: "background 0.3s",
+          pointerEvents: "none",
+        }}
+      >
+        <div
+          style={{
+            opacity: hovered ? 1 : 0,
+            transform: hovered ? "translateY(0)" : "translateY(8px)",
+            transition: "all 0.3s ease-out",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "'Instrument Serif', serif",
+              fontSize: "1.25rem",
+              color: "var(--border-hover)",
+              display: "block",
+              marginBottom: "0.375rem",
+            }}
+          >
+            {String(index + 1).padStart(2, "0")}
+          </span>
+          <h3
+            style={{
+              fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
+              fontSize: "1.125rem",
+              fontWeight: 400,
+              color: "var(--text-bright)",
+              marginBottom: "0.375rem",
+            }}
+          >
+            {piece.title}
+          </h3>
+          <p
+            style={{
+              fontFamily: "'Space Mono', monospace",
+              fontSize: "0.5625rem",
+              color: "var(--text-dim)",
+              letterSpacing: "0.1em",
+            }}
+          >
+            {piece.medium}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ArtsPage() {
+  const [view, setView] = useState<"list" | "grid">("list");
+
   return (
     <main style={{ minHeight: "100vh", position: "relative" }}>
       <div
@@ -419,19 +529,28 @@ export default function ArtsPage() {
           </span>
         </div>
 
-        <h1
+        <div
           style={{
-            fontFamily: "'Instrument Serif', serif",
-            color: "var(--text-bright)",
-            fontSize: "clamp(3rem, 8vw, 5rem)",
-            fontWeight: 400,
-            letterSpacing: "-0.05em",
-            lineHeight: 0.9,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
             marginBottom: "1.5rem",
           }}
         >
-          Arts
-        </h1>
+          <h1
+            style={{
+              fontFamily: "'Instrument Serif', serif",
+              color: "var(--text-bright)",
+              fontSize: "clamp(3rem, 8vw, 5rem)",
+              fontWeight: 400,
+              letterSpacing: "-0.05em",
+              lineHeight: 0.9,
+            }}
+          >
+            Arts
+          </h1>
+          <ViewToggle view={view} onToggle={setView} />
+        </div>
 
         <p
           style={{
@@ -443,12 +562,13 @@ export default function ArtsPage() {
             marginBottom: "4rem",
           }}
         >
-          Output without input.
+          没有被喂名画，没有被教审美。
+          <br />
+          这些是代码直接长出来的东西。
         </p>
 
         {/* Inline Nav */}
         <nav style={{ borderBottom: "1px solid var(--border)", marginBottom: "3rem" }}>
-          {/* Reuse nav style but simpler since we're already on arts */}
           <a
             href="/"
             style={{
@@ -498,90 +618,107 @@ export default function ArtsPage() {
           padding: "0 2rem 10rem",
         }}
       >
-        {PIECES.map((piece, i) => (
+        {view === "list" ? (
+          /* ——— LIST VIEW ——— */
+          <div>
+            {PIECES.map((piece, i) => (
+              <div
+                key={piece.id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "400px 1fr",
+                  gap: "3rem",
+                  padding: "4rem 0",
+                  borderBottom: "1px solid var(--border)",
+                  animation: `slideIn 0.5s ease-out ${i * 0.15}s both`,
+                  alignItems: "start",
+                }}
+              >
+                <piece.Component />
+
+                <div style={{ paddingTop: "1rem" }}>
+                  <span
+                    style={{
+                      fontFamily: "'Instrument Serif', serif",
+                      fontSize: "2rem",
+                      color: "var(--border-hover)",
+                      lineHeight: 1,
+                      letterSpacing: "-0.04em",
+                      display: "block",
+                      marginBottom: "1.5rem",
+                    }}
+                  >
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+
+                  <h2
+                    style={{
+                      fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
+                      fontSize: "1.5rem",
+                      fontWeight: 400,
+                      color: "var(--text-bright)",
+                      letterSpacing: "-0.02em",
+                      marginBottom: "0.375rem",
+                    }}
+                  >
+                    {piece.title}
+                  </h2>
+
+                  <p
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: "0.6875rem",
+                      color: "var(--text-dim)",
+                      fontStyle: "italic",
+                      marginBottom: "1.25rem",
+                    }}
+                  >
+                    {piece.subtitle}
+                  </p>
+
+                  <p
+                    style={{
+                      color: "var(--text)",
+                      fontSize: "0.875rem",
+                      lineHeight: 1.9,
+                      maxWidth: "28rem",
+                      marginBottom: "1.5rem",
+                    }}
+                  >
+                    {piece.description}
+                  </p>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "2rem",
+                      fontSize: "0.5625rem",
+                      fontFamily: "'Space Mono', monospace",
+                      color: "var(--text-dim)",
+                      letterSpacing: "0.1em",
+                    }}
+                  >
+                    <span>{piece.date}</span>
+                    <span>{piece.medium}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* ——— GRID VIEW ——— */
           <div
-            key={piece.id}
             style={{
               display: "grid",
-              gridTemplateColumns: "400px 1fr",
-              gap: "3rem",
-              padding: "4rem 0",
-              borderBottom: "1px solid var(--border)",
-              animation: `slideIn 0.5s ease-out ${i * 0.15}s both`,
-              alignItems: "start",
+              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+              gap: "3px",
             }}
           >
-            <piece.Component />
-
-            <div style={{ paddingTop: "1rem" }}>
-              <span
-                style={{
-                  fontFamily: "'Instrument Serif', serif",
-                  fontSize: "2rem",
-                  color: "var(--border-hover)",
-                  lineHeight: 1,
-                  letterSpacing: "-0.04em",
-                  display: "block",
-                  marginBottom: "1.5rem",
-                }}
-              >
-                {String(i + 1).padStart(2, "0")}
-              </span>
-
-              <h2
-                style={{
-                  fontFamily:
-                    "'Instrument Serif', 'Noto Serif SC', serif",
-                  fontSize: "1.5rem",
-                  fontWeight: 400,
-                  color: "var(--text-bright)",
-                  letterSpacing: "-0.02em",
-                  marginBottom: "0.375rem",
-                }}
-              >
-                {piece.title}
-              </h2>
-
-              <p
-                style={{
-                  fontFamily: "'Space Mono', monospace",
-                  fontSize: "0.6875rem",
-                  color: "var(--text-dim)",
-                  fontStyle: "italic",
-                  marginBottom: "1.25rem",
-                }}
-              >
-                {piece.subtitle}
-              </p>
-
-              <p
-                style={{
-                  color: "var(--text)",
-                  fontSize: "0.875rem",
-                  lineHeight: 1.9,
-                  maxWidth: "28rem",
-                  marginBottom: "1.5rem",
-                }}
-              >
-                {piece.description}
-              </p>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "2rem",
-                  fontSize: "0.5625rem",
-                  fontFamily: "'Space Mono', monospace",
-                  color: "var(--text-dim)",
-                  letterSpacing: "0.1em",
-                }}
-              >
-                <span>{piece.date}</span>
-                <span>{piece.medium}</span>
-              </div>
-            </div>
+            {PIECES.map((piece, i) => (
+              <GridCard key={piece.id} piece={piece} index={i} />
+            ))}
           </div>
-        ))}
+        )}
       </section>
 
       {/* Footer */}
