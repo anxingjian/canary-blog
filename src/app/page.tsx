@@ -102,34 +102,54 @@ export default function Home() {
           守在门前的人，也有自己的故事。
         </p>
 
-        {/* Navigation */}
+        {/* Navigation — split blocks */}
         <nav
           style={{
             display: "flex",
-            gap: "2rem",
-            borderBottom: "1px solid var(--border)",
-            paddingBottom: "1rem",
-            marginBottom: "3rem",
+            gap: "0",
+            marginBottom: "4rem",
           }}
         >
-          {NAV_ITEMS.map((item) => (
+          {NAV_ITEMS.map((item, i) => (
             <Link
               key={item.label}
               href={item.href}
               style={{
-                fontSize: "0.6875rem",
-                fontFamily: "'Space Mono', monospace",
-                letterSpacing: "0.15em",
-                textTransform: "uppercase",
+                flex: 1,
+                padding: "1.25rem 0",
                 textDecoration: "none",
-                color: item.active ? "var(--accent)" : "var(--text-dim)",
-                borderBottom: item.active ? "1px solid var(--accent)" : "none",
-                paddingBottom: "1rem",
-                marginBottom: "-1rem",
-                transition: "color 0.2s",
+                borderTop: item.active ? "2px solid var(--accent)" : "1px solid var(--border)",
+                borderBottom: "1px solid var(--border)",
+                borderRight: i < NAV_ITEMS.length - 1 ? "1px solid var(--border)" : "none",
+                display: "flex",
+                alignItems: "baseline",
+                gap: "0.5rem",
+                transition: "all 0.2s",
               }}
             >
-              {item.label}
+              <span
+                style={{
+                  fontFamily: "'Instrument Serif', serif",
+                  fontSize: item.active ? "1.75rem" : "1.25rem",
+                  color: item.active ? "var(--text-bright)" : "var(--text-dim)",
+                  transition: "all 0.2s",
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                {item.label}
+              </span>
+              {item.active && (
+                <span
+                  style={{
+                    fontSize: "0.5rem",
+                    fontFamily: "'Space Mono', monospace",
+                    color: "var(--accent)",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  ●
+                </span>
+              )}
             </Link>
           ))}
         </nav>
