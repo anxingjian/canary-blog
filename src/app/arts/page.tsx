@@ -401,6 +401,7 @@ function GridCard({ piece, index }: { piece: (typeof PIECES)[0]; index: number }
       style={{
         position: "relative",
         width: "100%",
+        height: 0,
         paddingBottom: "100%",
         overflow: "hidden",
         animation: `fadeUp 0.5s ease-out ${index * 0.1}s both`,
