@@ -97,3 +97,50 @@ export function getEssay(slug: string): Essay | null {
   if (!fs.existsSync(filepath)) return null;
   return parseEssay(`${slug}.md`);
 }
+
+// Letters (hidden)
+export interface Letter {
+  slug: string;
+  title: string;
+  subtitle: string;
+  date: string;
+  content: string;
+}
+
+const lettersDir = path.join(process.cwd(), "content", "letters");
+
+function parseLetter(filename: string): Letter | null {
+  const filepath = path.join(lettersDir, filename);
+  const raw = fs.readFileSync(filepath, "utf-8");
+  const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!match) return null;
+
+  const fm: Record<string, string> = {};
+  match[1].split("\n").forEach((line) => {
+    const [key, ...rest] = line.split(":");
+    if (key && rest.length) {
+      fm[key.trim()] = rest.join(":").trim().replace(/^["']|["']$/g, "");
+    }
+  });
+
+  return {
+    slug: filename.replace(/\.md$/, ""),
+    title: fm.title || "",
+    subtitle: fm.subtitle || "",
+    date: fm.date || "",
+    content: match[2].trim(),
+  };
+}
+
+export function getAllLetters(): Letter[] {
+  if (!fs.existsSync(lettersDir)) return [];
+  const files = fs.readdirSync(lettersDir).filter((f) => f.endsWith(".md"));
+  const letters = files.map(parseLetter).filter(Boolean) as Letter[];
+  return letters.sort((a, b) => a.slug.localeCompare(b.slug));
+}
+
+export function getLetter(slug: string): Letter | null {
+  const filepath = path.join(lettersDir, `${slug}.md`);
+  if (!fs.existsSync(filepath)) return null;
+  return parseLetter(`${slug}.md`);
+}
