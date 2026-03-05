@@ -631,7 +631,7 @@ export default function ArtsPage() {
                   display: "grid",
                   gridTemplateColumns: "400px 1fr",
                   gap: "3rem",
-                  padding: "4rem 0",
+                  padding: i === 0 ? "1rem 0 4rem" : "4rem 0",
                   borderBottom: "1px solid var(--border)",
                   animation: `slideIn 0.5s ease-out ${i * 0.15}s both`,
                   alignItems: "start",
@@ -718,8 +718,9 @@ export default function ArtsPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 320px), 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 400px), 1fr))",
               gap: "3px",
+              paddingTop: "1rem",
             }}
           >
             {PIECES.map((piece, i) => (
