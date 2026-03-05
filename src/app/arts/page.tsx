@@ -142,7 +142,7 @@ function Piece001() {
   return (
     <div
       style={{
-        border: "1px solid var(--border)",
+        aspectRatio: "1 / 1", border: "1px solid var(--border)",
         background: "var(--bg)",
         position: "relative",
         overflow: "hidden",
@@ -236,7 +236,7 @@ function Piece002() {
   return (
     <div
       style={{
-        border: "1px solid var(--border)",
+        aspectRatio: "1 / 1", border: "1px solid var(--border)",
         background: "var(--bg)",
         overflow: "hidden",
       }}
@@ -319,7 +319,7 @@ function Piece003() {
   return (
     <div
       style={{
-        border: "1px solid var(--border)",
+        aspectRatio: "1 / 1", border: "1px solid var(--border)",
         background: "var(--bg)",
         overflow: "hidden",
       }}
