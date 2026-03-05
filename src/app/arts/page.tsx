@@ -565,7 +565,7 @@ export default function ArtsPage() {
           Code that grew on its own.
         </p>
 
-        <nav style={{ borderBottom: "1px solid var(--border)", marginBottom: "3rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <nav style={{ borderBottom: "1px solid var(--border)", marginBottom: "2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
 
           <a
