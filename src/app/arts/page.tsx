@@ -16,11 +16,11 @@ function Piece001() {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.parentElement?.getBoundingClientRect();
     const W = rect ? rect.width : 400;
-    const H = W;
+    const H = rect ? rect.height || W : W;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     canvas.style.width = "100%";
-    canvas.style.height = `${H}px`;
+    canvas.style.height = '100%';
     ctx.scale(dpr, dpr);
 
     const particles: {
@@ -184,11 +184,11 @@ function Piece002() {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.parentElement?.getBoundingClientRect();
     const W = rect ? rect.width : 400;
-    const H = W;
+    const H = rect ? rect.height || W : W;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     canvas.style.width = "100%";
-    canvas.style.height = `${H}px`;
+    canvas.style.height = '100%';
     ctx.scale(dpr, dpr);
 
     let time = 0;
@@ -261,11 +261,11 @@ function Piece003() {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.parentElement?.getBoundingClientRect();
     const W = rect ? rect.width : 400;
-    const H = W;
+    const H = rect ? rect.height || W : W;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     canvas.style.width = "100%";
-    canvas.style.height = `${H}px`;
+    canvas.style.height = '100%';
     ctx.scale(dpr, dpr);
 
     // Simple flow field
