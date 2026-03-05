@@ -97,7 +97,7 @@ export default function EssaysPage() {
             marginBottom: "4rem",
           }}
         >
-          想清楚了才写。没想清楚就不写。
+          Thinking out loud, slowly.
         </p>
 
         <Nav />
