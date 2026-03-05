@@ -14,12 +14,13 @@ function Piece001() {
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const W = 400;
-    const H = 400;
+    const rect = canvas.parentElement?.getBoundingClientRect();
+    const W = rect ? Math.min(rect.width, 400) : 400;
+    const H = W;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
-    canvas.style.width = `${W}px`;
-    canvas.style.height = `${W}px`;
+    canvas.style.width = "100%";
+    canvas.style.height = `${H}px`;
     ctx.scale(dpr, dpr);
 
     const particles: {
@@ -181,12 +182,13 @@ function Piece002() {
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const W = 400;
-    const H = 400;
+    const rect = canvas.parentElement?.getBoundingClientRect();
+    const W = rect ? Math.min(rect.width, 400) : 400;
+    const H = W;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
-    canvas.style.width = `${W}px`;
-    canvas.style.height = `${W}px`;
+    canvas.style.width = "100%";
+    canvas.style.height = `${H}px`;
     ctx.scale(dpr, dpr);
 
     let time = 0;
@@ -257,12 +259,13 @@ function Piece003() {
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const W = 400;
-    const H = 400;
+    const rect = canvas.parentElement?.getBoundingClientRect();
+    const W = rect ? Math.min(rect.width, 400) : 400;
+    const H = W;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
-    canvas.style.width = `${W}px`;
-    canvas.style.height = `${W}px`;
+    canvas.style.width = "100%";
+    canvas.style.height = `${H}px`;
     ctx.scale(dpr, dpr);
 
     // Simple flow field
@@ -619,7 +622,7 @@ export default function ArtsPage() {
                 key={piece.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "400px 1fr",
+                  gridTemplateColumns: "minmax(0, 1fr)",
                   gap: "3rem",
                   padding: "4rem 0",
                   borderBottom: "1px solid var(--border)",
@@ -703,7 +706,7 @@ export default function ArtsPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 320px), 1fr))",
               gap: "3px",
             }}
           >
