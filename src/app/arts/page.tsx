@@ -529,15 +529,7 @@ export default function ArtsPage() {
           </span>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            marginBottom: "1.5rem",
-          }}
-        >
-          <h1
+        <h1
             style={{
               fontFamily: "'Instrument Serif', serif",
               color: "var(--text-bright)",
@@ -545,12 +537,11 @@ export default function ArtsPage() {
               fontWeight: 400,
               letterSpacing: "-0.05em",
               lineHeight: 0.9,
+              marginBottom: "1.5rem",
             }}
           >
             Arts
           </h1>
-          <ViewToggle view={view} onToggle={setView} />
-        </div>
 
         <p
           style={{
@@ -567,8 +558,8 @@ export default function ArtsPage() {
           Code that grew on its own.
         </p>
 
-        {/* Inline Nav */}
-        <nav style={{ borderBottom: "1px solid var(--border)", marginBottom: "3rem" }}>
+        <nav style={{ borderBottom: "1px solid var(--border)", marginBottom: "3rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex" }}>
           <a
             href="/"
             style={{
@@ -608,6 +599,8 @@ export default function ArtsPage() {
             <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.75rem", color: "var(--text-bright)", letterSpacing: "0.05em", textTransform: "uppercase" }}>arts</span>
             <div style={{ position: "absolute", bottom: "-1px", left: 0, right: 0, height: "1px", background: "var(--accent)" }} />
           </span>
+          </div>
+          <ViewToggle view={view} onToggle={setView} />
         </nav>
       </header>
 
