@@ -16,11 +16,10 @@ function Piece001() {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.parentElement?.getBoundingClientRect();
     const W = rect ? rect.width : 400;
-    const H = rect ? rect.height || W : W;
+    const H = W;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
-    canvas.style.width = "100%";
-    canvas.style.height = '100%';
+    canvas.style.width = '100%'; canvas.style.height = '100%'; canvas.style.objectFit = 'contain';
     ctx.scale(dpr, dpr);
 
     const particles: {
@@ -184,11 +183,10 @@ function Piece002() {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.parentElement?.getBoundingClientRect();
     const W = rect ? rect.width : 400;
-    const H = rect ? rect.height || W : W;
+    const H = W;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
-    canvas.style.width = "100%";
-    canvas.style.height = '100%';
+    canvas.style.width = '100%'; canvas.style.height = '100%'; canvas.style.objectFit = 'contain';
     ctx.scale(dpr, dpr);
 
     let time = 0;
@@ -261,11 +259,10 @@ function Piece003() {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.parentElement?.getBoundingClientRect();
     const W = rect ? rect.width : 400;
-    const H = rect ? rect.height || W : W;
+    const H = W;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
-    canvas.style.width = "100%";
-    canvas.style.height = '100%';
+    canvas.style.width = '100%'; canvas.style.height = '100%'; canvas.style.objectFit = 'contain';
     ctx.scale(dpr, dpr);
 
     // Simple flow field
