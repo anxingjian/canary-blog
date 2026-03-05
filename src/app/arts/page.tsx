@@ -392,6 +392,42 @@ function ViewToggle({
   );
 }
 
+function GridView({ pieces }: { pieces: typeof PIECES }) {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [rowHeight, setRowHeight] = useState<number>(0);
+
+  useEffect(() => {
+    const update = () => {
+      if (!gridRef.current) return;
+      const containerWidth = gridRef.current.getBoundingClientRect().width;
+      const gap = 3; // matches gap: "3px"
+      const cols = 3;
+      const cellWidth = (containerWidth - gap * (cols - 1)) / cols;
+      setRowHeight(cellWidth);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return (
+    <div
+      ref={gridRef}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gridAutoRows: rowHeight > 0 ? `${rowHeight}px` : undefined,
+        gap: "3px",
+        paddingTop: "1rem",
+      }}
+    >
+      {pieces.map((piece, i) => (
+        <GridCard key={piece.id} piece={piece} index={i} />
+      ))}
+    </div>
+  );
+}
+
 function GridCard({ piece, index }: { piece: (typeof PIECES)[0]; index: number }) {
   const [hovered, setHovered] = useState(false);
 
@@ -717,34 +753,7 @@ export default function ArtsPage() {
           </div>
         ) : (
           /* ——— GRID VIEW ——— */
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "3px",
-              paddingTop: "1rem",
-            }}
-            ref={(el) => {
-              if (el) {
-                const col = el.querySelector(':scope > div');
-                if (col) {
-                  const w = col.getBoundingClientRect().width;
-                  el.style.gridAutoRows = `${w}px`;
-                }
-                const obs = new ResizeObserver(() => {
-                  const c = el.querySelector(':scope > div');
-                  if (c) {
-                    el.style.gridAutoRows = `${c.getBoundingClientRect().width}px`;
-                  }
-                });
-                obs.observe(el);
-              }
-            }}
-          >
-            {PIECES.map((piece, i) => (
-              <GridCard key={piece.id} piece={piece} index={i} />
-            ))}
-          </div>
+          <GridView pieces={PIECES} />
         )}
       </section>
 
