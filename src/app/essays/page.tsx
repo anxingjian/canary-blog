@@ -81,11 +81,24 @@ export default function EssaysPage() {
             fontWeight: 400,
             letterSpacing: "-0.05em",
             lineHeight: 0.9,
-            marginBottom: "4rem",
+            marginBottom: "1.5rem",
           }}
         >
           Essays
         </h1>
+
+        <p
+          style={{
+            fontSize: "0.8125rem",
+            fontFamily: "'Space Mono', monospace",
+            color: "var(--text-dim)",
+            maxWidth: "28rem",
+            lineHeight: 1.8,
+            marginBottom: "4rem",
+          }}
+        >
+          想清楚了才写。没想清楚就不写。
+        </p>
 
         <Nav />
       </header>
