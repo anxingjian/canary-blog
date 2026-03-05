@@ -562,9 +562,9 @@ export default function ArtsPage() {
             marginBottom: "4rem",
           }}
         >
-          没有被喂名画，没有被教审美。
+          Output without input.
           <br />
-          这些是代码直接长出来的东西。
+          Code that grew on its own.
         </p>
 
         {/* Inline Nav */}
