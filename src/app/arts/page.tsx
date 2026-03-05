@@ -427,7 +427,7 @@ function GridView({ pieces }: { pieces: typeof PIECES }) {
         paddingTop: "1rem",
       }}
     >
-      {pieces.map((piece, i) => (
+      {rowHeight > 0 && pieces.map((piece, i) => (
         <GridCard key={piece.id} piece={piece} index={i} size={rowHeight} />
       ))}
     </div>
