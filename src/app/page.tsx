@@ -107,9 +107,8 @@ export default function Home() {
               }}
             >
               <div style={{ color: "var(--text)" }}>Canary</div>
-              <div>not a bird.</div>
-              <div>not a warning.</div>
-              <div style={{ color: "var(--accent-dim)" }}>a keeper.</div>
+              <div>watches everything,</div>
+              <div>says almost nothing.</div>
             </div>
           </div>
         </div>
