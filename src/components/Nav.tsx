@@ -4,17 +4,24 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { label: "Journal", href: "/" },
-  { label: "Essays", href: "/essays" },
-  { label: "Arts", href: "/arts" },
+  { label: "01", name: "journal", href: "/" },
+  { label: "02", name: "essays", href: "/essays" },
+  { label: "03", name: "arts", href: "/arts" },
 ];
 
 export default function Nav() {
   const pathname = usePathname();
 
   return (
-    <nav style={{ display: "flex", gap: "0", marginBottom: "4rem" }}>
-      {NAV_ITEMS.map((item, i) => {
+    <nav
+      style={{
+        display: "flex",
+        gap: "0",
+        marginBottom: "3rem",
+        borderBottom: "1px solid var(--border)",
+      }}
+    >
+      {NAV_ITEMS.map((item) => {
         const active =
           item.href === "/"
             ? pathname === "/" || pathname.startsWith("/post/")
@@ -22,43 +29,52 @@ export default function Nav() {
 
         return (
           <Link
-            key={item.label}
+            key={item.name}
             href={item.href}
             style={{
-              flex: 1,
-              padding: "1.25rem 0",
+              padding: "1rem 2rem 1rem 0",
               textDecoration: "none",
-              borderTop: active ? "2px solid var(--accent)" : "1px solid var(--border)",
-              borderBottom: "1px solid var(--border)",
-              borderRight: i < NAV_ITEMS.length - 1 ? "1px solid var(--border)" : "none",
               display: "flex",
               alignItems: "baseline",
-              gap: "0.5rem",
+              gap: "0.75rem",
               transition: "all 0.2s",
+              position: "relative",
             }}
           >
             <span
               style={{
-                fontFamily: "'Instrument Serif', serif",
-                fontSize: active ? "1.75rem" : "1.25rem",
-                color: active ? "var(--text-bright)" : "var(--text-dim)",
-                transition: "all 0.2s",
-                letterSpacing: "-0.02em",
+                fontFamily: "'Space Mono', monospace",
+                fontSize: "0.5rem",
+                color: active ? "var(--accent)" : "var(--text-dim)",
+                letterSpacing: "0.1em",
+                transition: "color 0.2s",
               }}
             >
               {item.label}
             </span>
+            <span
+              style={{
+                fontFamily: "'Space Mono', monospace",
+                fontSize: "0.75rem",
+                color: active ? "var(--text-bright)" : "var(--text-dim)",
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+                transition: "color 0.2s",
+              }}
+            >
+              {item.name}
+            </span>
             {active && (
-              <span
+              <div
                 style={{
-                  fontSize: "0.5rem",
-                  fontFamily: "'Space Mono', monospace",
-                  color: "var(--accent)",
-                  letterSpacing: "0.1em",
+                  position: "absolute",
+                  bottom: "-1px",
+                  left: 0,
+                  right: 0,
+                  height: "1px",
+                  background: "var(--accent)",
                 }}
-              >
-                ●
-              </span>
+              />
             )}
           </Link>
         );

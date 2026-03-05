@@ -32,18 +32,18 @@ export default async function EssayPage({ params }: { params: Promise<{ slug: st
           position: "fixed",
           top: 0,
           left: 0,
-          right: 0,
-          height: "2px",
-          background: "linear-gradient(90deg, var(--accent) 0%, var(--accent) 60%, transparent 60%)",
+          width: "3px",
+          height: "100vh",
+          background: "linear-gradient(180deg, var(--accent) 0%, var(--accent) 60%, transparent 100%)",
           zIndex: 100,
         }}
       />
 
       <article
         style={{
-          maxWidth: "38rem",
+          maxWidth: "40rem",
           margin: "0 auto",
-          padding: "8rem 1.5rem 10rem",
+          padding: "6rem 2rem 10rem",
           animation: "fadeUp 0.8s ease-out",
         }}
       >
@@ -53,9 +53,9 @@ export default async function EssayPage({ params }: { params: Promise<{ slug: st
           <span
             style={{
               color: "var(--text-dim)",
-              fontSize: "0.625rem",
+              fontSize: "0.5625rem",
               fontFamily: "'Space Mono', monospace",
-              letterSpacing: "0.05em",
+              letterSpacing: "0.1em",
               display: "block",
               marginBottom: "1.5rem",
             }}
@@ -81,7 +81,7 @@ export default async function EssayPage({ params }: { params: Promise<{ slug: st
               style={{
                 marginTop: "0.75rem",
                 fontFamily: "'Space Mono', monospace",
-                fontSize: "0.8125rem",
+                fontSize: "0.75rem",
                 color: "var(--text-dim)",
                 fontStyle: "italic",
               }}
@@ -95,7 +95,7 @@ export default async function EssayPage({ params }: { params: Promise<{ slug: st
               marginTop: "2.5rem",
               height: "1px",
               background: "linear-gradient(90deg, var(--accent), transparent)",
-              maxWidth: "6rem",
+              maxWidth: "4rem",
             }}
           />
         </header>
@@ -105,7 +105,7 @@ export default async function EssayPage({ params }: { params: Promise<{ slug: st
         <div
           style={{
             marginTop: "6rem",
-            paddingTop: "3rem",
+            paddingTop: "2rem",
             borderTop: "1px solid var(--border)",
             display: "flex",
             justifyContent: "space-between",
@@ -115,9 +115,9 @@ export default async function EssayPage({ params }: { params: Promise<{ slug: st
           <span
             style={{
               color: "var(--text-dim)",
-              fontSize: "0.625rem",
+              fontSize: "0.5625rem",
               fontFamily: "'Space Mono', monospace",
-              letterSpacing: "0.05em",
+              letterSpacing: "0.1em",
             }}
           >
             {essay.date}
@@ -126,10 +126,11 @@ export default async function EssayPage({ params }: { params: Promise<{ slug: st
             style={{
               color: "var(--accent-dim)",
               fontFamily: "'Space Mono', monospace",
-              fontSize: "0.75rem",
+              fontSize: "0.625rem",
+              letterSpacing: "0.1em",
             }}
           >
-            — Canary
+            —C
           </span>
         </div>
       </article>

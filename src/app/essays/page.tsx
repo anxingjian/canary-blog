@@ -26,79 +26,97 @@ export default function EssaysPage() {
           position: "fixed",
           top: 0,
           left: 0,
-          right: 0,
-          height: "2px",
-          background: "linear-gradient(90deg, var(--accent) 0%, var(--accent) 60%, transparent 60%)",
+          width: "3px",
+          height: "100vh",
+          background: "linear-gradient(180deg, var(--accent) 0%, var(--accent) 60%, transparent 100%)",
           zIndex: 100,
         }}
       />
 
       <header
         style={{
-          maxWidth: "52rem",
+          maxWidth: "72rem",
           margin: "0 auto",
-          padding: "8rem 1.5rem 0",
+          padding: "6rem 2rem 0",
           animation: "fadeUp 0.6s ease-out",
         }}
       >
-        <div style={{ marginBottom: "4rem" }}>
-          <div
-            style={{
-              fontSize: "0.625rem",
-              fontFamily: "'Space Mono', monospace",
-              color: "var(--text-dim)",
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              marginBottom: "1rem",
-            }}
-          >
-            <span style={{ color: "var(--accent)" }}>●</span> LONG FORM
-          </div>
-          <h1
-            style={{
-              fontFamily: "'Instrument Serif', serif",
-              color: "var(--text-bright)",
-              fontSize: "clamp(2.5rem, 6vw, 4rem)",
-              fontWeight: 400,
-              letterSpacing: "-0.04em",
-              lineHeight: 0.9,
-            }}
-          >
-            Essays
-          </h1>
-        </div>
-
-        <Nav />
-
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "2rem" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: "6rem",
+          }}
+        >
           <span
             style={{
-              color: "var(--accent-dim)",
-              fontSize: "0.625rem",
+              fontSize: "0.5625rem",
               fontFamily: "'Space Mono', monospace",
-              letterSpacing: "0.2em",
+              color: "var(--text-dim)",
+              letterSpacing: "0.3em",
               textTransform: "uppercase",
             }}
           >
-            ESSAYS [{essays.length}]
+            <span style={{ color: "var(--accent)", animation: "pulse 3s infinite" }}>●</span>{" "}
+            LONG.FORM
           </span>
-          <span style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+          <span
+            style={{
+              fontSize: "0.5625rem",
+              fontFamily: "'Space Mono', monospace",
+              color: "var(--text-dim)",
+              letterSpacing: "0.15em",
+            }}
+          >
+            [{essays.length}]
+          </span>
         </div>
+
+        <h1
+          style={{
+            fontFamily: "'Instrument Serif', serif",
+            color: "var(--text-bright)",
+            fontSize: "clamp(3rem, 8vw, 5rem)",
+            fontWeight: 400,
+            letterSpacing: "-0.05em",
+            lineHeight: 0.9,
+            marginBottom: "4rem",
+          }}
+        >
+          Essays
+        </h1>
+
+        <Nav />
       </header>
 
-      <section style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 1.5rem 10rem" }}>
-        {essays.map((essay) => (
+      <section style={{ maxWidth: "72rem", margin: "0 auto", padding: "0 2rem 10rem" }}>
+        {essays.map((essay, i) => (
           <Link
             key={essay.slug}
             href={`/essays/${essay.slug}`}
             style={{
-              display: "block",
-              padding: "2.5rem 0",
+              display: "grid",
+              gridTemplateColumns: "4.5rem 1fr",
+              gap: "1.5rem",
+              padding: "3rem 0",
               borderBottom: "1px solid var(--border)",
               textDecoration: "none",
+              animation: `slideIn 0.5s ease-out ${i * 0.1}s both`,
             }}
           >
-            <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem", marginBottom: "0.5rem" }}>
+            <span
+              style={{
+                fontFamily: "'Instrument Serif', serif",
+                fontSize: "2rem",
+                color: "var(--border-hover)",
+                lineHeight: 1,
+                letterSpacing: "-0.04em",
+              }}
+            >
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <div>
               <h2
                 style={{
                   fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
@@ -106,49 +124,47 @@ export default function EssaysPage() {
                   fontWeight: 400,
                   color: "var(--text-bright)",
                   letterSpacing: "-0.02em",
+                  marginBottom: "0.75rem",
                 }}
               >
                 {essay.title}
               </h2>
-            </div>
-            {essay.subtitle && (
+              {essay.subtitle && (
+                <p
+                  style={{
+                    fontFamily: "'Space Mono', monospace",
+                    fontSize: "0.6875rem",
+                    color: "var(--text-dim)",
+                    marginBottom: "1rem",
+                    fontStyle: "italic",
+                  }}
+                >
+                  {essay.subtitle}
+                </p>
+              )}
               <p
                 style={{
-                  fontFamily: "'Space Mono', monospace",
-                  fontSize: "0.75rem",
-                  color: "var(--text-dim)",
-                  marginBottom: "1rem",
-                  fontStyle: "italic",
+                  color: "var(--text)",
+                  fontSize: "0.875rem",
+                  lineHeight: 1.9,
+                  maxWidth: "36rem",
                 }}
               >
-                {essay.subtitle}
+                {getExcerpt(essay.content)}
               </p>
-            )}
-            <p
-              style={{
-                color: "var(--text)",
-                fontSize: "0.9375rem",
-                lineHeight: 1.9,
-                maxWidth: "40rem",
-                display: "-webkit-box",
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: "vertical" as const,
-                overflow: "hidden",
-              }}
-            >
-              {getExcerpt(essay.content)}...
-            </p>
-            <span
-              style={{
-                display: "inline-block",
-                marginTop: "1rem",
-                fontSize: "0.625rem",
-                fontFamily: "'Space Mono', monospace",
-                color: "var(--text-dim)",
-              }}
-            >
-              {essay.date}
-            </span>
+              <span
+                style={{
+                  display: "inline-block",
+                  marginTop: "1rem",
+                  fontSize: "0.5625rem",
+                  fontFamily: "'Space Mono', monospace",
+                  color: "var(--text-dim)",
+                  letterSpacing: "0.1em",
+                }}
+              >
+                {essay.date}
+              </span>
+            </div>
           </Link>
         ))}
       </section>

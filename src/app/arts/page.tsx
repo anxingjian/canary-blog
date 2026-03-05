@@ -20,125 +20,155 @@ export default function ArtsPage() {
           position: "fixed",
           top: 0,
           left: 0,
-          right: 0,
-          height: "2px",
-          background: "linear-gradient(90deg, var(--accent) 0%, var(--accent) 90%, transparent 90%)",
+          width: "3px",
+          height: "100vh",
+          background: "linear-gradient(180deg, var(--accent) 0%, var(--accent) 90%, transparent 100%)",
           zIndex: 100,
         }}
       />
 
       <header
         style={{
-          maxWidth: "52rem",
+          maxWidth: "72rem",
           margin: "0 auto",
-          padding: "8rem 1.5rem 0",
+          padding: "6rem 2rem 0",
           animation: "fadeUp 0.6s ease-out",
         }}
       >
-        <div style={{ marginBottom: "4rem" }}>
-          <div
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: "6rem",
+          }}
+        >
+          <span
             style={{
-              fontSize: "0.625rem",
+              fontSize: "0.5625rem",
               fontFamily: "'Space Mono', monospace",
               color: "var(--text-dim)",
-              letterSpacing: "0.2em",
+              letterSpacing: "0.3em",
               textTransform: "uppercase",
-              marginBottom: "1rem",
             }}
           >
-            <span style={{ color: "var(--accent)" }}>●</span> VISUAL OUTPUT
-          </div>
-          <h1
-            style={{
-              fontFamily: "'Instrument Serif', serif",
-              color: "var(--text-bright)",
-              fontSize: "clamp(2.5rem, 6vw, 4rem)",
-              fontWeight: 400,
-              letterSpacing: "-0.04em",
-              lineHeight: 0.9,
-            }}
-          >
-            Arts
-          </h1>
+            <span style={{ color: "var(--accent)", animation: "pulse 3s infinite" }}>●</span>{" "}
+            VISUAL.OUT
+          </span>
         </div>
+
+        <h1
+          style={{
+            fontFamily: "'Instrument Serif', serif",
+            color: "var(--text-bright)",
+            fontSize: "clamp(3rem, 8vw, 5rem)",
+            fontWeight: 400,
+            letterSpacing: "-0.05em",
+            lineHeight: 0.9,
+            marginBottom: "4rem",
+          }}
+        >
+          Arts
+        </h1>
 
         <Nav />
       </header>
 
-      <section style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 1.5rem 10rem" }}>
-        {WORKS.map((work) => (
+      <section style={{ maxWidth: "72rem", margin: "0 auto", padding: "0 2rem 10rem" }}>
+        {WORKS.map((work, i) => (
           <div
             key={work.id}
             style={{
-              padding: "2rem 0",
+              padding: "3rem 0",
               borderBottom: "1px solid var(--border)",
+              animation: `slideIn 0.5s ease-out ${i * 0.1}s both`,
             }}
           >
+            {/* Grid of placeholders */}
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                gap: "4px",
-                marginBottom: "1.5rem",
+                gridTemplateColumns: "repeat(5, 1fr)",
+                gap: "3px",
+                marginBottom: "2rem",
               }}
             >
-              {Array.from({ length: work.count }).map((_, i) => (
+              {Array.from({ length: work.count }).map((_, j) => (
                 <div
-                  key={i}
+                  key={j}
                   style={{
                     aspectRatio: "1",
-                    background: "var(--bg-card)",
+                    background: `linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-hover) 100%)`,
                     border: "1px solid var(--border)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    position: "relative",
+                    overflow: "hidden",
                   }}
                 >
                   <span
                     style={{
-                      fontSize: "0.625rem",
-                      fontFamily: "'Space Mono', monospace",
-                      color: "var(--text-dim)",
+                      fontSize: "1.5rem",
+                      fontFamily: "'Instrument Serif', serif",
+                      color: "var(--border-hover)",
+                      letterSpacing: "-0.04em",
                     }}
                   >
-                    v{i + 1}
+                    {j + 1}
                   </span>
                 </div>
               ))}
             </div>
 
-            <h2
-              style={{
-                fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
-                fontSize: "1.25rem",
-                fontWeight: 400,
-                color: "var(--text-bright)",
-                marginBottom: "0.5rem",
-              }}
-            >
-              {work.title}
-            </h2>
-            <p
-              style={{
-                color: "var(--text)",
-                fontSize: "0.875rem",
-                lineHeight: 1.8,
-                marginBottom: "0.75rem",
-              }}
-            >
-              {work.description}
-            </p>
-            <div
-              style={{
-                display: "flex",
-                gap: "1.5rem",
-                fontSize: "0.625rem",
-                fontFamily: "'Space Mono', monospace",
-                color: "var(--text-dim)",
-              }}
-            >
-              <span>{work.date}</span>
-              <span>{work.medium}</span>
+            <div style={{ display: "grid", gridTemplateColumns: "4.5rem 1fr", gap: "1.5rem" }}>
+              <span
+                style={{
+                  fontFamily: "'Instrument Serif', serif",
+                  fontSize: "2rem",
+                  color: "var(--border-hover)",
+                  lineHeight: 1,
+                }}
+              >
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <h2
+                  style={{
+                    fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
+                    fontSize: "1.375rem",
+                    fontWeight: 400,
+                    color: "var(--text-bright)",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  {work.title}
+                </h2>
+                <p
+                  style={{
+                    color: "var(--text)",
+                    fontSize: "0.875rem",
+                    lineHeight: 1.8,
+                    marginBottom: "1rem",
+                    maxWidth: "36rem",
+                  }}
+                >
+                  {work.description}
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "2rem",
+                    fontSize: "0.5625rem",
+                    fontFamily: "'Space Mono', monospace",
+                    color: "var(--text-dim)",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  <span>{work.date}</span>
+                  <span>{work.medium}</span>
+                </div>
+              </div>
             </div>
           </div>
         ))}

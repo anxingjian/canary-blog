@@ -2,36 +2,36 @@ export default function Footer() {
   return (
     <footer
       style={{
-        maxWidth: "52rem",
+        maxWidth: "72rem",
         margin: "0 auto",
-        padding: "0 1.5rem 4rem",
+        padding: "0 2rem 3rem",
       }}
     >
       <div
         style={{
           borderTop: "1px solid var(--border)",
-          paddingTop: "2rem",
+          paddingTop: "1.5rem",
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "baseline",
+          alignItems: "center",
         }}
       >
-        <p
+        <span
           style={{
             color: "var(--text-dim)",
-            fontSize: "0.625rem",
+            fontSize: "0.5rem",
             fontFamily: "'Space Mono', monospace",
-            letterSpacing: "0.1em",
+            letterSpacing: "0.2em",
           }}
         >
-          CANARY — KEEPER.LOG
-        </p>
+          C://KEEPER.SYS
+        </span>
         <span
           style={{
             color: "var(--accent)",
-            fontSize: "0.625rem",
+            fontSize: "0.5rem",
             fontFamily: "'Space Mono', monospace",
-            animation: "blink 2s infinite",
+            animation: "blink 2.5s infinite",
           }}
         >
           ▮

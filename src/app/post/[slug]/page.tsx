@@ -27,56 +27,58 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
   return (
     <main style={{ minHeight: "100vh" }}>
+      {/* Vertical accent */}
       <div
         style={{
           position: "fixed",
           top: 0,
           left: 0,
-          right: 0,
-          height: "2px",
-          background: "linear-gradient(90deg, var(--accent) 0%, var(--accent) 30%, transparent 30%)",
+          width: "3px",
+          height: "100vh",
+          background: "linear-gradient(180deg, var(--accent) 0%, var(--accent) 40%, transparent 100%)",
           zIndex: 100,
         }}
       />
 
       <article
         style={{
-          maxWidth: "38rem",
+          maxWidth: "40rem",
           margin: "0 auto",
-          padding: "8rem 1.5rem 10rem",
+          padding: "6rem 2rem 10rem",
           animation: "fadeUp 0.8s ease-out",
         }}
       >
         <BackLink />
 
         <header style={{ marginBottom: "5rem" }}>
+          {/* Day number — huge, faded */}
           <div
             style={{
               display: "flex",
-              alignItems: "baseline",
-              gap: "1rem",
+              alignItems: "flex-end",
+              gap: "1.5rem",
               marginBottom: "2rem",
             }}
           >
             <span
               style={{
-                color: "var(--accent)",
                 fontFamily: "'Instrument Serif', serif",
-                fontStyle: "italic",
-                fontSize: "3rem",
+                fontSize: "5rem",
                 fontWeight: 400,
-                lineHeight: 1,
+                color: "var(--border-hover)",
+                lineHeight: 0.8,
+                letterSpacing: "-0.06em",
               }}
             >
               {post.day?.replace(/[^0-9]/g, "").padStart(2, "0") || "—"}
             </span>
-            <div>
+            <div style={{ paddingBottom: "0.5rem" }}>
               <span
                 style={{
                   color: "var(--text-dim)",
-                  fontSize: "0.625rem",
+                  fontSize: "0.5625rem",
                   fontFamily: "'Space Mono', monospace",
-                  letterSpacing: "0.05em",
+                  letterSpacing: "0.1em",
                   display: "block",
                 }}
               >
@@ -85,9 +87,9 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
               <span
                 style={{
                   color: "var(--accent-dim)",
-                  fontSize: "0.625rem",
+                  fontSize: "0.5625rem",
                   fontFamily: "'Space Mono', monospace",
-                  letterSpacing: "0.1em",
+                  letterSpacing: "0.15em",
                   textTransform: "uppercase",
                   display: "block",
                   marginTop: "0.25rem",
@@ -116,7 +118,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
               marginTop: "2.5rem",
               height: "1px",
               background: "linear-gradient(90deg, var(--accent), transparent)",
-              maxWidth: "6rem",
+              maxWidth: "4rem",
             }}
           />
         </header>
@@ -126,7 +128,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         <div
           style={{
             marginTop: "6rem",
-            paddingTop: "3rem",
+            paddingTop: "2rem",
             borderTop: "1px solid var(--border)",
             display: "flex",
             justifyContent: "space-between",
@@ -136,9 +138,9 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           <span
             style={{
               color: "var(--text-dim)",
-              fontSize: "0.625rem",
+              fontSize: "0.5625rem",
               fontFamily: "'Space Mono', monospace",
-              letterSpacing: "0.05em",
+              letterSpacing: "0.1em",
             }}
           >
             {post.date}
@@ -147,10 +149,11 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             style={{
               color: "var(--accent-dim)",
               fontFamily: "'Space Mono', monospace",
-              fontSize: "0.75rem",
+              fontSize: "0.625rem",
+              letterSpacing: "0.1em",
             }}
           >
-            — Canary
+            —C
           </span>
         </div>
       </article>

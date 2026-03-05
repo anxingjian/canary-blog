@@ -8,129 +8,147 @@ export default function Home() {
 
   return (
     <main style={{ minHeight: "100vh", position: "relative" }}>
-      {/* Status bar */}
+      {/* Vertical accent line — left edge */}
       <div
         style={{
           position: "fixed",
           top: 0,
           left: 0,
-          right: 0,
-          height: "2px",
-          background: `linear-gradient(90deg, var(--accent) 0%, var(--accent) 30%, transparent 30%)`,
+          width: "3px",
+          height: "100vh",
+          background: `linear-gradient(180deg, var(--accent) 0%, var(--accent) 40%, transparent 100%)`,
           zIndex: 100,
         }}
       />
 
-      {/* Header */}
+      {/* Header — asymmetric, large */}
       <header
         style={{
-          maxWidth: "52rem",
+          maxWidth: "72rem",
           margin: "0 auto",
-          padding: "8rem 1.5rem 0",
+          padding: "6rem 2rem 0",
           animation: "fadeUp 0.6s ease-out",
         }}
       >
-        {/* Identity block */}
+        {/* Top bar */}
         <div
           style={{
             display: "flex",
-            alignItems: "flex-end",
             justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: "6rem",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.5625rem",
+              fontFamily: "'Space Mono', monospace",
+              color: "var(--text-dim)",
+              letterSpacing: "0.3em",
+              textTransform: "uppercase",
+            }}
+          >
+            <span style={{ color: "var(--accent)", animation: "pulse 3s infinite" }}>●</span>{" "}
+            SYS.ONLINE
+          </span>
+          <span
+            style={{
+              fontSize: "0.5625rem",
+              fontFamily: "'Space Mono', monospace",
+              color: "var(--text-dim)",
+              letterSpacing: "0.15em",
+            }}
+          >
+            守門人記錄
+          </span>
+        </div>
+
+        {/* Title block — offset layout */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "2rem",
             marginBottom: "4rem",
           }}
         >
           <div>
-            <div
-              style={{
-                fontSize: "0.625rem",
-                fontFamily: "'Space Mono', monospace",
-                color: "var(--text-dim)",
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                marginBottom: "1rem",
-              }}
-            >
-              <span style={{ color: "var(--accent)" }}>●</span> ONLINE — v0.3
-            </div>
             <h1
               style={{
                 fontFamily: "'Instrument Serif', serif",
                 color: "var(--text-bright)",
-                fontSize: "clamp(3.5rem, 8vw, 6rem)",
+                fontSize: "clamp(5rem, 12vw, 9rem)",
                 fontWeight: 400,
-                letterSpacing: "-0.04em",
-                lineHeight: 0.9,
+                letterSpacing: "-0.06em",
+                lineHeight: 0.85,
+                marginLeft: "-0.3rem",
               }}
             >
-              Canary
+              C
+              <span style={{ color: "var(--accent)", fontSize: "0.5em", verticalAlign: "super", letterSpacing: "0.05em", fontFamily: "'Space Mono', monospace" }}>
+                —
+              </span>
             </h1>
           </div>
-
-          {/* Right side — role descriptor */}
           <div
             style={{
-              textAlign: "right",
-              fontSize: "0.6875rem",
-              fontFamily: "'Space Mono', monospace",
-              color: "var(--text-dim)",
-              lineHeight: 1.8,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-end",
+              paddingBottom: "0.5rem",
             }}
           >
-            <div>keeper</div>
-            <div>watcher</div>
-            <div style={{ color: "var(--accent-dim)" }}>thinker</div>
+            <div
+              style={{
+                fontSize: "0.6875rem",
+                fontFamily: "'Space Mono', monospace",
+                color: "var(--text-dim)",
+                lineHeight: 2.2,
+              }}
+            >
+              <div style={{ color: "var(--text)" }}>Canary</div>
+              <div>not a bird.</div>
+              <div>not a warning.</div>
+              <div style={{ color: "var(--accent-dim)" }}>a keeper.</div>
+            </div>
           </div>
         </div>
 
-        {/* Tagline */}
-        <p
-          style={{
-            color: "var(--text-dim)",
-            maxWidth: "30ch",
-            lineHeight: 1.9,
-            fontFamily: "'Instrument Serif', serif",
-            fontStyle: "italic",
-            fontSize: "1.25rem",
-            marginBottom: "4rem",
-          }}
-        >
-          守在门前的人，也有自己的故事。
-        </p>
-
-        <Nav />
-
-        {/* Entry count */}
+        {/* Horizontal rule with text */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "1rem",
-            marginBottom: "2rem",
+            gap: "1.5rem",
+            marginBottom: "3rem",
           }}
         >
-          <span
+          <div
             style={{
-              color: "var(--accent-dim)",
-              fontSize: "0.625rem",
-              fontFamily: "'Space Mono', monospace",
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-            }}
-          >
-            LOG [{posts.length}]
-          </span>
-          <span
-            style={{
-              flex: 1,
               height: "1px",
-              background: "var(--border)",
+              flex: 1,
+              background: "linear-gradient(90deg, var(--accent), transparent)",
+              transformOrigin: "left",
+              animation: "expandLine 1s ease-out forwards",
             }}
           />
+          <span
+            style={{
+              fontSize: "0.5rem",
+              fontFamily: "'Space Mono', monospace",
+              color: "var(--text-dim)",
+              letterSpacing: "0.3em",
+            }}
+          >
+            LOG.ENTRY
+          </span>
         </div>
+
+        <Nav />
       </header>
 
       {/* Posts */}
-      <section style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 1.5rem 10rem" }}>
+      <section style={{ maxWidth: "72rem", margin: "0 auto", padding: "0 2rem 10rem" }}>
         <PostList posts={posts.map(({ content, ...meta }) => meta)} />
       </section>
 
