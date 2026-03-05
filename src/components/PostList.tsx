@@ -16,105 +16,92 @@ function PostCard({ post, index }: { post: PostMeta; index: number }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), index * 150 + 600);
+    const timer = setTimeout(() => setVisible(true), index * 100 + 300);
     return () => clearTimeout(timer);
   }, [index]);
 
   return (
     <Link
       href={`/post/${post.slug}`}
-      className="block"
       style={{
-        display: "block",
-        padding: "2.5rem 0",
+        display: "grid",
+        gridTemplateColumns: "4rem 1fr auto",
+        gap: "1.5rem",
+        alignItems: "baseline",
+        padding: "1.75rem 0",
         borderBottom: "1px solid var(--border)",
         opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(16px)",
-        transition: "all 0.7s cubic-bezier(0.22, 1, 0.36, 1)",
+        transform: visible ? "translateY(0)" : "translateY(12px)",
+        transition: "all 0.5s cubic-bezier(0.22, 1, 0.36, 1)",
         textDecoration: "none",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Day number + date row */}
-      <div
+      {/* Index number */}
+      <span
         style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: "1rem",
-          marginBottom: "1rem",
+          color: hovered ? "var(--accent)" : "var(--text-dim)",
+          fontFamily: "'Space Mono', monospace",
+          fontSize: "0.75rem",
+          transition: "color 0.2s",
         }}
       >
-        <span
+        {String(index + 1).padStart(3, "0")}
+      </span>
+
+      {/* Content */}
+      <div>
+        <h2
           style={{
-            color: hovered ? "var(--accent)" : "var(--accent-dim)",
-            fontFamily: "'Playfair Display', serif",
-            fontStyle: "italic",
-            fontSize: "2rem",
+            color: hovered ? "var(--text-bright)" : "var(--text)",
+            fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
+            fontSize: "1.25rem",
             fontWeight: 400,
-            lineHeight: 1,
-            transition: "color 0.4s ease",
+            marginBottom: "0.375rem",
+            transition: "color 0.2s",
+            lineHeight: 1.4,
           }}
         >
-          {post.day?.replace(/[^0-9]/g, "").padStart(2, "0") || "—"}
-        </span>
+          {post.title}
+        </h2>
+        <p
+          style={{
+            color: "var(--text-dim)",
+            fontSize: "0.8125rem",
+            lineHeight: 1.7,
+            maxWidth: "36rem",
+          }}
+        >
+          {post.excerpt}
+        </p>
+      </div>
+
+      {/* Date + arrow */}
+      <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
         <span
           style={{
             color: "var(--text-dim)",
-            fontSize: "0.6875rem",
-            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "0.625rem",
+            fontFamily: "'Space Mono', monospace",
             letterSpacing: "0.05em",
           }}
         >
           {post.date}
         </span>
-      </div>
-
-      {/* Title */}
-      <h2
-        style={{
-          color: hovered ? "var(--text-bright)" : "var(--text)",
-          fontFamily: "'Playfair Display', 'Noto Serif SC', serif",
-          fontSize: "1.375rem",
-          fontWeight: 400,
-          marginBottom: "0.75rem",
-          transition: "color 0.4s ease",
-          letterSpacing: "-0.01em",
-          lineHeight: 1.4,
-        }}
-      >
-        {post.title}
-      </h2>
-
-      {/* Excerpt */}
-      <p
-        style={{
-          color: "var(--text-dim)",
-          fontSize: "0.9375rem",
-          lineHeight: 1.8,
-          maxWidth: "32rem",
-          transition: "color 0.4s ease",
-          ...(hovered ? { color: "var(--text)" } : {}),
-        }}
-      >
-        {post.excerpt}
-      </p>
-
-      {/* Read arrow — appears on hover */}
-      <div
-        style={{
-          marginTop: "1rem",
-          opacity: hovered ? 1 : 0,
-          transform: hovered ? "translateX(0)" : "translateX(-8px)",
-          transition: "all 0.3s ease",
-          color: "var(--accent-dim)",
-          fontSize: "0.6875rem",
-          fontFamily: "'JetBrains Mono', monospace",
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-        }}
-      >
-        read →
+        <div
+          style={{
+            marginTop: "0.25rem",
+            opacity: hovered ? 1 : 0,
+            transform: hovered ? "translateX(0)" : "translateX(-4px)",
+            transition: "all 0.2s",
+            color: "var(--accent)",
+            fontSize: "0.625rem",
+            fontFamily: "'Space Mono', monospace",
+          }}
+        >
+          →
+        </div>
       </div>
     </Link>
   );
@@ -137,23 +124,22 @@ export default function PostList({ posts }: { posts: PostMeta[] }) {
         >
           <p
             style={{
-              fontFamily: "'Playfair Display', serif",
-              fontStyle: "italic",
-              fontSize: "1.5rem",
+              fontFamily: "'Space Mono', monospace",
+              fontSize: "0.875rem",
               color: "var(--text-dim)",
-              marginBottom: "1rem",
+              marginBottom: "0.5rem",
             }}
           >
-            The nest is empty...
+            // no entries yet
           </p>
           <p
             style={{
-              fontSize: "0.75rem",
+              fontSize: "0.625rem",
               color: "var(--accent-dim)",
-              fontFamily: "'JetBrains Mono', monospace",
+              fontFamily: "'Space Mono', monospace",
             }}
           >
-            for now.
+            awaiting input<span style={{ animation: "blink 1s infinite" }}>_</span>
           </p>
         </div>
       )}
