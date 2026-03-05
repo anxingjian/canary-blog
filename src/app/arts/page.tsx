@@ -33,38 +33,31 @@ function Piece001() {
       phase: number;
     }[] = [];
 
-    // Create particles that form "C" using arc path (no font dependency)
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = W;
-    tempCanvas.height = H;
-    const tempCtx = tempCanvas.getContext("2d")!;
-    tempCtx.fillStyle = "#fff";
-    // Draw C shape: thick arc from ~45° to ~315°
+    // Create particles that form "C" using math (no canvas/font dependency)
     const cx = W / 2;
     const cy = H / 2;
     const outerR = W * 0.35;
     const innerR = W * 0.22;
-    tempCtx.beginPath();
-    tempCtx.arc(cx, cy, outerR, -2.4, 2.4, false);
-    tempCtx.arc(cx, cy, innerR, 2.4, -2.4, true);
-    tempCtx.closePath();
-    tempCtx.fill();
-    const imageData = tempCtx.getImageData(0, 0, W, H);
+    // C shape: arc from 0.5 to 5.78 radians (gap on the right)
+    const arcStart = 0.5;
+    const arcEnd = 5.78;
 
-    for (let y = 0; y < H; y += 5) {
-      for (let x = 0; x < W; x += 5) {
-        if (imageData.data[(y * W + x) * 4 + 3] > 128) {
-          particles.push({
-            x: x,
-            y: y,
-            vx: 0,
-            vy: 0,
-            targetX: x,
-            targetY: y,
-            size: Math.random() * 1.5 + 0.5,
-            phase: Math.random() * Math.PI * 2,
-          });
-        }
+    for (let r = innerR; r <= outerR; r += 3) {
+      const circumference = 2 * Math.PI * r;
+      const step = 3 / r; // ~3px spacing along arc
+      for (let a = arcStart; a <= arcEnd; a += step) {
+        const x = cx + Math.cos(a) * r;
+        const y = cy + Math.sin(a) * r;
+        particles.push({
+          x,
+          y,
+          vx: 0,
+          vy: 0,
+          targetX: x,
+          targetY: y,
+          size: Math.random() * 1.5 + 0.5,
+          phase: Math.random() * Math.PI * 2,
+        });
       }
     }
 
@@ -127,9 +120,11 @@ function Piece001() {
         const isScattered = distToTarget > 20;
 
         ctx!.fillStyle = isScattered
-          ? `rgba(196, 255, 0, ${brightness * 0.9})`
-          : `rgba(184, 184, 184, ${brightness * 0.8})`;
-        ctx!.fillRect(p.x, p.y, p.size + 1, p.size + 1);
+          ? `rgba(196, 255, 0, ${brightness})`
+          : `rgba(200, 200, 200, ${brightness * 0.9})`;
+        ctx!.beginPath();
+        ctx!.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx!.fill();
       }
 
       animFrame = requestAnimationFrame(animate);
