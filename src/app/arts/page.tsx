@@ -722,7 +722,7 @@ export default function ArtsPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 400px), 1fr))",
+              gridTemplateColumns: "repeat(3, 1fr)",
               gap: "3px",
               paddingTop: "1rem",
             }}
