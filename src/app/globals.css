@@ -247,11 +247,38 @@ body::after {
     display: none !important;
   }
 
-  /* Arts list: stack vertically */
+  /* Arts list: stack vertically, compact */
   .arts-list-item {
     grid-template-columns: 1fr !important;
-    gap: 1.5rem !important;
-    padding: 2.5rem 0 !important;
+    gap: 0.75rem !important;
+    padding: 1.5rem 0 !important;
+  }
+  .piece-info {
+    padding-top: 0 !important;
+  }
+  .piece-number {
+    font-size: 1.125rem !important;
+    display: inline !important;
+    margin-right: 0.5rem !important;
+    margin-bottom: 0 !important;
+  }
+  .piece-title {
+    font-size: 1rem !important;
+    display: inline !important;
+    margin-bottom: 0.125rem !important;
+  }
+  .piece-subtitle {
+    margin-bottom: 0.375rem !important;
+    font-size: 0.5625rem !important;
+  }
+  .piece-description {
+    font-size: 0.8125rem !important;
+    margin-bottom: 0.5rem !important;
+    line-height: 1.7 !important;
+  }
+  .piece-meta {
+    font-size: 0.5rem !important;
+    gap: 1rem !important;
   }
 
   /* Page headers */
@@ -267,24 +294,9 @@ body::after {
   }
   .page-subtitle {
     font-size: 0.75rem !important;
-    margin-bottom: 2.5rem !important;
+    margin-bottom: 2rem !important;
   }
   .page-section {
     padding: 0 1.25rem 6rem !important;
-  }
-
-  /* Mobile typography */
-  .piece-number {
-    font-size: 1.5rem !important;
-    margin-bottom: 1rem !important;
-  }
-  .piece-title {
-    font-size: 1.25rem !important;
-  }
-  .piece-description {
-    font-size: 0.8125rem !important;
-  }
-  .piece-meta {
-    font-size: 0.5rem !important;
   }
 }

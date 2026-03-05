@@ -639,7 +639,7 @@ export default function ArtsPage() {
               >
                 <piece.Component />
 
-                <div style={{ paddingTop: "1rem" }}>
+                <div className="piece-info" style={{ paddingTop: "1rem" }}>
                   <span
                     className="piece-number"
                     style={{
@@ -670,6 +670,7 @@ export default function ArtsPage() {
                   </h2>
 
                   <p
+                    className="piece-subtitle"
                     style={{
                       fontFamily: "'Space Mono', monospace",
                       fontSize: "0.6875rem",
@@ -682,6 +683,7 @@ export default function ArtsPage() {
                   </p>
 
                   <p
+                    className="piece-description"
                     style={{
                       color: "var(--text)",
                       fontSize: "0.875rem",
@@ -694,6 +696,7 @@ export default function ArtsPage() {
                   </p>
 
                   <div
+                    className="piece-meta"
                     style={{
                       display: "flex",
                       gap: "2rem",
