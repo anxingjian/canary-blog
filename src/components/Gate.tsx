@@ -169,10 +169,10 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             overflow: "hidden",
             WebkitMaskImage: peeking
               ? "linear-gradient(180deg, black 0%, black 90%, transparent 100%)"
-              : "linear-gradient(180deg, black 0%, black 50%, transparent 100%)",
+              : "linear-gradient(180deg, black 0%, black 50%, transparent 70%)",
             maskImage: peeking
               ? "linear-gradient(180deg, black 0%, black 90%, transparent 100%)"
-              : "linear-gradient(180deg, black 0%, black 50%, transparent 100%)",
+              : "linear-gradient(180deg, black 0%, black 50%, transparent 70%)",
           }}>
             <div style={noiseOverlay} />
 
