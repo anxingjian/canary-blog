@@ -193,7 +193,11 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                   textAlign: "center",
-                  transform: `perspective(300px) rotateX(8deg)`,
+                  transform: [
+                    "perspective(400px) rotateX(5deg)",
+                    "perspective(300px) rotateX(8deg)",
+                    "perspective(250px) rotateX(12deg)",
+                  ][i],
                   transformOrigin: "center top",
                   textShadow: hoveredEntry === i
                     ? "0 0 30px rgba(196,255,0,0.4)"
