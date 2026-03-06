@@ -52,7 +52,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         SYS.ONLINE
       </div>
 
-      {/* Interactive zone — covers door + floor projection area */}
+      {/* Interactive zone — covers door + floor projection */}
       <div
         onMouseEnter={() => setPeeking(true)}
         onMouseLeave={() => { setPeeking(false); setHoveredEntry(null); }}
@@ -87,60 +87,49 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             }}
           />
 
-          {/* ===== DOOR — single flat panel, light/shadow via color blocks ===== */}
+          {/* ===== DOOR — opens INWARD (rotateY positive = swings into the room) ===== */}
           <div
             style={{
               position: "absolute",
               inset: 0,
               transformOrigin: "left center",
+              // Default: slightly ajar (small positive rotateY = slightly open inward)
+              // Hover: opens more inward
               transform: peeking
-                ? "perspective(800px) rotateY(-42deg)"
-                : "perspective(800px) rotateY(-6deg)",
+                ? "perspective(800px) rotateY(50deg)"
+                : "perspective(800px) rotateY(8deg)",
               transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
               zIndex: 3,
             }}
           >
-            {/* Door base — flat, no texture */}
+            {/* Door surface — flat, light/shadow via gradients */}
             <div
               style={{
                 position: "absolute",
                 inset: 0,
                 background: peeking
-                  ? "linear-gradient(90deg, #0e0e0e 0%, #151515 30%, #1a1a1a 100%)"
-                  : "#0e0e0e",
+                  ? "linear-gradient(90deg, #1a1a1a 0%, #141414 40%, #0e0e0e 100%)"
+                  : "linear-gradient(90deg, #0f0f0f 0%, #0d0d0d 50%, #0b0b0b 100%)",
                 transition: "background 0.8s",
               }}
             />
 
-            {/* Light edge on the opening side */}
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                right: 0,
-                width: peeking ? "3px" : "1px",
-                background: peeking
-                  ? "rgba(196,255,0,0.2)"
-                  : "rgba(196,255,0,0.05)",
-                transition: "all 0.8s",
-              }}
-            />
-
-            {/* Shadow gradient on hinge side */}
+            {/* Light edge on hinge side (light leaking from behind) */}
             <div
               style={{
                 position: "absolute",
                 top: 0,
                 bottom: 0,
                 left: 0,
-                width: "30%",
-                background: "linear-gradient(90deg, rgba(0,0,0,0.3) 0%, transparent 100%)",
-                pointerEvents: "none",
+                width: peeking ? "2px" : "1px",
+                background: peeking
+                  ? "rgba(196,255,0,0.15)"
+                  : "rgba(196,255,0,0.04)",
+                transition: "all 0.8s",
               }}
             />
 
-            {/* CANARY nameplate — Space Mono, tight, dark */}
+            {/* CANARY nameplate */}
             <div
               style={{
                 position: "absolute",
@@ -150,29 +139,15 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                 fontFamily: "'Space Mono', monospace",
                 fontSize: "clamp(0.55rem, 1.2vw, 0.7rem)",
                 fontWeight: 700,
-                color: "#1a1a1a",
+                color: peeking ? "#222" : "#1a1a1a",
                 letterSpacing: "0.4em",
                 textTransform: "uppercase",
                 whiteSpace: "nowrap",
+                transition: "color 0.8s",
               }}
             >
               CANARY
             </div>
-
-            {/* Door handle — simple line */}
-            <div
-              style={{
-                position: "absolute",
-                right: "14%",
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: "3px",
-                height: "28px",
-                background: peeking ? "#333" : "#1a1a1a",
-                borderRadius: "1.5px",
-                transition: "background 0.5s",
-              }}
-            />
           </div>
 
           {/* ===== Frame ===== */}
@@ -204,8 +179,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         {/* ===== FLOOR LIGHT with projected entries ===== */}
         <div
           style={{
-            width: peeking ? "min(450px, 85vw)" : "min(160px, 35vw)",
-            height: peeking ? "min(200px, 25vh)" : "min(40px, 6vh)",
+            width: peeking ? "min(450px, 85vw)" : "min(180px, 38vw)",
+            height: peeking ? "min(200px, 25vh)" : "min(60px, 9vh)",
             background: peeking
               ? `linear-gradient(180deg,
                   rgba(196,255,0,0.10) 0%,
@@ -214,7 +189,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   transparent 100%
                 )`
               : `linear-gradient(180deg,
-                  rgba(196,255,0,0.02) 0%,
+                  rgba(196,255,0,0.03) 0%,
+                  rgba(196,255,0,0.01) 50%,
                   transparent 100%
                 )`,
             clipPath: peeking
@@ -225,9 +201,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: "0.4rem",
+            gap: "0.3rem",
             paddingTop: "1rem",
-            perspective: "400px",
           }}
         >
           {ENTRIES.map((entry, i) => (
@@ -250,14 +225,14 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                 letterSpacing: "0.25em",
                 textTransform: "uppercase",
                 cursor: "pointer",
-                textShadow: hoveredEntry === i
-                  ? "0 0 30px rgba(196,255,0,0.4)"
-                  : "none",
                 whiteSpace: "nowrap",
                 transform: `perspective(400px) rotateX(50deg) scaleY(${1.3 + i * 0.15})`,
                 transformOrigin: "center top",
+                textShadow: hoveredEntry === i
+                  ? "0 0 30px rgba(196,255,0,0.4)"
+                  : "none",
                 opacity: peeking ? 1 : 0,
-                transition: "color 0.3s, opacity 0.5s 0.3s",
+                transition: "color 0.3s, opacity 0.5s 0.3s, text-shadow 0.3s",
               }}
             >
               {entry.name}
