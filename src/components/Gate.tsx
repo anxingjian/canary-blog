@@ -227,7 +227,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                     : "none",
                   opacity: peeking ? 1 : 0,
                   transition: peeking
-                    ? "color 0.3s, opacity 0.6s 0.5s, text-shadow 0.3s"
+                    ? "color 0.3s, opacity 0.6s 0.3s, text-shadow 0.3s"
                     : "color 0.3s, opacity 0s, text-shadow 0.3s",
                   position: "relative",
                   zIndex: 1,
