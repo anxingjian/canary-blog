@@ -165,20 +165,22 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         {/* FLOOR PROJECTION — container is 2.2x door width, clip-path makes trapezoid */}
         <div
           style={{
-            width: "min(440px, 95vw)",
+            width: "min(260px, 55vw)",
             height: "min(180px, 22vh)",
             position: "relative",
+            overflow: "visible",
           }}
         >
           <div
             style={{
               position: "absolute",
               top: 0,
-              left: 0,
-              right: 0,
+              /* Left/right extend beyond container to form trapezoid bottom */
+              left: "-35%",
+              right: "-35%",
               height: "100%",
-              /* Top narrow (centered to door width), bottom fills full container width */
-              clipPath: "polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%)",
+              /* Top edges at 26%/74% = the 260px door width centered in the wider box */
+              clipPath: "polygon(26% 0%, 74% 0%, 100% 100%, 0% 100%)",
               background: peeking
                 ? `linear-gradient(180deg,
                     rgba(196,255,0,0.14) 0%,
@@ -223,8 +225,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   whiteSpace: "nowrap",
                   transform: `perspective(400px) rotateX(50deg) scaleY(${1.3 + i * 0.12})`,
                   transformOrigin: "center top",
-                  marginTop: i === 0 ? "0" : i === 2 ? "0" : "0.15rem",
-                  marginBottom: i === 0 ? "0" : "0",
+                  marginTop: i === 0 ? "0" : i === 1 ? "-0.15rem" : "-0.2rem",
+                  marginBottom: "0",
                   textShadow: hoveredEntry === i
                     ? "0 0 30px rgba(196,255,0,0.4)"
                     : "none",
