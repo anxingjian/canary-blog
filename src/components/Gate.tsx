@@ -19,9 +19,9 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
   };
 
   const entryFontSizes = [
-    "clamp(1.1rem, 2.2vw, 1.4rem)",
-    "clamp(1.4rem, 3vw, 1.9rem)",
-    "clamp(1.8rem, 4vw, 2.5rem)",
+    "clamp(1.4rem, 2.8vw, 1.8rem)",
+    "clamp(1.7rem, 3.5vw, 2.2rem)",
+    "clamp(2.2rem, 5vw, 3rem)",
   ];
 
   /* Noise overlay style — uses noise.gif via CSS pseudo-element in globals.css */
@@ -165,8 +165,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            padding: "1.2rem 0",
-            gap: "0.25rem",
+            padding: "0.8rem 0",
+            gap: "0",
             position: "relative",
             overflow: "hidden",
             WebkitMaskImage: "linear-gradient(180deg, black 0%, black 85%, transparent 100%)",
