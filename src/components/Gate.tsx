@@ -19,7 +19,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
     setTimeout(() => onEnter(href), 600);
   };
 
-  /* Animated noise on canvas — snow/static effect */
+  /* Animated noise on canvas */
   useEffect(() => {
     const canvas = noiseCanvasRef.current;
     if (!canvas) return;
@@ -45,11 +45,6 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
 
   const entryWidths = ["56%", "72%", "90%"];
 
-  /* Door dimensions */
-  const doorW = "min(260px, 55vw)";
-  const doorH = "min(460px, 65vh)";
-  const projH = "min(180px, 22vh)";
-
   return (
     <div
       style={{
@@ -64,7 +59,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
       }}
       onClick={() => { if (peeking) { setPeeking(false); setHoveredEntry(null); } }}
     >
-      {/* SYS indicator */}
+      {/* SYS */}
       <div style={{
         position: "absolute", top: "2.5rem", left: "2.5rem",
         color: "#666", fontFamily: "'Space Mono', monospace",
@@ -82,8 +77,11 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         Canary · 守門人記錄
       </div>
 
-      {/* === SINGLE CONTINUOUS LIGHT (door crack + floor projection as ONE shape) === */}
+      {/* Main assembly — everything in one container */}
       <div
+        onMouseEnter={() => setPeeking(true)}
+        onMouseLeave={() => { setPeeking(false); setHoveredEntry(null); }}
+        onClick={(e) => { if (!peeking) { e.stopPropagation(); setPeeking(true); } }}
         style={{
           position: "absolute",
           left: "50%",
@@ -92,40 +90,82 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          zIndex: 1,
-          pointerEvents: "none",
+          cursor: "pointer",
+          zIndex: 5,
         }}
       >
-        {/* Door-height light strip */}
+        {/* Door frame — contains light + door panel */}
         <div style={{
-          width: doorW,
-          height: doorH,
-          background: peeking
-            ? "linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.6) 100%)"
-            : "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.08) 100%)",
-          transition: "background 0.8s",
           position: "relative",
+          width: "min(260px, 55vw)",
+          height: "min(460px, 65vh)",
         }}>
-          {/* Noise overlay on light — only when closed */}
-          <canvas
-            ref={noiseCanvasRef}
-            style={{
+          {/* LIGHT behind door — full rectangle */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            background: peeking
+              ? "linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.6) 100%)"
+              : "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.08) 100%)",
+            transition: "background 0.8s",
+            zIndex: 1,
+          }}>
+            {/* Noise canvas overlay */}
+            <canvas
+              ref={noiseCanvasRef}
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                opacity: peeking ? 0 : 0.8,
+                transition: "opacity 0.8s",
+                mixBlendMode: "overlay",
+                pointerEvents: "none",
+              }}
+            />
+          </div>
+
+          {/* DOOR PANEL — same container, overlays light */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            perspective: "800px",
+            zIndex: 3,
+          }}>
+            <div style={{
               position: "absolute",
               inset: 0,
-              width: "100%",
-              height: "100%",
-              opacity: peeking ? 0 : 0.8,
-              transition: "opacity 0.8s",
-              mixBlendMode: "overlay",
-              pointerEvents: "none",
-            }}
-          />
+              transformOrigin: "left center",
+              transform: peeking ? "rotateY(25deg)" : "rotateY(12deg)",
+              transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+              backfaceVisibility: "hidden",
+              background: "#0a0a0a",
+            }}>
+              {/* CANARY */}
+              <div style={{
+                position: "absolute",
+                top: "30%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                fontFamily: "'Instrument Serif', serif",
+                fontSize: "clamp(1.3rem, 3vw, 1.8rem)",
+                fontWeight: 400,
+                color: peeking ? "#222" : "#555",
+                letterSpacing: "-0.02em",
+                whiteSpace: "nowrap",
+                transition: "color 0.8s",
+              }}>
+                Canary
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Floor projection — same brightness, continuous with door light */}
+        {/* FLOOR PROJECTION — continuous with door light */}
         <div style={{
           width: "min(500px, 105vw)",
-          height: projH,
+          height: "min(180px, 22vh)",
         }}>
           <div style={{
             width: "100%",
@@ -151,7 +191,6 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             gap: "0",
             paddingTop: "0.5rem",
             paddingBottom: "0.3rem",
-            pointerEvents: "auto",
           }}>
             {ENTRIES.map((entry, i) => (
               <div
@@ -175,7 +214,6 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   whiteSpace: "nowrap",
                   width: entryWidths[i],
                   textAlign: "center",
-                  /* Top narrow, bottom wide — like text projected onto floor */
                   transform: `perspective(300px) rotateX(8deg) scaleY(${1.3 + i * 0.12})`,
                   transformOrigin: "center top",
                   marginTop: i === 0 ? "0" : "-0.25rem",
@@ -189,53 +227,6 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                 {entry.name}
               </div>
             ))}
-          </div>
-        </div>
-      </div>
-
-      {/* === DOOR PANEL (overlays on top of the light) === */}
-      <div
-        onMouseEnter={() => setPeeking(true)}
-        onMouseLeave={() => { setPeeking(false); setHoveredEntry(null); }}
-        onClick={(e) => { if (!peeking) { e.stopPropagation(); setPeeking(true); } }}
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: "50%",
-          transform: "translate(-50%, -45%)",
-          width: doorW,
-          height: doorH,
-          perspective: "800px",
-          cursor: "pointer",
-          zIndex: 3,
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            transformOrigin: "left center",
-            transform: peeking ? "rotateY(25deg)" : "rotateY(12deg)",
-            transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-            backfaceVisibility: "hidden",
-            background: "#0a0a0a",
-          }}
-        >
-          {/* CANARY nameplate */}
-          <div style={{
-            position: "absolute",
-            top: "30%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            fontFamily: "'Instrument Serif', serif",
-            fontSize: "clamp(1.3rem, 3vw, 1.8rem)",
-            fontWeight: 400,
-            color: peeking ? "#222" : "#555",
-            letterSpacing: "-0.02em",
-            whiteSpace: "nowrap",
-            transition: "color 0.8s",
-          }}>
-            Canary
           </div>
         </div>
       </div>
