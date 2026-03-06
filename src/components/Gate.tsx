@@ -52,230 +52,218 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         SYS.ONLINE
       </div>
 
-      {/* Scene container */}
+      {/* Interactive zone — covers door + floor projection area */}
       <div
+        onMouseEnter={() => setPeeking(true)}
+        onMouseLeave={() => { setPeeking(false); setHoveredEntry(null); }}
+        onClick={(e) => { if (!peeking) { e.stopPropagation(); setPeeking(true); } }}
         style={{
           position: "relative",
-          width: "100%",
-          height: "100%",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
+          cursor: "pointer",
+          zIndex: 5,
         }}
       >
-        {/* ===== DOOR FRAME (the bright rectangle behind) ===== */}
+        {/* Door assembly */}
         <div
           style={{
-            position: "absolute",
+            position: "relative",
             width: "min(260px, 55vw)",
             height: "min(460px, 65vh)",
-            background: peeking
-              ? "linear-gradient(180deg, rgba(196,255,0,0.12) 0%, rgba(196,255,0,0.08) 50%, rgba(196,255,0,0.15) 100%)"
-              : "linear-gradient(180deg, rgba(196,255,0,0.03) 0%, rgba(196,255,0,0.02) 50%, rgba(196,255,0,0.04) 100%)",
-            transition: "background 0.8s",
-            zIndex: 1,
-          }}
-        />
-
-        {/* ===== DOOR (single panel, swings open) ===== */}
-        <div
-          onMouseEnter={() => setPeeking(true)}
-          onMouseLeave={() => { setPeeking(false); setHoveredEntry(null); }}
-          onClick={(e) => { if (!peeking) { e.stopPropagation(); setPeeking(true); } }}
-          style={{
-            position: "absolute",
-            width: "min(260px, 55vw)",
-            height: "min(460px, 65vh)",
-            transformOrigin: "left center",
-            transform: peeking
-              ? "perspective(800px) rotateY(-38deg)"
-              : "perspective(800px) rotateY(-8deg)",
-            transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-            zIndex: 3,
-            cursor: "pointer",
           }}
         >
-          {/* Door surface */}
+          {/* ===== Light behind door ===== */}
           <div
             style={{
               position: "absolute",
               inset: 0,
-              background: "linear-gradient(135deg, #111 0%, #0d0d0d 40%, #0a0a0a 100%)",
-              borderRight: "1px solid #1a1a1a",
+              background: peeking
+                ? "linear-gradient(180deg, rgba(196,255,0,0.10) 0%, rgba(196,255,0,0.06) 40%, rgba(196,255,0,0.12) 100%)"
+                : "linear-gradient(180deg, rgba(196,255,0,0.02) 0%, rgba(196,255,0,0.01) 40%, rgba(196,255,0,0.03) 100%)",
+              transition: "background 0.8s",
+              zIndex: 1,
+            }}
+          />
+
+          {/* ===== DOOR — single flat panel, light/shadow via color blocks ===== */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              transformOrigin: "left center",
+              transform: peeking
+                ? "perspective(800px) rotateY(-42deg)"
+                : "perspective(800px) rotateY(-6deg)",
+              transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+              zIndex: 3,
             }}
           >
-            {/* Top panel inset */}
+            {/* Door base — flat, no texture */}
             <div
               style={{
                 position: "absolute",
-                top: "8%",
-                left: "15%",
-                right: "10%",
-                height: "30%",
-                border: "1px solid #1a1a1a",
-                borderRadius: "1px",
-                background: "linear-gradient(180deg, #0c0c0c 0%, #0e0e0e 100%)",
+                inset: 0,
+                background: peeking
+                  ? "linear-gradient(90deg, #0e0e0e 0%, #151515 30%, #1a1a1a 100%)"
+                  : "#0e0e0e",
+                transition: "background 0.8s",
               }}
             />
-            {/* Bottom panel inset */}
+
+            {/* Light edge on the opening side */}
             <div
               style={{
                 position: "absolute",
-                top: "45%",
-                left: "15%",
-                right: "10%",
-                height: "42%",
-                border: "1px solid #1a1a1a",
-                borderRadius: "1px",
-                background: "linear-gradient(180deg, #0c0c0c 0%, #0e0e0e 100%)",
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: peeking ? "3px" : "1px",
+                background: peeking
+                  ? "rgba(196,255,0,0.2)"
+                  : "rgba(196,255,0,0.05)",
+                transition: "all 0.8s",
               }}
             />
-            {/* Door handle */}
+
+            {/* Shadow gradient on hinge side */}
             <div
               style={{
                 position: "absolute",
-                right: "12%",
-                top: "48%",
-                width: "4px",
-                height: "24px",
-                background: "#222",
-                borderRadius: "2px",
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: "30%",
+                background: "linear-gradient(90deg, rgba(0,0,0,0.3) 0%, transparent 100%)",
+                pointerEvents: "none",
               }}
             />
-            {/* Handle plate */}
+
+            {/* CANARY nameplate — Space Mono, tight, dark */}
             <div
               style={{
                 position: "absolute",
-                right: "10%",
-                top: "46%",
-                width: "10px",
-                height: "40px",
-                border: "1px solid #1a1a1a",
-                borderRadius: "2px",
-              }}
-            />
-            {/* Door nameplate — "Canary" */}
-            <div
-              style={{
-                position: "absolute",
-                top: "18%",
+                top: "50%",
                 left: "50%",
-                transform: "translateX(-50%)",
-                fontFamily: "'Instrument Serif', serif",
-                fontSize: "clamp(0.7rem, 1.5vw, 0.9rem)",
-                color: "#2a2a2a",
-                letterSpacing: "0.15em",
+                transform: "translate(-50%, -50%)",
+                fontFamily: "'Space Mono', monospace",
+                fontSize: "clamp(0.55rem, 1.2vw, 0.7rem)",
+                fontWeight: 700,
+                color: "#1a1a1a",
+                letterSpacing: "0.4em",
                 textTransform: "uppercase",
                 whiteSpace: "nowrap",
               }}
             >
-              Canary
+              CANARY
             </div>
+
+            {/* Door handle — simple line */}
+            <div
+              style={{
+                position: "absolute",
+                right: "14%",
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: "3px",
+                height: "28px",
+                background: peeking ? "#333" : "#1a1a1a",
+                borderRadius: "1.5px",
+                transition: "background 0.5s",
+              }}
+            />
           </div>
-        </div>
 
-        {/* ===== DOOR FRAME BORDER (on top) ===== */}
-        <div
-          style={{
-            position: "absolute",
-            width: "min(260px, 55vw)",
-            height: "min(460px, 65vh)",
-            border: "3px solid #151515",
-            boxShadow: "inset 0 0 0 1px #111, 0 0 0 1px #111",
-            pointerEvents: "none",
-            zIndex: 4,
-          }}
-        />
-
-        {/* ===== LIGHT SPILL on floor (trapezoid via perspective) ===== */}
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(50% + min(230px, 32.5vh))",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: peeking ? "min(400px, 80vw)" : "min(180px, 40vw)",
-            height: peeking ? "min(220px, 28vh)" : "min(80px, 12vh)",
-            background: peeking
-              ? `linear-gradient(180deg,
-                  rgba(196,255,0,0.12) 0%,
-                  rgba(196,255,0,0.06) 40%,
-                  rgba(196,255,0,0.02) 70%,
-                  transparent 100%
-                )`
-              : `linear-gradient(180deg,
-                  rgba(196,255,0,0.03) 0%,
-                  rgba(196,255,0,0.01) 40%,
-                  transparent 100%
-                )`,
-            clipPath: peeking
-              ? "polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%)"
-              : "polygon(35% 0%, 65% 0%, 85% 100%, 15% 100%)",
-            transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-            zIndex: 2,
-          }}
-        >
-          {/* Tab names projected in the floor light */}
+          {/* ===== Frame ===== */}
           <div
             style={{
               position: "absolute",
               inset: 0,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "0.6rem",
-              opacity: peeking ? 1 : 0,
-              transition: "opacity 0.6s 0.3s",
-              paddingTop: "0.5rem",
+              border: "2px solid #181818",
+              pointerEvents: "none",
+              zIndex: 4,
             }}
-          >
-            {ENTRIES.map((entry, i) => (
-              <div
-                key={entry.name}
-                onClick={(e) => { e.stopPropagation(); handleEntryClick(entry.href); }}
-                onMouseEnter={() => setHoveredEntry(i)}
-                onMouseLeave={() => setHoveredEntry(null)}
-                style={{
-                  fontFamily: "'Instrument Serif', serif",
-                  fontSize: i === 0
-                    ? "clamp(0.9rem, 2vw, 1.2rem)"
-                    : i === 1
-                    ? "clamp(1.2rem, 3vw, 1.8rem)"
-                    : "clamp(1.6rem, 4vw, 2.4rem)",
-                  color: hoveredEntry === i
-                    ? "rgba(196,255,0,0.9)"
-                    : `rgba(196,255,0,${i === 0 ? 0.2 : i === 1 ? 0.3 : 0.4})`,
-                  letterSpacing: `${0.15 + i * 0.1}em`,
-                  textTransform: "uppercase",
-                  cursor: "pointer",
-                  transition: "color 0.3s, letter-spacing 0.3s",
-                  whiteSpace: "nowrap",
-                  textShadow: hoveredEntry === i
-                    ? "0 0 20px rgba(196,255,0,0.3)"
-                    : "none",
-                }}
-              >
-                {entry.name}
-              </div>
-            ))}
-          </div>
+          />
+
+          {/* Ambient glow */}
+          <div
+            style={{
+              position: "absolute",
+              inset: "-40px",
+              background: peeking
+                ? "radial-gradient(ellipse, rgba(196,255,0,0.04) 0%, transparent 60%)"
+                : "none",
+              transition: "background 0.8s",
+              zIndex: 0,
+              pointerEvents: "none",
+            }}
+          />
         </div>
 
-        {/* ===== Ambient glow behind door ===== */}
+        {/* ===== FLOOR LIGHT with projected entries ===== */}
         <div
           style={{
-            position: "absolute",
-            width: "min(300px, 60vw)",
-            height: "min(500px, 70vh)",
+            width: peeking ? "min(450px, 85vw)" : "min(160px, 35vw)",
+            height: peeking ? "min(200px, 25vh)" : "min(40px, 6vh)",
             background: peeking
-              ? "radial-gradient(ellipse, rgba(196,255,0,0.06) 0%, transparent 70%)"
-              : "radial-gradient(ellipse, rgba(196,255,0,0.02) 0%, transparent 70%)",
-            transition: "background 0.8s",
-            zIndex: 0,
-            pointerEvents: "none",
+              ? `linear-gradient(180deg,
+                  rgba(196,255,0,0.10) 0%,
+                  rgba(196,255,0,0.05) 40%,
+                  rgba(196,255,0,0.01) 80%,
+                  transparent 100%
+                )`
+              : `linear-gradient(180deg,
+                  rgba(196,255,0,0.02) 0%,
+                  transparent 100%
+                )`,
+            clipPath: peeking
+              ? "polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)"
+              : "polygon(35% 0%, 65% 0%, 80% 100%, 20% 100%)",
+            transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.4rem",
+            paddingTop: "1rem",
+            perspective: "400px",
           }}
-        />
+        >
+          {ENTRIES.map((entry, i) => (
+            <div
+              key={entry.name}
+              onClick={(e) => { e.stopPropagation(); handleEntryClick(entry.href); }}
+              onMouseEnter={() => setHoveredEntry(i)}
+              onMouseLeave={() => setHoveredEntry(null)}
+              style={{
+                fontFamily: "'Instrument Serif', serif",
+                fontSize: i === 0
+                  ? "clamp(1rem, 2.5vw, 1.4rem)"
+                  : i === 1
+                  ? "clamp(1.4rem, 3.5vw, 2rem)"
+                  : "clamp(1.8rem, 4.5vw, 2.8rem)",
+                fontWeight: 600,
+                color: hoveredEntry === i
+                  ? "rgba(196,255,0,0.95)"
+                  : `rgba(196,255,0,${0.15 + i * 0.08})`,
+                letterSpacing: "0.25em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                textShadow: hoveredEntry === i
+                  ? "0 0 30px rgba(196,255,0,0.4)"
+                  : "none",
+                whiteSpace: "nowrap",
+                transform: `perspective(400px) rotateX(50deg) scaleY(${1.3 + i * 0.15})`,
+                transformOrigin: "center top",
+                opacity: peeking ? 1 : 0,
+                transition: "color 0.3s, opacity 0.5s 0.3s",
+              }}
+            >
+              {entry.name}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
