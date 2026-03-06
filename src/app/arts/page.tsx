@@ -521,7 +521,7 @@ function ListItem({ piece, index }: { piece: (typeof PIECES)[0]; index: number }
             transition: "color 0.3s",
           }}
         >
-          {String(index + 1).padStart(2, "0")}
+          {String(PIECES.length - index).padStart(2, "0")}
         </span>
 
         <h2
@@ -703,7 +703,7 @@ function GridCard({ piece, index, size }: { piece: (typeof PIECES)[0]; index: nu
               marginBottom: "0.375rem",
             }}
           >
-            {String(index + 1).padStart(2, "0")}
+            {String(PIECES.length - index).padStart(2, "0")}
           </span>
           <h3
             style={{
