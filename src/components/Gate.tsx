@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const ENTRIES = [
   { name: "Arts", href: "/arts" },
@@ -8,19 +8,37 @@ const ENTRIES = [
   { name: "Journal", href: "/journal" },
 ];
 
+/* SVG noise filter as data URI for the static/snow effect */
+const NOISE_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
+
 export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
   const [peeking, setPeeking] = useState(false);
   const [hoveredEntry, setHoveredEntry] = useState<number | null>(null);
   const [entered, setEntered] = useState(false);
+  const noiseRef = useRef<HTMLDivElement>(null);
 
   const handleEntryClick = (href: string) => {
     setEntered(true);
     setTimeout(() => onEnter(href), 600);
   };
 
-  /* Each entry's width as % of trapezoid container — matching the trapezoid's slope at that row's Y position */
+  /* Animate noise by shifting background-position for a flickering TV static effect */
+  useEffect(() => {
+    if (peeking) return;
+    let frame: number;
+    const animate = () => {
+      if (noiseRef.current) {
+        const x = Math.random() * 256;
+        const y = Math.random() * 256;
+        noiseRef.current.style.backgroundPosition = `${x}px ${y}px`;
+      }
+      frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [peeking]);
+
   const entryWidths = ["56%", "72%", "90%"];
-  /* scaleX to stretch letters horizontally to fill that width */
   const entryScaleX = [1.3, 1.5, 1.7];
 
   return (
@@ -96,7 +114,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             height: "min(460px, 65vh)",
           }}
         >
-          {/* Light behind door — clipped to only show on the opening side */}
+          {/* Light behind door — white, only on opening side */}
           <div
             style={{
               position: "absolute",
@@ -105,10 +123,29 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               bottom: 0,
               width: peeking ? "45%" : "15%",
               background: peeking
-                ? "linear-gradient(180deg, rgba(196,255,0,0.18) 0%, rgba(196,255,0,0.10) 40%, rgba(196,255,0,0.14) 100%)"
-                : "linear-gradient(180deg, rgba(196,255,0,0.08) 0%, rgba(196,255,0,0.04) 40%, rgba(196,255,0,0.05) 100%)",
+                ? "linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.6) 40%, rgba(255,255,255,0.75) 100%)"
+                : "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 40%, rgba(255,255,255,0.08) 100%)",
               transition: "background 0.8s, width 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
               zIndex: 1,
+            }}
+          />
+
+          {/* Noise / static overlay — only visible when door is closed */}
+          <div
+            ref={noiseRef}
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: peeking ? "45%" : "15%",
+              backgroundImage: NOISE_SVG,
+              backgroundSize: "256px 256px",
+              mixBlendMode: "overlay",
+              opacity: peeking ? 0 : 0.6,
+              transition: "opacity 0.8s, width 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+              zIndex: 2,
+              pointerEvents: "none",
             }}
           />
 
@@ -147,8 +184,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   left: 0,
                   width: peeking ? "2px" : "1px",
                   background: peeking
-                    ? "rgba(196,255,0,0.25)"
-                    : "rgba(196,255,0,0.08)",
+                    ? "rgba(255,255,255,0.3)"
+                    : "rgba(255,255,255,0.1)",
                   transition: "all 0.8s",
                 }}
               />
@@ -174,7 +211,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           </div>
         </div>
 
-        {/* FLOOR PROJECTION */}
+        {/* FLOOR PROJECTION — white light */}
         <div
           style={{
             width: "min(500px, 105vw)",
@@ -188,14 +225,14 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               clipPath: "polygon(24% 0%, 76% 0%, 100% 100%, 0% 100%)",
               background: peeking
                 ? `linear-gradient(180deg,
-                    rgba(196,255,0,0.14) 0%,
-                    rgba(196,255,0,0.07) 40%,
-                    rgba(196,255,0,0.02) 80%,
+                    rgba(255,255,255,0.5) 0%,
+                    rgba(255,255,255,0.2) 40%,
+                    rgba(255,255,255,0.05) 80%,
                     transparent 100%
                   )`
                 : `linear-gradient(180deg,
-                    rgba(196,255,0,0.05) 0%,
-                    rgba(196,255,0,0.02) 50%,
+                    rgba(255,255,255,0.08) 0%,
+                    rgba(255,255,255,0.03) 50%,
                     transparent 100%
                   )`,
               transition: "background 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -224,11 +261,10 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   fontWeight: 400,
                   color: hoveredEntry === i
                     ? "rgba(196,255,0,0.95)"
-                    : `rgba(196,255,0,${0.18 + i * 0.08})`,
+                    : `rgba(30,30,30,${0.6 + i * 0.1})`,
                   letterSpacing: "0.02em",
                   cursor: "pointer",
                   whiteSpace: "nowrap",
-                  /* Stretch horizontally to fill trapezoid width at this row */
                   width: entryWidths[i],
                   textAlign: "center",
                   transform: `scaleX(${entryScaleX[i]}) perspective(400px) rotateX(50deg) scaleY(${1.3 + i * 0.12})`,
@@ -249,7 +285,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         </div>
       </div>
 
-      {/* Ambient glow */}
+      {/* Ambient glow — white */}
       <div
         style={{
           position: "absolute",
@@ -259,8 +295,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           width: "min(350px, 65vw)",
           height: "min(550px, 75vh)",
           background: peeking
-            ? "radial-gradient(ellipse, rgba(196,255,0,0.04) 0%, transparent 60%)"
-            : "radial-gradient(ellipse, rgba(196,255,0,0.015) 0%, transparent 60%)",
+            ? "radial-gradient(ellipse, rgba(255,255,255,0.06) 0%, transparent 60%)"
+            : "radial-gradient(ellipse, rgba(255,255,255,0.02) 0%, transparent 60%)",
           transition: "background 0.8s",
           zIndex: 0,
           pointerEvents: "none",
