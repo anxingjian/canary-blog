@@ -13,16 +13,24 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
   const [hoveredEntry, setHoveredEntry] = useState<number | null>(null);
   const [entered, setEntered] = useState(false);
 
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
   const handleEntryClick = (href: string) => {
     setEntered(true);
     setTimeout(() => onEnter(href), 600);
   };
 
-  const entryFontSizes = [
-    "clamp(1.6rem, 3.2vw, 2rem)",
-    "clamp(1.7rem, 3.5vw, 2.2rem)",
-    "clamp(2.2rem, 5vw, 3rem)",
-  ];
+  const entryFontSizes = isMobile
+    ? [
+        "clamp(1.8rem, 5vw, 2.2rem)",
+        "clamp(2rem, 5.5vw, 2.5rem)",
+        "clamp(2.5rem, 7vw, 3.2rem)",
+      ]
+    : [
+        "clamp(1.6rem, 3.2vw, 2rem)",
+        "clamp(1.7rem, 3.5vw, 2.2rem)",
+        "clamp(2.2rem, 5vw, 3rem)",
+      ];
 
   /* Noise overlay style — uses noise.gif via CSS pseudo-element in globals.css */
   const noiseOverlay: React.CSSProperties = {
