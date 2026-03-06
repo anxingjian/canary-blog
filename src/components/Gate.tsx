@@ -168,11 +168,11 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             position: "relative",
             overflow: "hidden",
             WebkitMaskImage: peeking
-              ? "linear-gradient(180deg, black 0%, black 80%, transparent 100%)"
-              : "linear-gradient(180deg, black 0%, black 50%, transparent 80%)",
+              ? "linear-gradient(180deg, black 0%, black 85%, transparent 100%)"
+              : "linear-gradient(180deg, black 0%, black 30%, transparent 60%)",
             maskImage: peeking
-              ? "linear-gradient(180deg, black 0%, black 80%, transparent 100%)"
-              : "linear-gradient(180deg, black 0%, black 50%, transparent 80%)",
+              ? "linear-gradient(180deg, black 0%, black 85%, transparent 100%)"
+              : "linear-gradient(180deg, black 0%, black 30%, transparent 60%)",
           }}>
             <div style={noiseOverlay} />
 
@@ -206,7 +206,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   transition: "color 0.3s, opacity 0.6s 0.5s, text-shadow 0.3s",
                   position: "relative",
                   zIndex: 1,
-                  marginTop: i === 0 ? "0" : "-0.15rem",
+                  marginTop: i === 0 ? "0" : i === 1 ? "-0.18rem" : "-0.2rem",
                 }}
               >
                 {entry.name}
