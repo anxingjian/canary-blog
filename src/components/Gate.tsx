@@ -206,7 +206,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   transition: "color 0.3s, opacity 0.6s 0.5s, text-shadow 0.3s",
                   position: "relative",
                   zIndex: 1,
-                  marginTop: i === 0 ? "0" : i === 1 ? "-0.18rem" : "-0.2rem",
+                  marginTop: i === 0 ? "0" : i === 1 ? "-0.3rem" : "-0.4rem",
                 }}
               >
                 {entry.name}

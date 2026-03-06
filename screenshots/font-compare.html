@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Abril+Fatface&family=Playfair+Display:wght@400;700&family=DM+Serif+Display&family=Bodoni+Moda:wght@400;700&family=Libre+Caslon+Display&family=Young+Serif&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0a; width: 1440px; padding: 40px 60px; }
+  .row { display: flex; align-items: flex-start; margin-bottom: 36px; border-bottom: 1px solid #1a1a1a; padding-bottom: 36px; }
+  .label { width: 240px; flex-shrink: 0; }
+  .label h3 { color: #888; font-family: 'Space Mono', monospace; font-size: 13px; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .label p { color: #444; font-family: 'Space Mono', monospace; font-size: 10px; }
+  .preview { display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
+  .preview span { color: rgba(255,255,255,0.7); letter-spacing: 0.05em; line-height: 1.1; }
+  .e0 { font-size: 1.8rem; }
+  .e1 { font-size: 2.2rem; margin-top: -2px; }
+  .e2 { font-size: 3rem; margin-top: -3px; }
+  .current .label h3 { color: var(--accent, #c4ff00); }
+</style>
+</head>
+<body>
+
+<div class="row current">
+  <div class="label"><h3>Instrument Serif (current)</h3><p>Current font</p></div>
+  <div class="preview" style="font-family:'Instrument Serif',serif;">
+    <span class="e0">Arts</span><span class="e1">Essays</span><span class="e2">Journal</span>
+  </div>
+</div>
+
+<div class="row">
+  <div class="label"><h3>Abril Fatface</h3><p>Widest · poster-grade · The Shining vibe</p></div>
+  <div class="preview" style="font-family:'Abril Fatface',serif;">
+    <span class="e0">Arts</span><span class="e1">Essays</span><span class="e2">Journal</span>
+  </div>
+</div>
+
+<div class="row">
+  <div class="label"><h3>Playfair Display</h3><p>Wide · elegant · high contrast</p></div>
+  <div class="preview" style="font-family:'Playfair Display',serif;">
+    <span class="e0">Arts</span><span class="e1">Essays</span><span class="e2">Journal</span>
+  </div>
+</div>
+
+<div class="row">
+  <div class="label"><h3>DM Serif Display</h3><p>Wide · solid · modern</p></div>
+  <div class="preview" style="font-family:'DM Serif Display',serif;">
+    <span class="e0">Arts</span><span class="e1">Essays</span><span class="e2">Journal</span>
+  </div>
+</div>
+
+<div class="row">
+  <div class="label"><h3>Bodoni Moda</h3><p>High contrast · wide · editorial</p></div>
+  <div class="preview" style="font-family:'Bodoni Moda',serif;">
+    <span class="e0">Arts</span><span class="e1">Essays</span><span class="e2">Journal</span>
+  </div>
+</div>
+
+<div class="row">
+  <div class="label"><h3>Libre Caslon Display</h3><p>Classic wide serif · character</p></div>
+  <div class="preview" style="font-family:'Libre Caslon Display',serif;">
+    <span class="e0">Arts</span><span class="e1">Essays</span><span class="e2">Journal</span>
+  </div>
+</div>
+
+<div class="row" style="border-bottom:none;">
+  <div class="label"><h3>Young Serif</h3><p>Rounded · wide · friendly</p></div>
+  <div class="preview" style="font-family:'Young Serif',serif;">
+    <span class="e0">Arts</span><span class="e1">Essays</span><span class="e2">Journal</span>
+  </div>
+</div>
+
+</body></html>
