@@ -22,9 +22,9 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
 
   const entryFontSizes = isMobile
     ? [
-        "clamp(1.8rem, 5vw, 2.2rem)",
-        "clamp(2rem, 5.5vw, 2.5rem)",
-        "clamp(2.5rem, 7vw, 3.2rem)",
+        "clamp(2rem, 6vw, 2.5rem)",
+        "clamp(2.3rem, 6.5vw, 2.8rem)",
+        "clamp(2.8rem, 8vw, 3.5rem)",
       ]
     : [
         "clamp(1.6rem, 3.2vw, 2rem)",
