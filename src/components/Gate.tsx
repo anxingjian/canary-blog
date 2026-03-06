@@ -267,8 +267,9 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   whiteSpace: "nowrap",
                   width: entryWidths[i],
                   textAlign: "center",
-                  transform: `scaleX(${entryScaleX[i]}) perspective(400px) rotateX(50deg) scaleY(${1.3 + i * 0.12})`,
-                  transformOrigin: "center top",
+                  /* Trapezoid distortion: each word narrower at top, wider at bottom */
+                  transform: `perspective(200px) rotateX(-8deg) scaleX(${entryScaleX[i]}) scaleY(${1.3 + i * 0.12})`,
+                  transformOrigin: "center bottom",
                   marginTop: i === 0 ? "0" : i === 1 ? "-0.25rem" : "-0.3rem",
                   marginBottom: "0",
                   textShadow: hoveredEntry === i
