@@ -88,8 +88,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         {/* Door frame */}
         <div style={{
           position: "relative",
-          width: "min(260px, 55vw)",
-          height: "min(460px, 65vh)",
+          width: "min(200px, 42vw)",
+          height: "min(360px, 52vh)",
         }}>
           {/* LIGHT — z1 */}
           <div style={{
@@ -138,8 +138,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
 
         {/* FLOOR PROJECTION — clip-path trapezoid, text individually transformed */}
         <div style={{
-          width: "min(500px, 105vw)",
-          height: "min(220px, 28vh)",
+          width: "min(420px, 90vw)",
+          height: "min(240px, 18vh)",
         }}>
           <div style={{
             width: "100%",
