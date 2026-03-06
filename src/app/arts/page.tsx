@@ -8,6 +8,7 @@ function Piece001() {
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
+    document.fonts.ready.then(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -33,31 +34,32 @@ function Piece001() {
       phase: number;
     }[] = [];
 
-    // Create particles that form "C" using math (no canvas/font dependency)
-    const cx = W / 2;
-    const cy = H / 2;
-    const outerR = W * 0.35;
-    const innerR = W * 0.22;
-    // C shape: arc from 0.5 to 5.78 radians (gap on the right)
-    const arcStart = 0.5;
-    const arcEnd = 5.78;
+    // Create particles that form "C" using font rendering
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = W;
+    tempCanvas.height = H;
+    const tempCtx = tempCanvas.getContext("2d")!;
+    tempCtx.fillStyle = "#fff";
+    tempCtx.font = "bold 280px 'Instrument Serif', serif";
+    tempCtx.textAlign = "center";
+    tempCtx.textBaseline = "middle";
+    tempCtx.fillText("C", W / 2, H / 2 + 10);
+    const imageData = tempCtx.getImageData(0, 0, W, H);
 
-    for (let r = innerR; r <= outerR; r += 3) {
-      const circumference = 2 * Math.PI * r;
-      const step = 3 / r; // ~3px spacing along arc
-      for (let a = arcStart; a <= arcEnd; a += step) {
-        const x = cx + Math.cos(a) * r;
-        const y = cy + Math.sin(a) * r;
-        particles.push({
-          x,
-          y,
-          vx: 0,
-          vy: 0,
-          targetX: x,
-          targetY: y,
-          size: Math.random() * 1.5 + 0.5,
-          phase: Math.random() * Math.PI * 2,
-        });
+    for (let y = 0; y < H; y += 5) {
+      for (let x = 0; x < W; x += 5) {
+        if (imageData.data[(y * W + x) * 4 + 3] > 128) {
+          particles.push({
+            x: x,
+            y: y,
+            vx: 0,
+            vy: 0,
+            targetX: x,
+            targetY: y,
+            size: Math.random() * 1.5 + 0.5,
+            phase: Math.random() * Math.PI * 2,
+          });
+        }
       }
     }
 
@@ -81,7 +83,7 @@ function Piece001() {
 
     function animate() {
       time += 0.01;
-      ctx!.fillStyle = "rgba(5, 5, 5, 0.08)";
+      ctx!.fillStyle = "rgba(5, 5, 5, 0.15)";
       ctx!.fillRect(0, 0, W, H);
 
       for (const p of particles) {
@@ -138,6 +140,7 @@ function Piece001() {
       canvas.removeEventListener("mouseenter", onEnter);
       canvas.removeEventListener("mouseleave", onLeave);
     };
+    }); // document.fonts.ready
   }, []);
 
   return (
