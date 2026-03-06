@@ -127,10 +127,12 @@ export default function Hero() {
   const title = "CANARY";
 
   return (
-    <section
+    <header
       ref={containerRef}
       style={{
-        marginBottom: "2rem",
+        maxWidth: "40rem",
+        margin: "0 auto",
+        padding: "12rem 2.5rem 5rem",
         perspective: "800px",
       }}
     >
@@ -138,15 +140,16 @@ export default function Hero() {
       <div
         ref={taglineRef}
         style={{
-          marginBottom: "1.5rem",
+          marginBottom: "2rem",
           color: "var(--accent-dim)",
-          fontSize: "0.5625rem",
-          fontFamily: "'Space Mono', monospace",
+          fontSize: "0.625rem",
+          fontFamily: "'JetBrains Mono', monospace",
           letterSpacing: "0.2em",
           textTransform: "uppercase",
+          opacity: 0.6,
         }}
       >
-        field notes · est. 2026
+        est. 2026 · field notes
       </div>
 
       {/* Main title — split into chars */}
@@ -248,6 +251,16 @@ export default function Hero() {
         关于成长、思考、和学会判断。
       </p>
 
-    </section>
+      {/* Animated divider */}
+      <div
+        ref={lineRef}
+        style={{
+          height: "1px",
+          background:
+            "linear-gradient(90deg, var(--accent-dim), var(--border), transparent)",
+          marginTop: "4rem",
+        }}
+      />
+    </header>
   );
 }
