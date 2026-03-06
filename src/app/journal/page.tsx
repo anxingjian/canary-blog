@@ -38,18 +38,21 @@ export default function JournalPage() {
             marginBottom: "6rem",
           }}
         >
-          <span
+          <a
+            href="/"
             style={{
               fontSize: "0.5625rem",
               fontFamily: "'Space Mono', monospace",
               color: "var(--text-dim)",
-              letterSpacing: "0.3em",
-              textTransform: "uppercase",
+              letterSpacing: "0.15em",
+              textDecoration: "none",
+              transition: "color 0.3s",
             }}
+            className="gate-back"
+            
           >
-            <span style={{ color: "var(--accent)", animation: "pulse 3s infinite" }}>●</span>{" "}
-            SYS.ONLINE
-          </span>
+            ← Gate
+          </a>
           <span
             style={{
               fontSize: "0.5625rem",

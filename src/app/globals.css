@@ -302,3 +302,5 @@ body::after {
     padding: 0 1.25rem 6rem !important;
   }
 }
+
+.gate-back:hover { color: var(--accent) !important; }
