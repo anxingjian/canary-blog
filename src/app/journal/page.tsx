@@ -88,7 +88,7 @@ export default function JournalPage() {
             marginBottom: "1.5rem",
           }}
         >
-          Journal
+          <a href="/" className="title-home-link" style={{ color: "inherit", textDecoration: "none" }}>Journal</a>
         </h1>
 
         <p

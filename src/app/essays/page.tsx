@@ -101,7 +101,7 @@ export default function EssaysPage() {
             marginBottom: "1.5rem",
           }}
         >
-          Essays
+          <a href="/" className="title-home-link" style={{ color: "inherit", textDecoration: "none" }}>Essays</a>
         </h1>
 
         <p

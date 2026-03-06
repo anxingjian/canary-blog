@@ -819,7 +819,7 @@ export default function ArtsPage() {
               marginBottom: "1.5rem",
             }}
           >
-            Arts
+            <a href="/" className="title-home-link" style={{ color: "inherit", textDecoration: "none" }}>Arts</a>
           </h1>
 
         <p
