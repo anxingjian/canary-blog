@@ -38,7 +38,7 @@ export default function EssaysPage() {
         style={{
           maxWidth: "72rem",
           margin: "0 auto",
-          padding: "3rem 2rem 0",
+          padding: "4rem 2rem 0",
           animation: "fadeUp 0.6s ease-out",
         }}
       >
