@@ -23,19 +23,19 @@ function useNoise() {
 
   useEffect(() => {
     const oc = document.createElement("canvas");
-    oc.width = 256;
-    oc.height = 512;
+    oc.width = 512;
+    oc.height = 1024;
     offscreen.current = oc;
 
     const draw = (time: number) => {
-      if (time - lastDraw.current > 150) {
+      if (time - lastDraw.current > 120) {
         const ctx = oc.getContext("2d");
         if (ctx) {
-          const img = ctx.createImageData(256, 512);
+          const img = ctx.createImageData(512, 1024);
           for (let i = 0; i < img.data.length; i += 4) {
             const v = Math.random() * 255;
             img.data[i] = img.data[i+1] = img.data[i+2] = v;
-            img.data[i+3] = 25;
+            img.data[i+3] = 40;
           }
           ctx.putImageData(img, 0, 0);
         }
@@ -142,7 +142,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             inset: 0,
             background: peeking
               ? "linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.6) 100%)"
-              : "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.14) 100%)",
+              : "linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0.28) 100%)",
             transition: "background 0.8s",
             zIndex: 1,
             overflow: "hidden",
@@ -199,8 +199,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   transparent 100%
                 )`
               : `linear-gradient(180deg,
-                  rgba(255,255,255,0.14) 0%,
-                  rgba(255,255,255,0.06) 50%,
+                  rgba(255,255,255,0.28) 0%,
+                  rgba(255,255,255,0.12) 50%,
                   transparent 100%
                 )`,
             transition: "background 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -217,43 +217,71 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             {/* Noise INSIDE the projection — clipped by clipPath */}
             <canvas ref={registerNoise} style={noiseStyle} />
 
-            {ENTRIES.map((entry, i) => (
-              <div
-                key={entry.name}
-                onClick={(e) => { e.stopPropagation(); handleEntryClick(entry.href); }}
-                onMouseEnter={() => setHoveredEntry(i)}
-                onMouseLeave={() => setHoveredEntry(null)}
-                style={{
-                  fontFamily: "'Instrument Serif', serif",
-                  fontSize: i === 0
-                    ? "clamp(1.2rem, 3vw, 1.6rem)"
-                    : i === 1
-                    ? "clamp(1.5rem, 3.5vw, 2.1rem)"
-                    : "clamp(1.9rem, 4.5vw, 2.7rem)",
-                  fontWeight: 400,
-                  color: hoveredEntry === i
-                    ? "rgba(196,255,0,0.95)"
-                    : `rgba(30,30,30,${0.55 + i * 0.1})`,
-                  letterSpacing: "0.02em",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  width: entryWidths[i],
-                  textAlign: "center",
-                  transform: `perspective(300px) rotateX(8deg) scaleY(${1.3 + i * 0.12})`,
-                  transformOrigin: "center top",
-                  marginTop: i === 0 ? "0" : "-0.25rem",
-                  textShadow: hoveredEntry === i
-                    ? "0 0 30px rgba(196,255,0,0.4)"
-                    : "none",
-                  opacity: peeking ? 1 : 0,
-                  transition: "color 0.3s, opacity 0.6s 0.5s, text-shadow 0.3s",
-                  position: "relative",
-                  zIndex: 1,
-                }}
-              >
-                {entry.name}
-              </div>
-            ))}
+            {ENTRIES.map((entry, i) => {
+              // Render each entry as SVG for true trapezoid distortion
+              const w = i === 0 ? 160 : i === 1 ? 210 : 280;
+              const h = i === 0 ? 32 : i === 1 ? 38 : 48;
+              const fontSize = i === 0 ? 22 : i === 1 ? 28 : 36;
+              // Trapezoid: top narrower, bottom wider — matching floor projection perspective
+              const squeeze = 0.82 - i * 0.02; // top gets narrower for upper entries
+              const x1 = (w * (1 - squeeze)) / 2;
+              const x2 = w - x1;
+
+              return (
+                <div
+                  key={entry.name}
+                  onClick={(e) => { e.stopPropagation(); handleEntryClick(entry.href); }}
+                  onMouseEnter={() => setHoveredEntry(i)}
+                  onMouseLeave={() => setHoveredEntry(null)}
+                  style={{
+                    width: entryWidths[i],
+                    textAlign: "center",
+                    cursor: "pointer",
+                    marginTop: i === 0 ? "0" : "-0.15rem",
+                    opacity: peeking ? 1 : 0,
+                    transition: "opacity 0.6s 0.5s",
+                    position: "relative",
+                    zIndex: 1,
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <svg
+                    width={w}
+                    height={h}
+                    viewBox={`0 0 ${w} ${h}`}
+                    style={{
+                      overflow: "visible",
+                      filter: hoveredEntry === i
+                        ? "drop-shadow(0 0 20px rgba(196,255,0,0.4))"
+                        : "none",
+                      transition: "filter 0.3s",
+                    }}
+                  >
+                    <defs>
+                      <clipPath id={`trap-${i}`}>
+                        <polygon points={`${x1},0 ${x2},0 ${w},${h} 0,${h}`} />
+                      </clipPath>
+                    </defs>
+                    <text
+                      x={w / 2}
+                      y={h * 0.78}
+                      textAnchor="middle"
+                      fontFamily="'Instrument Serif', serif"
+                      fontSize={fontSize}
+                      fontWeight={400}
+                      fill={hoveredEntry === i
+                        ? "rgba(196,255,0,0.95)"
+                        : `rgba(30,30,30,${0.55 + i * 0.1})`}
+                      style={{ transition: "fill 0.3s" }}
+                      clipPath={`url(#trap-${i})`}
+                    >
+                      {entry.name}
+                    </text>
+                  </svg>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
