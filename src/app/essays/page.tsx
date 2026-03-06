@@ -66,16 +66,6 @@ export default function EssaysPage() {
           >
             ← Gate
           </a>
-          <span
-            style={{
-              fontSize: "0.5625rem",
-              fontFamily: "'Space Mono', monospace",
-              color: "var(--text-dim)",
-              letterSpacing: "0.15em",
-            }}
-          >
-            [{essays.length}]
-          </span>
         </div>
 
         <h1

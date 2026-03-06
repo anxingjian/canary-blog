@@ -53,16 +53,6 @@ export default function JournalPage() {
           >
             ← Gate
           </a>
-          <span
-            style={{
-              fontSize: "0.5625rem",
-              fontFamily: "'Space Mono', monospace",
-              color: "var(--text-dim)",
-              letterSpacing: "0.15em",
-            }}
-          >
-            [{posts.length}]
-          </span>
         </div>
 
         <h1
