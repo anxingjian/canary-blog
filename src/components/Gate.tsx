@@ -175,21 +175,6 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                 }}
               />
 
-              {/* Light edge on hinge side */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  bottom: 0,
-                  left: 0,
-                  width: peeking ? "2px" : "1px",
-                  background: peeking
-                    ? "rgba(255,255,255,0.3)"
-                    : "rgba(255,255,255,0.1)",
-                  transition: "all 0.8s",
-                }}
-              />
-
               {/* CANARY */}
               <div
                 style={{
