@@ -136,7 +136,7 @@ export function getAllLetters(): Letter[] {
   if (!fs.existsSync(lettersDir)) return [];
   const files = fs.readdirSync(lettersDir).filter((f) => f.endsWith(".md"));
   const letters = files.map(parseLetter).filter(Boolean) as Letter[];
-  return letters.sort((a, b) => a.slug.localeCompare(b.slug));
+  return letters.sort((a, b) => b.slug.localeCompare(a.slug));
 }
 
 export function getLetter(slug: string): Letter | null {

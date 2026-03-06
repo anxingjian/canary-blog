@@ -146,7 +146,7 @@ export default function EssaysPage() {
                 letterSpacing: "-0.04em",
               }}
             >
-              {String(i + 1).padStart(2, "0")}
+              {String(essays.length - i).padStart(2, "0")}
             </span>
             <div>
               <h2

@@ -127,7 +127,7 @@ export default function LettersPage() {
                     minWidth: "3rem",
                   }}
                 >
-                  {String(i + 1).padStart(3, "0")}
+                  {String(letters.length - i).padStart(3, "0")}
                 </span>
                 <div style={{ flex: 1 }}>
                   <div
