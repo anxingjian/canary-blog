@@ -22,28 +22,27 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
     setTimeout(() => onEnter(href), 600);
   };
 
-  /* Shared noise — slow, fine, subtle */
   useEffect(() => {
     const oc = document.createElement("canvas");
-    oc.width = 256;
+    oc.width = 512;
     oc.height = 512;
 
     const draw = (time: number) => {
       if (time - lastDrawRef.current > 150) {
         const ctx = oc.getContext("2d");
         if (ctx) {
-          const img = ctx.createImageData(256, 512);
+          const img = ctx.createImageData(512, 512);
           for (let i = 0; i < img.data.length; i += 4) {
             const v = Math.random() * 255;
             img.data[i] = img.data[i+1] = img.data[i+2] = v;
-            img.data[i+3] = 25;
+            img.data[i+3] = 50;
           }
           ctx.putImageData(img, 0, 0);
         }
         for (const ref of [noise1Ref, noise2Ref]) {
           const c = ref.current;
           if (c) {
-            c.width = c.offsetWidth || 256;
+            c.width = c.offsetWidth || 512;
             c.height = c.offsetHeight || 512;
             const cctx = c.getContext("2d");
             if (cctx) cctx.drawImage(oc, 0, 0, c.width, c.height);
@@ -63,13 +62,13 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
     "clamp(1.8rem, 4vw, 2.5rem)",
   ];
 
-  const noiseStyle: React.CSSProperties = {
+  const noiseCanvas: React.CSSProperties = {
     position: "absolute",
     inset: 0,
     width: "100%",
     height: "100%",
     mixBlendMode: "overlay",
-    opacity: peeking ? 0 : 0.5,
+    opacity: peeking ? 0 : 0.7,
     transition: "opacity 0.8s",
     pointerEvents: "none",
   };
@@ -97,7 +96,6 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         <span style={{ color: "var(--accent)", animation: "pulse 3s infinite" }}>●</span>{" "}SYS.ONLINE
       </div>
 
-      {/* Footnote */}
       <div style={{
         position: "absolute", top: "2.5rem", right: "2.5rem",
         color: "#444", fontFamily: "'Space Mono', monospace",
@@ -140,7 +138,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             zIndex: 1,
             overflow: "hidden",
           }}>
-            <canvas ref={noise1Ref} style={noiseStyle} />
+            <canvas ref={noise1Ref} style={noiseCanvas} />
           </div>
 
           {/* DOOR — z3 */}
@@ -174,40 +172,43 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           </div>
         </div>
 
-        {/* FLOOR PROJECTION — 3D perspective container */}
+        {/* FLOOR PROJECTION — same width as door, 3D perspective */}
         <div style={{
-          width: "min(340px, 72vw)",
-          height: "min(180px, 22vh)",
-          perspective: "300px",
+          width: "min(260px, 55vw)",
+          height: "min(220px, 28vh)",
+          perspective: "350px",
         }}>
           <div style={{
             width: "100%",
             height: "100%",
-            transform: "rotateX(55deg)",
+            transform: "rotateX(42deg)",
             transformOrigin: "center top",
             background: peeking
               ? `linear-gradient(180deg,
                   rgba(255,255,255,0.6) 0%,
                   rgba(255,255,255,0.35) 40%,
-                  rgba(255,255,255,0.1) 80%,
-                  rgba(255,255,255,0.02) 100%
+                  rgba(255,255,255,0.1) 75%,
+                  transparent 100%
                 )`
               : `linear-gradient(180deg,
                   rgba(255,255,255,0.45) 0%,
-                  rgba(255,255,255,0.25) 50%,
-                  rgba(255,255,255,0.08) 100%
+                  rgba(255,255,255,0.25) 40%,
+                  rgba(255,255,255,0.08) 75%,
+                  transparent 100%
                 )`,
             transition: "background 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            padding: "1rem 0",
-            gap: "0.2rem",
+            padding: "1.2rem 0",
+            gap: "0.25rem",
             position: "relative",
             overflow: "hidden",
+            WebkitMaskImage: "linear-gradient(180deg, black 0%, black 70%, transparent 100%)",
+            maskImage: "linear-gradient(180deg, black 0%, black 70%, transparent 100%)",
           }}>
-            <canvas ref={noise2Ref} style={noiseStyle} />
+            <canvas ref={noise2Ref} style={noiseCanvas} />
 
             {ENTRIES.map((entry, i) => (
               <div
