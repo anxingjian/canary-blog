@@ -123,7 +123,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                 /* Door fills full width, hinge flush to left frame edge */
                 width: "100%",
                 transformOrigin: "left center",
-                transform: peeking ? "rotateY(25deg)" : "rotateY(6deg)",
+                transform: peeking ? "rotateY(25deg)" : "rotateY(12deg)",
                 transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
                 backfaceVisibility: "hidden",
               }}
@@ -140,15 +140,15 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                 }}
               />
 
-              {/* CANARY — Instrument Serif, not italic */}
+              {/* CANARY */}
               <div
                 style={{
                   position: "absolute",
-                  top: "38%",
+                  top: "30%",
                   left: "50%",
                   transform: "translate(-50%, -50%)",
                   fontFamily: "'Instrument Serif', serif",
-                  fontSize: "clamp(1.8rem, 4vw, 2.6rem)",
+                  fontSize: "clamp(1.3rem, 3vw, 1.8rem)",
                   fontWeight: 400,
                   color: peeking ? "#222" : "#555",
                   letterSpacing: "-0.02em",
@@ -162,10 +162,10 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           </div>
         </div>
 
-        {/* FLOOR PROJECTION — top = door width, bottom = much wider (like The Shining poster) */}
+        {/* FLOOR PROJECTION — container is 2.2x door width, clip-path makes trapezoid */}
         <div
           style={{
-            width: "min(260px, 55vw)",
+            width: "min(572px, 121vw)",
             height: "min(180px, 22vh)",
             position: "relative",
           }}
@@ -177,8 +177,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               left: 0,
               right: 0,
               height: "100%",
-              /* Top matches door width (0% and 100%), bottom extends much wider (-60% and 160%) */
-              clipPath: "polygon(0% 0%, 100% 0%, 160% 100%, -60% 100%)",
+              /* Top narrow (centered to door width), bottom fills full container width */
+              clipPath: "polygon(27% 0%, 73% 0%, 100% 100%, 0% 100%)",
               background: peeking
                 ? `linear-gradient(180deg,
                     rgba(196,255,0,0.18) 0%,
