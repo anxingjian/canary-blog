@@ -18,9 +18,6 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
     setTimeout(() => onEnter(href), 600);
   };
 
-  const doorW = "min(260px, 55vw)";
-  const doorH = "min(460px, 65vh)";
-
   return (
     <div
       style={{
@@ -52,7 +49,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         SYS.ONLINE
       </div>
 
-      {/* Fixed-position container — door + floor, won't shift on hover */}
+      {/* Hover zone */}
       <div
         onMouseEnter={() => setPeeking(true)}
         onMouseLeave={() => { setPeeking(false); setHoveredEntry(null); }}
@@ -62,101 +59,100 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           left: "50%",
           top: "50%",
           transform: "translate(-50%, -45%)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
           cursor: "pointer",
           zIndex: 5,
         }}
       >
-        {/* Door frame area — fixed size, no reflow */}
+        {/* Door frame area */}
         <div
           style={{
             position: "relative",
-            width: doorW,
-            height: doorH,
+            width: "min(260px, 55vw)",
+            height: "min(460px, 65vh)",
           }}
         >
-          {/* Light behind door — brighter default */}
+          {/* Light behind door */}
           <div
             style={{
               position: "absolute",
               inset: 0,
               background: peeking
                 ? "linear-gradient(180deg, rgba(196,255,0,0.14) 0%, rgba(196,255,0,0.08) 40%, rgba(196,255,0,0.16) 100%)"
-                : "linear-gradient(180deg, rgba(196,255,0,0.05) 0%, rgba(196,255,0,0.03) 40%, rgba(196,255,0,0.06) 100%)",
+                : "linear-gradient(180deg, rgba(196,255,0,0.06) 0%, rgba(196,255,0,0.03) 40%, rgba(196,255,0,0.07) 100%)",
               transition: "background 0.8s",
               zIndex: 1,
             }}
           />
 
-          {/* DOOR — opens inward, 8deg default → 30deg hover */}
+          {/* DOOR — perspective wrapper to prevent lateral shift */}
           <div
             style={{
               position: "absolute",
               inset: 0,
-              transformOrigin: "left center",
-              transform: peeking
-                ? "perspective(800px) rotateY(30deg)"
-                : "perspective(800px) rotateY(8deg)",
-              transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+              perspective: "800px",
               zIndex: 3,
             }}
           >
-            {/* Door surface */}
             <div
               style={{
                 position: "absolute",
                 inset: 0,
-                background: peeking
-                  ? "linear-gradient(90deg, #1a1a1a 0%, #141414 40%, #0e0e0e 100%)"
-                  : "linear-gradient(90deg, #0f0f0f 0%, #0d0d0d 50%, #0b0b0b 100%)",
-                transition: "background 0.8s",
-              }}
-            />
-
-            {/* Light edge on hinge side */}
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                left: 0,
-                width: peeking ? "2px" : "1px",
-                background: peeking
-                  ? "rgba(196,255,0,0.2)"
-                  : "rgba(196,255,0,0.08)",
-                transition: "all 0.8s",
-              }}
-            />
-
-            {/* CANARY nameplate — Instrument Serif, brighter */}
-            <div
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                fontFamily: "'Instrument Serif', serif",
-                fontSize: "clamp(0.8rem, 1.8vw, 1.1rem)",
-                fontWeight: 400,
-                color: peeking ? "#444" : "#333",
-                letterSpacing: "0.02em",
-                whiteSpace: "nowrap",
-                transition: "color 0.8s",
+                transformOrigin: "left center",
+                transform: peeking ? "rotateY(25deg)" : "rotateY(6deg)",
+                transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+                backfaceVisibility: "hidden",
               }}
             >
-              Canary
+              {/* Door surface — very dark */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: peeking
+                    ? "linear-gradient(90deg, #0c0c0c 0%, #0a0a0a 50%, #080808 100%)"
+                    : "#080808",
+                  transition: "background 0.8s",
+                }}
+              />
+
+              {/* Light edge on hinge side */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  width: peeking ? "2px" : "1px",
+                  background: peeking
+                    ? "rgba(196,255,0,0.2)"
+                    : "rgba(196,255,0,0.06)",
+                  transition: "all 0.8s",
+                }}
+              />
+
+              {/* CANARY nameplate — bigger, brighter */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  fontFamily: "'Instrument Serif', serif",
+                  fontSize: "clamp(1.2rem, 2.5vw, 1.6rem)",
+                  fontWeight: 400,
+                  color: peeking ? "#555" : "#444",
+                  letterSpacing: "0.02em",
+                  whiteSpace: "nowrap",
+                  transition: "color 0.8s",
+                }}
+              >
+                Canary
+              </div>
             </div>
           </div>
-
-          {/* Frame */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              border: "2px solid #181818",
-              pointerEvents: "none",
-              zIndex: 4,
-            }}
-          />
 
           {/* Ambient glow */}
           <div
@@ -173,12 +169,11 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           />
         </div>
 
-        {/* FLOOR LIGHT with projected entries */}
+        {/* FLOOR PROJECTION — same size/position always, only brightness changes */}
         <div
           style={{
-            width: peeking ? "min(450px, 85vw)" : "min(220px, 45vw)",
-            height: peeking ? "min(200px, 25vh)" : "min(70px, 10vh)",
-            margin: "0 auto",
+            width: "min(400px, 80vw)",
+            height: "min(180px, 22vh)",
             background: peeking
               ? `linear-gradient(180deg,
                   rgba(196,255,0,0.14) 0%,
@@ -187,14 +182,12 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   transparent 100%
                 )`
               : `linear-gradient(180deg,
-                  rgba(196,255,0,0.05) 0%,
+                  rgba(196,255,0,0.04) 0%,
                   rgba(196,255,0,0.02) 50%,
                   transparent 100%
                 )`,
-            clipPath: peeking
-              ? "polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)"
-              : "polygon(30% 0%, 70% 0%, 85% 100%, 15% 100%)",
-            transition: "all 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+            clipPath: "polygon(22% 0%, 78% 0%, 100% 100%, 0% 100%)",
+            transition: "background 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
