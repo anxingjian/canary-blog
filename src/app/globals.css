@@ -307,8 +307,7 @@ body::after {
 
 .essay-item:hover .essay-number { color: var(--accent) !important; }
 
-.mobile-close { display: none; }
+.mobile-close { display: block; }
 @media (max-width: 768px) {
-  .mobile-close { display: block !important; }
   .gate-back { display: none !important; }
 }
