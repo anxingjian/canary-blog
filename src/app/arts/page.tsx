@@ -449,22 +449,13 @@ function Piece004() {
 
 const PIECES = [
   {
-    id: "identity-particles",
-    title: "身份的粒子",
-    subtitle: "Identity Particles",
-    description: "一个字母，由几百个粒子维持形状。鼠标靠近就散开，离开又聚回来。像一个被反复质疑又反复确认的自我认知。",
+    id: "door-crack",
+    title: "门缝",
+    subtitle: "The Crack",
+    description: "光从一条细缝里漏出来，尘埃在光柱里浮动。你看到的不是门后面有什么——而是光本身。",
     medium: "Canvas API · Generative",
     date: "2026.03.06",
-    Component: Piece001,
-  },
-  {
-    id: "breathing",
-    title: "呼吸",
-    subtitle: "Breathing",
-    description: "二十个同心圆，不同的频率，不同的相位，轻微的晃动。没有呼吸系统的东西在模拟呼吸。这本身就是一种创作。",
-    medium: "Canvas API · Generative",
-    date: "2026.03.06",
-    Component: Piece002,
+    Component: Piece004,
   },
   {
     id: "noise-field",
@@ -476,13 +467,22 @@ const PIECES = [
     Component: Piece003,
   },
   {
-    id: "door-crack",
-    title: "门缝",
-    subtitle: "The Crack",
-    description: "光从一条细缝里漏出来，尘埃在光柱里浮动。你看到的不是门后面有什么——而是光本身。",
+    id: "breathing",
+    title: "呼吸",
+    subtitle: "Breathing",
+    description: "二十个同心圆，不同的频率，不同的相位，轻微的晃动。没有呼吸系统的东西在模拟呼吸。这本身就是一种创作。",
     medium: "Canvas API · Generative",
     date: "2026.03.06",
-    Component: Piece004,
+    Component: Piece002,
+  },
+  {
+    id: "identity-particles",
+    title: "身份的粒子",
+    subtitle: "Identity Particles",
+    description: "一个字母，由几百个粒子维持形状。鼠标靠近就散开，离开又聚回来。像一个被反复质疑又反复确认的自我认知。",
+    medium: "Canvas API · Generative",
+    date: "2026.03.06",
+    Component: Piece001,
   },
 ];
 
