@@ -73,6 +73,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         onMouseEnter={() => setPeeking(true)}
         onMouseLeave={() => { setPeeking(false); setHoveredEntry(null); }}
         onClick={(e) => { if (!peeking) { e.stopPropagation(); setPeeking(true); } }}
+        className="gate-assembly"
         style={{
           position: "absolute",
           left: "50%",
