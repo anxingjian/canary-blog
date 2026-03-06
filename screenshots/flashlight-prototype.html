@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashlight Prototype — Canary's Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    background: #0a0a0a;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    cursor: none;
+    font-family: 'DM Serif Display', serif;
+    user-select: none;
+  }
+
+  .scene {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* The spotlight mask — radial gradient that follows cursor */
+  .spotlight {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    background: radial-gradient(
+      circle 120px at var(--mx, 50%) var(--my, 50%),
+      transparent 0%,
+      transparent 60%,
+      rgba(0,0,0,0.97) 100%
+    );
+    transition: background 0.05s ease;
+  }
+
+  /* Subtle ambient noise */
+  .noise {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 11;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Tab items scattered on the page */
+  .tab-item {
+    position: absolute;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
+    letter-spacing: 0.08em;
+    text-transform: lowercase;
+    cursor: none;
+    pointer-events: auto;
+    padding: 1rem 1.5rem;
+    transition: color 0.3s, text-shadow 0.3s;
+    text-decoration: none;
+  }
+
+  .tab-item:hover {
+    color: rgba(255, 255, 255, 1);
+    text-shadow: 0 0 30px rgba(255,255,255,0.3);
+  }
+
+  .tab-item .subtitle {
+    display: block;
+    font-family: 'Instrument Serif', serif;
+    font-size: 0.55em;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.4);
+    margin-top: 0.3em;
+  }
+
+  /* Positions — scattered but intentional */
+  .tab-journal { top: 28%; left: 15%; }
+  .tab-essays { top: 55%; left: 55%; }
+  .tab-arts { top: 38%; right: 18%; }
+
+  /* Canary nameplate — very faint, center bottom */
+  .nameplate {
+    position: absolute;
+    bottom: 8%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+    letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.15);
+    text-transform: uppercase;
+  }
+
+  /* Custom cursor — small flashlight dot */
+  .cursor-dot {
+    position: fixed;
+    width: 6px;
+    height: 6px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 20;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px rgba(255,255,255,0.4);
+  }
+
+  /* Warm light tint in the spotlight area */
+  .warm-glow {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 5;
+    background: radial-gradient(
+      circle 100px at var(--mx, 50%) var(--my, 50%),
+      rgba(255, 240, 210, 0.06) 0%,
+      transparent 100%
+    );
+  }
+
+  /* Mobile touch hint */
+  .hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Instrument Serif', serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.2);
+    animation: fadeHint 3s ease 1s forwards;
+  }
+
+  @keyframes fadeHint {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* Mobile adjustments */
+  @media (max-width: 768px) {
+    .tab-journal { top: 25%; left: 10%; }
+    .tab-essays { top: 55%; left: 40%; }
+    .tab-arts { top: 40%; right: 10%; }
+    
+    .spotlight {
+      background: radial-gradient(
+        circle 80px at var(--mx, 50%) var(--my, 50%),
+        transparent 0%,
+        transparent 60%,
+        rgba(0,0,0,0.97) 100%
+      );
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="scene">
+  <div class="warm-glow"></div>
+  <div class="spotlight"></div>
+  <div class="noise"></div>
+  <div class="cursor-dot"></div>
+
+  <a class="tab-item tab-journal" href="#">
+    Journal
+    <span class="subtitle">daily notes</span>
+  </a>
+  
+  <a class="tab-item tab-essays" href="#">
+    Essays
+    <span class="subtitle">long thoughts</span>
+  </a>
+  
+  <a class="tab-item tab-arts" href="#">
+    Arts
+    <span class="subtitle">generative pieces</span>
+  </a>
+
+  <div class="nameplate">Canary's Journal</div>
+  
+  <div class="hint">move to explore</div>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const dot = document.querySelector('.cursor-dot');
+  
+  function updatePosition(x, y) {
+    root.style.setProperty('--mx', x + 'px');
+    root.style.setProperty('--my', y + 'px');
+    dot.style.left = x + 'px';
+    dot.style.top = y + 'px';
+  }
+
+  // Desktop: mouse
+  document.addEventListener('mousemove', (e) => {
+    updatePosition(e.clientX, e.clientY);
+  });
+
+  // Mobile: touch
+  document.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    updatePosition(touch.clientX, touch.clientY);
+  }, { passive: false });
+
+  document.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    updatePosition(touch.clientX, touch.clientY);
+  });
+
+  // Hide hint on first interaction
+  let hintHidden = false;
+  function hideHint() {
+    if (!hintHidden) {
+      hintHidden = true;
+      const hint = document.querySelector('.hint');
+      if (hint) hint.style.opacity = '0';
+    }
+  }
+  document.addEventListener('mousemove', hideHint, { once: true });
+  document.addEventListener('touchstart', hideHint, { once: true });
+
+  // Initialize cursor off-screen
+  updatePosition(-100, -100);
+</script>
+
+</body>
+</html>

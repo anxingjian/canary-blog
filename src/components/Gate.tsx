@@ -151,7 +151,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         {/* FLOOR PROJECTION — clip-path trapezoid, text individually transformed */}
         <div style={{
           width: "min(200px, 42vw)",
-          height: "min(240px, 20vh)",
+          height: "min(240px, 28vh)",
           marginTop: "0px",
           overflow: "visible",
         }}>
@@ -221,7 +221,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   transition: "color 0.3s, opacity 0.6s 0.5s, text-shadow 0.3s",
                   position: "relative",
                   zIndex: 1,
-                  marginTop: i === 0 ? "0" : i === 1 ? "-1rem" : "-1.3rem",
+                  marginTop: i === 0 ? "0" : i === 1 ? "clamp(-1.2rem, -1.5vw, -0.6rem)" : "clamp(-1.5rem, -2vw, -0.8rem)",
                 }}
               >
                 {entry.name}
