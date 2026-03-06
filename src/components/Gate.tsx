@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 
 const ENTRIES = [
   { name: "Journal", href: "/" },
@@ -29,6 +29,9 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         opacity: entered ? 0 : 1,
         transition: "opacity 0.6s ease-out",
         pointerEvents: entered ? "none" : "auto",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
       {/* SYS indicator */}
@@ -44,154 +47,203 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           zIndex: 20,
         }}
       >
-        <span
-          style={{
-            color: "var(--accent)",
-            animation: "pulse 3s infinite",
-          }}
-        >
-          ●
-        </span>{" "}
+        <span style={{ color: "var(--accent)", animation: "pulse 3s infinite" }}>●</span>{" "}
         SYS.ONLINE
       </div>
 
-      {/* Left door */}
+      {/* Door frame — centered, not full width */}
       <div
         style={{
-          position: "absolute",
-          top: 0,
-          bottom: 0,
-          left: 0,
-          width: "50%",
-          background: "linear-gradient(90deg, #060606 0%, #0a0a0a 80%, #0e0e0e 100%)",
-          borderRight: "1px solid #151515",
-          transform: peeking ? "translateX(-16px)" : "translateX(0)",
-          transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-          zIndex: 3,
+          position: "relative",
+          width: "280px",
+          height: "520px",
         }}
       >
-        {/* Door handle */}
+        {/* Door frame border */}
         <div
           style={{
             position: "absolute",
-            right: "36px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: "2px",
-            height: "36px",
-            background: peeking ? "#2a2a2a" : "#1a1a1a",
-            borderRadius: "1px",
-            transition: "background 0.5s",
+            inset: "-4px",
+            border: "1px solid #1a1a1a",
+            borderRadius: "2px",
+            pointerEvents: "none",
+            zIndex: 1,
           }}
         />
-      </div>
 
-      {/* Right door */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          bottom: 0,
-          right: 0,
-          width: "50%",
-          background: "linear-gradient(-90deg, #060606 0%, #0a0a0a 80%, #0e0e0e 100%)",
-          borderLeft: "1px solid #151515",
-          transform: peeking ? "translateX(16px)" : "translateX(0)",
-          transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-          zIndex: 3,
-        }}
-      />
+        {/* Door frame top accent */}
+        <div
+          style={{
+            position: "absolute",
+            top: "-4px",
+            left: "20%",
+            right: "20%",
+            height: "1px",
+            background: "rgba(196,255,0,0.15)",
+            zIndex: 2,
+          }}
+        />
 
-      {/* Crack glow */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          bottom: 0,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: peeking ? "36px" : "3px",
-          background: `linear-gradient(180deg,
-            transparent 5%,
-            rgba(196,255,0,0.03) 15%,
-            rgba(196,255,0,0.08) 35%,
-            rgba(196,255,0,0.14) 50%,
-            rgba(196,255,0,0.08) 65%,
-            rgba(196,255,0,0.03) 85%,
-            transparent 95%
-          )`,
-          transition: "width 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-          zIndex: 2,
-        }}
-      />
-
-      {/* Floor light */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: peeking ? "500px" : "100px",
-          height: peeking ? "150px" : "80px",
-          background: "radial-gradient(ellipse at center top, rgba(196,255,0,0.03) 0%, transparent 70%)",
-          transition: "width 0.8s, height 0.8s",
-          zIndex: 1,
-        }}
-      />
-
-      {/* Entries - perspective text */}
-      <div
-        style={{
-          position: "absolute",
-          left: "calc(50% + 40px)",
-          top: "50%",
-          transform: "translateY(-50%)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "2.2rem",
-          zIndex: 5,
-          opacity: peeking ? 1 : 0,
-          transition: "opacity 0.6s 0.2s",
-        }}
-      >
-        {ENTRIES.map((entry, i) => (
+        {/* Left door panel */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: 0,
+            width: "50%",
+            background: "linear-gradient(90deg, #0a0a0a 0%, #0f0f0f 60%, #121212 100%)",
+            borderRight: "1px solid #1a1a1a",
+            transform: peeking ? "translateX(-14px)" : "translateX(0)",
+            transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+            zIndex: 4,
+          }}
+        >
+          {/* Panel inset detail */}
           <div
-            key={entry.name}
-            onClick={() => handleEntryClick(entry.href)}
-            onMouseEnter={() => setHoveredEntry(i)}
-            onMouseLeave={() => setHoveredEntry(null)}
             style={{
-              fontFamily: "'Instrument Serif', serif",
-              fontSize: "2.8rem",
-              color: hoveredEntry === i ? "var(--accent)" : "#333",
-              letterSpacing: "0.02em",
-              cursor: "pointer",
-              transition: "color 0.3s",
-              whiteSpace: "nowrap",
-              transform: "perspective(300px) rotateY(-35deg)",
-              transformOrigin: "left center",
+              position: "absolute",
+              top: "15%",
+              bottom: "15%",
+              left: "20%",
+              right: "12%",
+              border: "1px solid #1a1a1a",
+              borderRadius: "1px",
+            }}
+          />
+          {/* Door handle */}
+          <div
+            style={{
+              position: "absolute",
+              right: "14px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: "3px",
+              height: "28px",
+              background: peeking ? "#333" : "#222",
+              borderRadius: "1.5px",
+              transition: "background 0.5s",
+            }}
+          />
+        </div>
+
+        {/* Right door panel */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            right: 0,
+            width: "50%",
+            background: "linear-gradient(-90deg, #0a0a0a 0%, #0f0f0f 60%, #121212 100%)",
+            borderLeft: "1px solid #1a1a1a",
+            transform: peeking ? "translateX(14px)" : "translateX(0)",
+            transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+            zIndex: 4,
+          }}
+        >
+          {/* Panel inset detail */}
+          <div
+            style={{
+              position: "absolute",
+              top: "15%",
+              bottom: "15%",
+              right: "20%",
+              left: "12%",
+              border: "1px solid #1a1a1a",
+              borderRadius: "1px",
+            }}
+          />
+        </div>
+
+        {/* Crack glow between doors */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: peeking ? "32px" : "2px",
+            background: `linear-gradient(180deg,
+              transparent 5%,
+              rgba(196,255,0,0.04) 15%,
+              rgba(196,255,0,0.1) 35%,
+              rgba(196,255,0,0.16) 50%,
+              rgba(196,255,0,0.1) 65%,
+              rgba(196,255,0,0.04) 85%,
+              transparent 95%
+            )`,
+            transition: "width 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+            zIndex: 3,
+          }}
+        />
+
+        {/* Floor light spill */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "-40px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: peeking ? "300px" : "60px",
+            height: peeking ? "80px" : "30px",
+            background: "radial-gradient(ellipse at center top, rgba(196,255,0,0.04) 0%, transparent 70%)",
+            transition: "all 0.8s",
+            zIndex: 0,
+          }}
+        />
+
+        {/* Hover zone — over the door area */}
+        <div
+          onMouseEnter={() => setPeeking(true)}
+          onMouseLeave={() => { setPeeking(false); setHoveredEntry(null); }}
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 10,
+            cursor: "pointer",
+          }}
+        >
+          {/* Entries — inside the hover zone so they stay visible */}
+          <div
+            style={{
+              position: "absolute",
+              left: "calc(50% + 24px)",
+              top: "50%",
+              transform: "translateY(-50%)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "2rem",
+              opacity: peeking ? 1 : 0,
+              transition: "opacity 0.5s 0.25s",
+              zIndex: 15,
             }}
           >
-            {entry.name}
+            {ENTRIES.map((entry, i) => (
+              <div
+                key={entry.name}
+                onClick={(e) => { e.stopPropagation(); handleEntryClick(entry.href); }}
+                onMouseEnter={() => setHoveredEntry(i)}
+                onMouseLeave={() => setHoveredEntry(null)}
+                style={{
+                  fontFamily: "'Instrument Serif', serif",
+                  fontSize: "2.4rem",
+                  color: hoveredEntry === i ? "var(--accent)" : "#2a2a2a",
+                  letterSpacing: "0.02em",
+                  cursor: "pointer",
+                  transition: "color 0.3s",
+                  whiteSpace: "nowrap",
+                  transform: "perspective(300px) rotateY(-35deg)",
+                  transformOrigin: "left center",
+                }}
+              >
+                {entry.name}
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
-
-      {/* Hover zone */}
-      <div
-        onMouseEnter={() => setPeeking(true)}
-        onMouseLeave={() => setPeeking(false)}
-        style={{
-          position: "absolute",
-          top: 0,
-          bottom: 0,
-          left: "30%",
-          right: "30%",
-          zIndex: 10,
-          cursor: "pointer",
-        }}
-      />
     </div>
   );
 }
