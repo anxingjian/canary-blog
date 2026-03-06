@@ -136,17 +136,15 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           </div>
         </div>
 
-        {/* FLOOR PROJECTION — same width as door, 3D perspective */}
+        {/* FLOOR PROJECTION — clip-path trapezoid, text individually transformed */}
         <div style={{
-          width: "min(260px, 55vw)",
+          width: "min(500px, 105vw)",
           height: "min(220px, 28vh)",
-          perspective: "350px",
         }}>
           <div style={{
             width: "100%",
             height: "100%",
-            transform: "rotateX(42deg)",
-            transformOrigin: "center top",
+            clipPath: "polygon(24% 0%, 76% 0%, 100% 100%, 0% 100%)",
             background: peeking
               ? `linear-gradient(180deg,
                   rgba(255,255,255,0.6) 0%,
@@ -195,6 +193,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                   textAlign: "center",
+                  transform: `perspective(300px) rotateX(8deg)`,
+                  transformOrigin: "center top",
                   textShadow: hoveredEntry === i
                     ? "0 0 30px rgba(196,255,0,0.4)"
                     : "none",
@@ -202,6 +202,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   transition: "color 0.3s, opacity 0.6s 0.5s, text-shadow 0.3s",
                   position: "relative",
                   zIndex: 1,
+                  marginTop: i === 0 ? "0" : "-0.15rem",
                 }}
               >
                 {entry.name}
