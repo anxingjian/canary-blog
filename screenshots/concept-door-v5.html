@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #020202; width: 1440px; height: 900px; overflow: hidden; font-family: 'Space Mono', monospace; display: flex; align-items: center; justify-content: center; }
+
+  .scene { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+
+  .sys { position: absolute; top: 2.5rem; left: 2.5rem; color: #1a1a1a; font-size: 0.5rem; letter-spacing: 0.3em; z-index: 20; }
+  .sys .dot { color: #c4ff00; }
+
+  /* Door frame glow behind */
+  .frame-glow {
+    position: absolute;
+    width: 260px; height: 460px;
+    background: linear-gradient(180deg, rgba(196,255,0,0.12) 0%, rgba(196,255,0,0.08) 50%, rgba(196,255,0,0.15) 100%);
+    z-index: 1;
+  }
+
+  /* Door panel */
+  .door {
+    position: absolute;
+    width: 260px; height: 460px;
+    transform-origin: left center;
+    transform: perspective(800px) rotateY(-38deg);
+    z-index: 3;
+  }
+  .door-surface {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, #111 0%, #0d0d0d 40%, #0a0a0a 100%);
+    border-right: 1px solid #1a1a1a;
+  }
+  .panel-top {
+    position: absolute; top: 8%; left: 15%; right: 10%; height: 30%;
+    border: 1px solid #1a1a1a; background: linear-gradient(180deg, #0c0c0c 0%, #0e0e0e 100%);
+  }
+  .panel-bottom {
+    position: absolute; top: 45%; left: 15%; right: 10%; height: 42%;
+    border: 1px solid #1a1a1a; background: linear-gradient(180deg, #0c0c0c 0%, #0e0e0e 100%);
+  }
+  .handle {
+    position: absolute; right: 12%; top: 48%; width: 4px; height: 24px;
+    background: #222; border-radius: 2px;
+  }
+  .handle-plate {
+    position: absolute; right: 10%; top: 46%; width: 10px; height: 40px;
+    border: 1px solid #1a1a1a; border-radius: 2px;
+  }
+
+  /* Frame border */
+  .frame-border {
+    position: absolute;
+    width: 260px; height: 460px;
+    border: 3px solid #151515;
+    box-shadow: inset 0 0 0 1px #111, 0 0 0 1px #111;
+    z-index: 4; pointer-events: none;
+  }
+
+  /* Floor light trapezoid */
+  .floor-light {
+    position: absolute;
+    top: calc(50% + 230px);
+    left: 50%; transform: translateX(-50%);
+    width: 400px; height: 220px;
+    background: linear-gradient(180deg,
+      rgba(196,255,0,0.12) 0%, rgba(196,255,0,0.06) 40%,
+      rgba(196,255,0,0.02) 70%, transparent 100%);
+    clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
+    z-index: 2;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 0.6rem; padding-top: 0.5rem;
+  }
+  .floor-light .entry {
+    font-family: 'Instrument Serif', serif;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .entry-arts { font-size: 1.2rem; color: rgba(196,255,0,0.2); letter-spacing: 0.15em; }
+  .entry-essays { font-size: 1.8rem; color: rgba(196,255,0,0.3); letter-spacing: 0.25em; }
+  .entry-journal { font-size: 2.4rem; color: rgba(196,255,0,0.4); letter-spacing: 0.35em; }
+
+  .ambient {
+    position: absolute;
+    width: 300px; height: 500px;
+    background: radial-gradient(ellipse, rgba(196,255,0,0.06) 0%, transparent 70%);
+    z-index: 0; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+  <div class="scene">
+    <div class="sys"><span class="dot">●</span> SYS.ONLINE</div>
+    <div class="ambient"></div>
+    <div class="frame-glow"></div>
+    <div class="door">
+      <div class="door-surface">
+        <div class="panel-top"></div>
+        <div class="panel-bottom"></div>
+        <div class="handle"></div>
+        <div class="handle-plate"></div>
+      </div>
+    </div>
+    <div class="frame-border"></div>
+    <div class="floor-light">
+      <div class="entry entry-arts">Arts</div>
+      <div class="entry entry-essays">Essays</div>
+      <div class="entry entry-journal">Journal</div>
+    </div>
+  </div>
+</body></html>
