@@ -162,13 +162,11 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "flex-start",
             padding: "0",
             gap: "0",
             position: "relative",
             overflow: "hidden",
-            justifyContent: "flex-start",
-            paddingTop: "0",
             WebkitMaskImage: peeking
               ? "linear-gradient(180deg, black 0%, black 85%, transparent 100%)"
               : "linear-gradient(180deg, black 0%, black 20%, transparent 36%)",
