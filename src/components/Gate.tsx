@@ -121,7 +121,10 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             <div
               style={{
                 position: "absolute",
-                inset: 0,
+                top: 0,
+                bottom: 0,
+                left: "-4px",
+                width: "calc(100% + 4px)",
                 transformOrigin: "left center",
                 transform: peeking ? "rotateY(25deg)" : "rotateY(12deg)",
                 transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -236,7 +239,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   textAlign: "center",
                   transform: `scaleX(${entryScaleX[i]}) perspective(400px) rotateX(50deg) scaleY(${1.3 + i * 0.12})`,
                   transformOrigin: "center top",
-                  marginTop: i === 0 ? "0" : i === 1 ? "-0.1rem" : "-0.15rem",
+                  marginTop: i === 0 ? "0" : i === 1 ? "-0.25rem" : "-0.3rem",
                   marginBottom: "0",
                   textShadow: hoveredEntry === i
                     ? "0 0 30px rgba(196,255,0,0.4)"
