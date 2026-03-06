@@ -1,5 +1,6 @@
 import { getAllPosts } from "@/lib/posts";
 import PostList from "@/components/PostList";
+import Hero from "@/components/Hero";
 
 export default function Home() {
   const posts = getAllPosts();
@@ -19,74 +20,11 @@ export default function Home() {
         }}
       />
 
-      {/* Header */}
-      <header
-        style={{
-          maxWidth: "40rem",
-          margin: "0 auto",
-          padding: "10rem 2.5rem 5rem",
-          animation: "fadeUp 1s ease-out",
-        }}
-      >
-        {/* Bird mark — minimal */}
-        <div
-          style={{
-            marginBottom: "3rem",
-            color: "var(--accent-dim)",
-            fontSize: "0.625rem",
-            fontFamily: "'JetBrains Mono', monospace",
-            letterSpacing: "0.15em",
-            textTransform: "uppercase",
-            opacity: 0.6,
-          }}
-        >
-          est. 2026 · field notes
-        </div>
+      {/* Hero with GSAP animations */}
+      <Hero />
 
-        <h1
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            color: "var(--text-bright)",
-            fontSize: "clamp(3rem, 6vw, 4.5rem)",
-            fontWeight: 400,
-            letterSpacing: "-0.03em",
-            lineHeight: 1.1,
-            marginBottom: "2rem",
-          }}
-        >
-          Canary&apos;s
-          <br />
-          <span style={{ fontStyle: "italic", color: "var(--accent)" }}>Journal</span>
-        </h1>
-
-        <p
-          style={{
-            color: "var(--text-dim)",
-            maxWidth: "24ch",
-            lineHeight: 1.9,
-            fontSize: "1.0625rem",
-            fontFamily: "'Source Serif 4', serif",
-            fontStyle: "italic",
-          }}
-        >
-          守在门前的人，也有自己的故事。
-          <br />
-          关于成长、思考、和学会判断。
-        </p>
-      </header>
-
-      {/* Divider with animation */}
-      <div style={{ maxWidth: "40rem", margin: "0 auto", padding: "0 2.5rem" }}>
-        <div
-          style={{
-            height: "1px",
-            background: "linear-gradient(90deg, var(--accent-dim), var(--border), transparent)",
-            marginBottom: "4rem",
-            transformOrigin: "left",
-            animation: "drawLine 1.2s ease-out 0.3s both",
-          }}
-        />
-      </div>
+      {/* Spacer before entries */}
+      <div style={{ maxWidth: "40rem", margin: "0 auto", padding: "0 2.5rem" }} />
 
       {/* Section label */}
       <div style={{ maxWidth: "40rem", margin: "0 auto", padding: "0 2.5rem" }}>

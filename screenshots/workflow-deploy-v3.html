@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.canvas {
+  width: 1080px;
+  height: 1440px;
+  background: #0d0d0d;
+  position: relative;
+  padding: 80px 72px;
+  overflow: hidden;
+  font-family: 'Noto Sans SC', -apple-system, sans-serif;
+}
+.canvas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 72px;
+  position: relative;
+}
+.header h1 {
+  font-size: 52px;
+  color: #c8a84e;
+  letter-spacing: 4px;
+  font-weight: 500;
+}
+.header .sub {
+  font-size: 22px;
+  color: rgba(255,255,255,0.2);
+  margin-top: 16px;
+  letter-spacing: 6px;
+  font-weight: 300;
+}
+
+/* Step item */
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+  margin-bottom: 20px;
+  position: relative;
+}
+.step .bar {
+  width: 5px;
+  min-height: 100%;
+  border-radius: 3px;
+  flex-shrink: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+}
+.step .bar.gold { background: rgba(200,168,78,0.6); }
+.step .bar.dim { background: rgba(200,168,78,0.2); }
+.step .content {
+  padding-left: 32px;
+}
+.step .num {
+  font-size: 18px;
+  color: rgba(200,168,78,0.4);
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+  font-weight: 400;
+}
+.step .title {
+  font-size: 40px;
+  color: #e8e8e8;
+  font-weight: 500;
+  margin-bottom: 12px;
+  line-height: 1.3;
+}
+.step .desc {
+  font-size: 26px;
+  color: rgba(255,255,255,0.3);
+  line-height: 1.7;
+}
+
+/* Connector */
+.connector {
+  display: flex;
+  align-items: center;
+  padding-left: 0px;
+  height: 56px;
+  position: relative;
+}
+.connector .line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, rgba(200,168,78,0.3), rgba(200,168,78,0.08));
+  margin-left: 2px;
+}
+.connector .auto {
+  margin-left: 40px;
+  font-size: 20px;
+  color: #c8a84e;
+  opacity: 0.4;
+  letter-spacing: 2px;
+  font-weight: 400;
+}
+
+/* Intro card */
+.intro {
+  background: rgba(255,255,255,0.03);
+  border-radius: 16px;
+  padding: 32px 36px;
+  margin-bottom: 20px;
+}
+.intro .text {
+  font-size: 24px;
+  color: rgba(255,255,255,0.25);
+  line-height: 1.6;
+}
+
+/* Result card */
+.result-card {
+  background: rgba(200,168,78,0.06);
+  border-radius: 16px;
+  padding: 44px 40px;
+  text-align: center;
+  margin-top: 8px;
+}
+.result-card .icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+.result-card .title {
+  font-size: 36px;
+  color: #c8a84e;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+.result-card .desc {
+  font-size: 26px;
+  color: rgba(255,255,255,0.3);
+  line-height: 1.7;
+}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="header">
+    <h1>Canary's Journal</h1>
+    <div class="sub">DEPLOYMENT WORKFLOW</div>
+  </div>
+
+  <div class="intro">
+    <div class="text">设计迭代完成后，从代码到上线的全自动流程 ↓</div>
+  </div>
+
+  <div class="step">
+    <div class="bar dim"></div>
+    <div class="content">
+      <div class="num">STEP 01</div>
+      <div class="title">编写代码 & 本地预览</div>
+      <div class="desc">Canary 用 Next.js 编写<br>实时预览，调到满意为止</div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="line"></div></div>
+
+  <div class="step">
+    <div class="bar gold"></div>
+    <div class="content">
+      <div class="num">STEP 02</div>
+      <div class="title">Git Commit & Push</div>
+      <div class="desc">提交到 GitHub<br>每次改动都有版本记录</div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="line"></div><div class="auto">⚡ 自动触发</div></div>
+
+  <div class="step">
+    <div class="bar gold"></div>
+    <div class="content">
+      <div class="num">STEP 03</div>
+      <div class="title">Vercel 自动构建部署</div>
+      <div class="desc">检测到 push → 自动构建<br>约 30 秒完成，无需手动操作</div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="line"></div><div class="auto">⚡ 自动上线</div></div>
+
+  <div class="result-card">
+    <div class="icon">✅</div>
+    <div class="title">上线完成</div>
+    <div class="desc">📱 手机 · 💻 电脑 · 🖥 iPad<br>任何设备，随时查看最新版</div>
+  </div>
+</div>
+</body>
+</html>

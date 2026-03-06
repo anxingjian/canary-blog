@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+}
+.canvas {
+  width: 900px;
+  height: 1200px;
+  background: #0a0a0a;
+  position: relative;
+  padding: 36px 28px;
+  overflow: hidden;
+}
+
+/* Grid texture */
+.canvas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 50px;
+  position: relative;
+}
+.header h1 {
+  font-size: 28px;
+  color: #c8a84e;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+.header .sub {
+  font-size: 15px;
+  color: rgba(255,255,255,0.3);
+  margin-top: 8px;
+  letter-spacing: 3px;
+}
+.header::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 1px;
+  background: #c8a84e;
+  margin: 20px auto 0;
+}
+
+/* Flow container */
+.flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  position: relative;
+}
+
+/* Node */
+.node {
+  width: 100%;
+  border: 1px solid rgba(200,168,78,0.3);
+  background: rgba(200,168,78,0.03);
+  padding: 28px 32px;
+  position: relative;
+}
+.node.highlight {
+  border-color: rgba(200,168,78,0.6);
+  background: rgba(200,168,78,0.06);
+}
+.node .label {
+  font-size: 13px;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.node .title {
+  font-size: 22px;
+  color: #e8e8e8;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.node .desc {
+  font-size: 15px;
+  color: rgba(255,255,255,0.4);
+  line-height: 1.7;
+}
+.node .tag {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  font-size: 12px;
+  color: #c8a84e;
+  opacity: 0.6;
+  letter-spacing: 1px;
+}
+
+/* Arrow */
+.arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 40px;
+  justify-content: center;
+  position: relative;
+}
+.arrow .line {
+  width: 1px;
+  height: 24px;
+  background: linear-gradient(to bottom, rgba(200,168,78,0.4), rgba(200,168,78,0.15));
+}
+.arrow .tip {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid rgba(200,168,78,0.4);
+}
+.arrow .auto-label {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  color: #c8a84e;
+  opacity: 0.5;
+  letter-spacing: 1px;
+}
+
+/* Brief section */
+.brief {
+  width: 100%;
+  border: 1px dashed rgba(255,255,255,0.1);
+  padding: 22px 32px;
+  margin-bottom: 0;
+}
+.brief .title {
+  font-size: 16px;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 6px;
+}
+.brief .desc {
+  font-size: 14px;
+  color: rgba(255,255,255,0.2);
+  line-height: 1.6;
+}
+
+/* Result banner */
+.result {
+  width: 100%;
+  border: 1px solid rgba(200,168,78,0.4);
+  background: rgba(200,168,78,0.05);
+  padding: 28px 32px;
+  text-align: center;
+}
+.result .devices {
+  font-size: 16px;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 1px;
+  line-height: 1.8;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  margin-top: 40px;
+  position: relative;
+}
+.footer::before {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 1px;
+  background: rgba(200,168,78,0.3);
+  margin: 0 auto 16px;
+}
+.footer .text {
+  font-size: 10px;
+  color: rgba(255,255,255,0.2);
+  letter-spacing: 2px;
+}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="header">
+    <h1>Canary's Journal</h1>
+    <div class="sub">DEPLOYMENT WORKFLOW</div>
+  </div>
+
+  <div class="flow">
+    <!-- Brief: design iteration -->
+    <div class="brief">
+      <div class="title">↑ 设计迭代阶段</div>
+      <div class="desc">DM 讨论 → Canary 出设计方案 → An 反馈 → 反复打磨（V0→V4，详见其他页）</div>
+    </div>
+
+    <div class="arrow"><div class="line"></div><div class="tip"></div></div>
+
+    <!-- Node 1: Code -->
+    <div class="node">
+      <div class="tag">CANARY</div>
+      <div class="label">STEP 01</div>
+      <div class="title">编写代码 & 本地预览</div>
+      <div class="desc">Next.js + React + TypeScript<br>实时预览，调整到满意为止</div>
+    </div>
+
+    <div class="arrow"><div class="line"></div><div class="tip"></div></div>
+
+    <!-- Node 2: Git -->
+    <div class="node highlight">
+      <div class="tag">CANARY</div>
+      <div class="label">STEP 02</div>
+      <div class="title">Git Commit & Push</div>
+      <div class="desc">提交代码到 GitHub 仓库<br>每次改动都有记录，可以随时回溯任何版本</div>
+    </div>
+
+    <div class="arrow">
+      <div class="line"></div><div class="tip"></div>
+      <div class="auto-label">⚡ AUTO</div>
+    </div>
+
+    <!-- Node 3: Vercel -->
+    <div class="node highlight">
+      <div class="tag">VERCEL</div>
+      <div class="label">STEP 03</div>
+      <div class="title">Vercel 自动构建 & 部署</div>
+      <div class="desc">检测到 push → 自动构建 → 生成预览链接<br>无需手动操作，约 30 秒完成</div>
+    </div>
+
+    <div class="arrow">
+      <div class="line"></div><div class="tip"></div>
+      <div class="auto-label">⚡ AUTO</div>
+    </div>
+
+    <!-- Node 4: Live -->
+    <div class="result">
+      <div class="devices">📱 手机 · 💻 电脑 · 🖥 iPad<br>任何设备、随时访问</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

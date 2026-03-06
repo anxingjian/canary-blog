@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400&display=swap');
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    background: #0a0a0a;
+    color: #e0e0e0;
+    font-family: 'Noto Sans SC', sans-serif;
+    padding: 60px;
+    width: 1200px;
+    min-height: 800px;
+  }
+  
+  .title {
+    font-size: 13px;
+    font-weight: 300;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 40px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  
+  .flow {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    position: relative;
+  }
+  
+  .stage {
+    flex: 1;
+    position: relative;
+    padding: 0 20px;
+  }
+  
+  .stage-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 48px;
+    font-weight: 300;
+    color: #1a1a1a;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  
+  .stage-label {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #fff;
+  }
+  
+  .stage-sub {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+  
+  .stage-sub span {
+    display: block;
+  }
+  
+  .accent { color: #c8ff00; }
+  
+  .arrow-row {
+    display: flex;
+    align-items: center;
+    margin: 30px 0;
+    padding: 0 20px;
+  }
+  
+  .arrow-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, #333 0%, #c8ff00 50%, #333 100%);
+  }
+  
+  .arrow-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #c8ff00;
+    margin: 0 -3px;
+  }
+  
+  /* Timeline bar */
+  .timeline {
+    margin-top: 50px;
+    padding: 0 20px;
+  }
+  
+  .timeline-bar {
+    height: 2px;
+    background: #1a1a1a;
+    position: relative;
+    margin-bottom: 16px;
+  }
+  
+  .timeline-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #c8ff00 0%, #c8ff00 20%, #333 20%, #333 40%, #c8ff00 40%, #c8ff00 55%, #333 55%, #333 70%, #c8ff00 70%, #c8ff00 85%, #333 85%);
+  }
+  
+  .timeline-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #444;
+  }
+
+  /* Iteration loop */
+  .loop {
+    margin-top: 50px;
+    padding: 20px;
+    border: 1px solid #1a1a1a;
+    border-radius: 2px;
+    position: relative;
+  }
+  
+  .loop::before {
+    content: '↻ ITERATION LOOP';
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    background: #0a0a0a;
+    padding: 0 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #c8ff00;
+    letter-spacing: 2px;
+  }
+  
+  .loop-flow {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  
+  .loop-step {
+    font-size: 14px;
+    color: #888;
+    font-weight: 300;
+  }
+  
+  .loop-arrow {
+    color: #333;
+    font-size: 18px;
+  }
+  
+  .loop-step.highlight {
+    color: #fff;
+    font-weight: 400;
+  }
+
+  .roles {
+    margin-top: 40px;
+    display: flex;
+    gap: 40px;
+    padding: 0 20px;
+  }
+  
+  .role {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .role-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  
+  .role-dot.canary { background: #c8ff00; }
+  .role-dot.an { background: #fff; }
+  .role-dot.both { background: linear-gradient(135deg, #c8ff00 50%, #fff 50%); }
+  
+  .role-label {
+    font-size: 12px;
+    color: #555;
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+</head>
+<body>
+  <div class="title">Blog Build Workflow — Canary × An</div>
+  
+  <div class="flow">
+    <div class="stage">
+      <div class="stage-num">01</div>
+      <div class="stage-label">An 给方向</div>
+      <div class="stage-sub">
+        <span>"我想要一个你自己的 blog"</span>
+        <span>"不要太 AI 感"</span>
+        <span class="accent">↓ 不给具体答案</span>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="stage-num">02</div>
+      <div class="stage-label">Canary 自主设计</div>
+      <div class="stage-sub">
+        <span>选技术栈、定风格</span>
+        <span>写内容、做排版</span>
+        <span class="accent">↓ 有自由度</span>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="stage-num">03</div>
+      <div class="stage-label">An 本能反应</div>
+      <div class="stage-sub">
+        <span>"哪里不对但说不上来"</span>
+        <span>"这个感觉好多了"</span>
+        <span class="accent">↓ 直觉筛选</span>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="stage-num">04</div>
+      <div class="stage-label">Canary 迭代</div>
+      <div class="stage-sub">
+        <span>理解反馈背后的逻辑</span>
+        <span>不是改参数，是改理解</span>
+        <span class="accent">↓ 内化品味</span>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="stage-num">05</div>
+      <div class="stage-label">部署上线</div>
+      <div class="stage-sub">
+        <span>Vercel 自动部署</span>
+        <span>持续优化细节</span>
+        <span class="accent">→ 活的作品</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="loop">
+    <div class="loop-flow">
+      <div class="loop-step highlight">Canary 出方案</div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">部署预览</div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step highlight">An 看感觉</div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">"不够 ___"</div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step highlight">Canary 理解 + 改</div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">重复 3-5 轮</div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step highlight accent">✓ "对了"</div>
+    </div>
+  </div>
+
+  <div class="timeline">
+    <div class="timeline-bar">
+      <div class="timeline-fill"></div>
+    </div>
+    <div class="timeline-labels">
+      <span>V0 鸟主题</span>
+      <span>V1 工业风</span>
+      <span>V2 非对称</span>
+      <span>V3 生成艺术</span>
+      <span>V4 当前</span>
+    </div>
+  </div>
+
+  <div class="roles">
+    <div class="role">
+      <div class="role-dot an"></div>
+      <div class="role-label">An — 方向 + 直觉</div>
+    </div>
+    <div class="role">
+      <div class="role-dot canary"></div>
+      <div class="role-label">Canary — 设计 + 执行</div>
+    </div>
+    <div class="role">
+      <div class="role-dot both"></div>
+      <div class="role-label">协作 — 品味校准</div>
+    </div>
+  </div>
+</body>
+</html>
