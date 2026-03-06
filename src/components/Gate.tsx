@@ -31,7 +31,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
     backgroundImage: "url('/noise.gif')",
     backgroundSize: "150px",
     backgroundRepeat: "repeat",
-    opacity: peeking ? 0 : 0.12,
+    opacity: peeking ? 0 : 0.17,
     transition: "opacity 0.8s",
     pointerEvents: "none",
     mixBlendMode: "overlay",
