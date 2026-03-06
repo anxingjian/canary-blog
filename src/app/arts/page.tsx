@@ -457,7 +457,7 @@ function ListItem({ piece, index }: { piece: (typeof PIECES)[0]; index: number }
   );
 }
 
-
+function ViewToggle({
   view,
   onToggle,
 }: {
