@@ -133,18 +133,31 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             }}>
               Canary
             </div>
+            {/* Door handle */}
+            <div style={{
+              position: "absolute",
+              top: "50%",
+              right: "18%",
+              width: "3px",
+              height: "20px",
+              borderRadius: "1.5px",
+              background: peeking ? "#333" : "#444",
+              transition: "background 0.8s",
+            }} />
           </div>
         </div>
 
         {/* FLOOR PROJECTION — clip-path trapezoid, text individually transformed */}
         <div style={{
           width: "min(420px, 90vw)",
-          height: "min(240px, 18vh)",
+          height: peeking ? "min(280px, 24vh)" : "min(240px, 18vh)",
+          transition: "height 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+          marginTop: "0",
         }}>
           <div style={{
             width: "100%",
             height: "100%",
-            clipPath: "polygon(24% 0%, 76% 0%, 100% 100%, 0% 100%)",
+            clipPath: "polygon(26% 0%, 74% 0%, 100% 100%, 0% 100%)",
             background: peeking
               ? `linear-gradient(180deg,
                   rgba(255,255,255,0.6) 0%,
@@ -169,10 +182,10 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             overflow: "hidden",
             WebkitMaskImage: peeking
               ? "linear-gradient(180deg, black 0%, black 85%, transparent 100%)"
-              : "linear-gradient(180deg, black 0%, black 18%, transparent 44%)",
+              : "linear-gradient(180deg, black 0%, black 10%, transparent 44%)",
             maskImage: peeking
               ? "linear-gradient(180deg, black 0%, black 85%, transparent 100%)"
-              : "linear-gradient(180deg, black 0%, black 18%, transparent 44%)",
+              : "linear-gradient(180deg, black 0%, black 10%, transparent 44%)",
           }}>
             <div style={noiseOverlay} />
 
