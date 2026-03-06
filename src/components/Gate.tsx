@@ -158,7 +158,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             width: "260%",
             height: "100%",
             marginLeft: "-80%",
-            clipPath: "polygon(31% 0%, 69% 0%, 100% 100%, 0% 100%)",
+            clipPath: "polygon(31% 0%, 69% 0%, 85% 100%, 15% 100%)",
             background: peeking
               ? `linear-gradient(180deg,
                   rgba(255,255,255,0.6) 0%,
