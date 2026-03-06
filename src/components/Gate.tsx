@@ -33,6 +33,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         alignItems: "center",
         justifyContent: "center",
       }}
+      onClick={() => { if (peeking) { setPeeking(false); setHoveredEntry(null); } }}
     >
       {/* SYS indicator */}
       <div
@@ -55,8 +56,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
       <div
         style={{
           position: "relative",
-          width: "280px",
-          height: "520px",
+          width: "min(280px, 65vw)",
+          height: "min(520px, 70vh)",
         }}
       >
         {/* Door frame border */}
@@ -194,10 +195,17 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           }}
         />
 
-        {/* Hover zone — over the door area */}
+        {/* Hover zone — over the door area. Tap to open on mobile. */}
         <div
           onMouseEnter={() => setPeeking(true)}
           onMouseLeave={() => { setPeeking(false); setHoveredEntry(null); }}
+          onClick={(e) => {
+            // Mobile: tap to toggle door open
+            if (!peeking) {
+              e.stopPropagation();
+              setPeeking(true);
+            }
+          }}
           style={{
             position: "absolute",
             inset: 0,
@@ -228,7 +236,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                 onMouseLeave={() => setHoveredEntry(null)}
                 style={{
                   fontFamily: "'Instrument Serif', serif",
-                  fontSize: "2.4rem",
+                  fontSize: "clamp(1.6rem, 5vw, 2.4rem)",
                   color: hoveredEntry === i ? "var(--accent)" : "#2a2a2a",
                   letterSpacing: "0.02em",
                   cursor: "pointer",
