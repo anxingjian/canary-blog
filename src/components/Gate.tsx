@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const ENTRIES = [
   { name: "Arts", href: "/arts" },
@@ -16,19 +16,17 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
   const noise2Ref = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<number>(0);
   const lastDrawRef = useRef<number>(0);
-  const offscreenRef = useRef<HTMLCanvasElement | null>(null);
 
   const handleEntryClick = (href: string) => {
     setEntered(true);
     setTimeout(() => onEnter(href), 600);
   };
 
-  /* Shared noise — slow refresh (150ms), fine grain, subtle alpha */
+  /* Shared noise — slow, fine, subtle */
   useEffect(() => {
     const oc = document.createElement("canvas");
     oc.width = 256;
     oc.height = 512;
-    offscreenRef.current = oc;
 
     const draw = (time: number) => {
       if (time - lastDrawRef.current > 150) {
@@ -42,7 +40,6 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           }
           ctx.putImageData(img, 0, 0);
         }
-        // Copy to both consumer canvases
         for (const ref of [noise1Ref, noise2Ref]) {
           const c = ref.current;
           if (c) {
@@ -60,11 +57,10 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
     return () => cancelAnimationFrame(frameRef.current);
   }, []);
 
-  /* Entry font sizes and letter-spacing to fill trapezoid width */
-  const entryStyles = [
-    { fontSize: "clamp(1.2rem, 2.5vw, 1.5rem)", letterSpacing: "0.6em" },
-    { fontSize: "clamp(1.5rem, 3.2vw, 2.0rem)", letterSpacing: "0.5em" },
-    { fontSize: "clamp(1.8rem, 4vw, 2.6rem)", letterSpacing: "0.4em" },
+  const entryFontSizes = [
+    "clamp(1.1rem, 2.2vw, 1.4rem)",
+    "clamp(1.4rem, 3vw, 1.9rem)",
+    "clamp(1.8rem, 4vw, 2.5rem)",
   ];
 
   const noiseStyle: React.CSSProperties = {
@@ -133,13 +129,13 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           width: "min(260px, 55vw)",
           height: "min(460px, 65vh)",
         }}>
-          {/* LIGHT — z1, inside door frame */}
+          {/* LIGHT — z1 */}
           <div style={{
             position: "absolute",
             inset: 0,
             background: peeking
               ? "linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.6) 100%)"
-              : "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.12) 100%)",
+              : "linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.45) 100%)",
             transition: "background 0.8s",
             zIndex: 1,
             overflow: "hidden",
@@ -147,7 +143,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             <canvas ref={noise1Ref} style={noiseStyle} />
           </div>
 
-          {/* DOOR — z3, covers light */}
+          {/* DOOR — z3 */}
           <div style={{
             position: "absolute",
             inset: 0,
@@ -178,34 +174,36 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           </div>
         </div>
 
-        {/* FLOOR PROJECTION — brightness matches door bottom (0.12) */}
+        {/* FLOOR PROJECTION — 3D perspective container */}
         <div style={{
-          width: "min(500px, 105vw)",
+          width: "min(340px, 72vw)",
           height: "min(180px, 22vh)",
+          perspective: "300px",
         }}>
           <div style={{
             width: "100%",
             height: "100%",
-            clipPath: "polygon(24% 0%, 76% 0%, 100% 100%, 0% 100%)",
+            transform: "rotateX(55deg)",
+            transformOrigin: "center top",
             background: peeking
               ? `linear-gradient(180deg,
                   rgba(255,255,255,0.6) 0%,
-                  rgba(255,255,255,0.3) 40%,
-                  rgba(255,255,255,0.08) 80%,
-                  transparent 100%
+                  rgba(255,255,255,0.35) 40%,
+                  rgba(255,255,255,0.1) 80%,
+                  rgba(255,255,255,0.02) 100%
                 )`
               : `linear-gradient(180deg,
-                  rgba(255,255,255,0.12) 0%,
-                  rgba(255,255,255,0.05) 50%,
-                  transparent 100%
+                  rgba(255,255,255,0.45) 0%,
+                  rgba(255,255,255,0.25) 50%,
+                  rgba(255,255,255,0.08) 100%
                 )`,
             transition: "background 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            paddingTop: "0.5rem",
-            paddingBottom: "0.3rem",
+            padding: "1rem 0",
+            gap: "0.2rem",
             position: "relative",
             overflow: "hidden",
           }}>
@@ -219,16 +217,15 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                 onMouseLeave={() => setHoveredEntry(null)}
                 style={{
                   fontFamily: "'Instrument Serif', serif",
-                  fontSize: entryStyles[i].fontSize,
+                  fontSize: entryFontSizes[i],
                   fontWeight: 400,
                   color: hoveredEntry === i
                     ? "rgba(196,255,0,0.95)"
                     : `rgba(30,30,30,${0.55 + i * 0.1})`,
-                  letterSpacing: entryStyles[i].letterSpacing,
+                  letterSpacing: "0.05em",
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                   textAlign: "center",
-                  marginTop: i === 0 ? "0.1rem" : "-0.05rem",
                   textShadow: hoveredEntry === i
                     ? "0 0 30px rgba(196,255,0,0.4)"
                     : "none",
