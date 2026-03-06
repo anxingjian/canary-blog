@@ -217,7 +217,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   whiteSpace: "nowrap",
                   textAlign: "center",
                   transform: [
-                    "perspective(120px) rotateX(30deg)",
+                    "perspective(110px) rotateX(30deg)",
                     "perspective(110px) rotateX(30deg)",
                     "perspective(100px) rotateX(30deg)",
                   ][i],
@@ -231,7 +231,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                     : "color 0.3s, opacity 0s, text-shadow 0.3s",
                   position: "relative",
                   zIndex: 1,
-                  marginTop: i === 0 ? "0" : isMobile
+                  marginTop: i === 0 ? "-0.5rem" : isMobile
                     ? (i === 1 ? "-1.8rem" : "-1.9rem")
                     : (i === 1 ? "clamp(-1.5rem, -2vw, -0.8rem)" : "clamp(-1.8rem, -2.5vw, -1rem)"),
                 }}
