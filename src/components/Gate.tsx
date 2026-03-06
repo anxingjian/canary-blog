@@ -19,7 +19,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
   };
 
   const entryFontSizes = [
-    "clamp(1.4rem, 2.8vw, 1.8rem)",
+    "clamp(1.6rem, 3.2vw, 2rem)",
     "clamp(1.7rem, 3.5vw, 2.2rem)",
     "clamp(2.2rem, 5vw, 3rem)",
   ];
