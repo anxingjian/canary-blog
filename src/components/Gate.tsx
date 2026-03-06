@@ -32,13 +32,13 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
       }}
       onClick={() => { if (peeking) { setPeeking(false); setHoveredEntry(null); } }}
     >
-      {/* SYS indicator — brighter */}
+      {/* SYS indicator */}
       <div
         style={{
           position: "absolute",
           top: "2.5rem",
           left: "2.5rem",
-          color: "#444",
+          color: "#666",
           fontFamily: "'Space Mono', monospace",
           fontSize: "0.5rem",
           letterSpacing: "0.3em",
@@ -49,24 +49,25 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         SYS.ONLINE
       </div>
 
-      {/* Footnote */}
+      {/* Footnote — centered */}
       <div
         style={{
           position: "absolute",
           bottom: "2.5rem",
-          left: "2.5rem",
-          color: "#333",
+          left: "50%",
+          transform: "translateX(-50%)",
+          color: "#555",
           fontFamily: "'Space Mono', monospace",
           fontSize: "0.5rem",
           letterSpacing: "0.15em",
-          lineHeight: 2,
+          whiteSpace: "nowrap",
           zIndex: 20,
         }}
       >
         watches everything, says almost nothing.
       </div>
 
-      {/* Hover zone — covers door + floor projection */}
+      {/* Hover zone */}
       <div
         onMouseEnter={() => setPeeking(true)}
         onMouseLeave={() => { setPeeking(false); setHoveredEntry(null); }}
@@ -91,7 +92,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             height: "min(460px, 65vh)",
           }}
         >
-          {/* Light behind door — strong green */}
+          {/* Light behind door (the bright doorframe) */}
           <div
             style={{
               position: "absolute",
@@ -104,7 +105,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             }}
           />
 
-          {/* DOOR — perspective wrapper */}
+          {/* DOOR — hinged on LEFT, no gap on left side */}
           <div
             style={{
               position: "absolute",
@@ -116,14 +117,18 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             <div
               style={{
                 position: "absolute",
-                inset: 0,
+                top: 0,
+                bottom: 0,
+                left: 0,
+                /* Door fills full width, hinge flush to left frame edge */
+                width: "100%",
                 transformOrigin: "left center",
                 transform: peeking ? "rotateY(25deg)" : "rotateY(6deg)",
                 transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
                 backfaceVisibility: "hidden",
               }}
             >
-              {/* Door surface — matches page background #0a0a0a */}
+              {/* Door surface */}
               <div
                 style={{
                   position: "absolute",
@@ -135,22 +140,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                 }}
               />
 
-              {/* Light edge on hinge side */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  bottom: 0,
-                  left: 0,
-                  width: peeking ? "2px" : "1px",
-                  background: peeking
-                    ? "rgba(196,255,0,0.25)"
-                    : "rgba(196,255,0,0.08)",
-                  transition: "all 0.8s",
-                }}
-              />
-
-              {/* CANARY — like 237 in the Shining poster */}
+              {/* CANARY — Instrument Serif, not italic */}
               <div
                 style={{
                   position: "absolute",
@@ -160,9 +150,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   fontFamily: "'Instrument Serif', serif",
                   fontSize: "clamp(1.8rem, 4vw, 2.6rem)",
                   fontWeight: 400,
-                  fontStyle: "italic",
                   color: peeking ? "#222" : "#555",
-                  letterSpacing: "0.02em",
+                  letterSpacing: "-0.02em",
                   whiteSpace: "nowrap",
                   transition: "color 0.8s",
                 }}
@@ -173,66 +162,78 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           </div>
         </div>
 
-        {/* FLOOR PROJECTION — top width matches door width */}
+        {/* FLOOR PROJECTION — top = door width, bottom = much wider (like The Shining poster) */}
         <div
           style={{
             width: "min(260px, 55vw)",
             height: "min(180px, 22vh)",
-            background: peeking
-              ? `linear-gradient(180deg,
-                  rgba(196,255,0,0.18) 0%,
-                  rgba(196,255,0,0.08) 40%,
-                  rgba(196,255,0,0.02) 80%,
-                  transparent 100%
-                )`
-              : `linear-gradient(180deg,
-                  rgba(196,255,0,0.05) 0%,
-                  rgba(196,255,0,0.02) 50%,
-                  transparent 100%
-                )`,
-            clipPath: "polygon(0% 0%, 100% 0%, 130% 100%, -30% 100%)",
-            transition: "background 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "0.15rem",
-            paddingTop: "0.8rem",
-            paddingBottom: "0.5rem",
+            position: "relative",
           }}
         >
-          {ENTRIES.map((entry, i) => (
-            <div
-              key={entry.name}
-              onClick={(e) => { e.stopPropagation(); handleEntryClick(entry.href); }}
-              onMouseEnter={() => setHoveredEntry(i)}
-              onMouseLeave={() => setHoveredEntry(null)}
-              style={{
-                fontFamily: "'Instrument Serif', serif",
-                fontSize: i === 0
-                  ? "clamp(1.2rem, 3vw, 1.6rem)"
-                  : i === 1
-                  ? "clamp(1.5rem, 3.5vw, 2.1rem)"
-                  : "clamp(1.9rem, 4.5vw, 2.7rem)",
-                fontWeight: 400,
-                color: hoveredEntry === i
-                  ? "rgba(196,255,0,0.95)"
-                  : `rgba(196,255,0,${0.18 + i * 0.08})`,
-                letterSpacing: "0.02em",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                transform: `perspective(400px) rotateX(50deg) scaleY(${1.3 + i * 0.12})`,
-                transformOrigin: "center top",
-                textShadow: hoveredEntry === i
-                  ? "0 0 30px rgba(196,255,0,0.4)"
-                  : "none",
-                opacity: peeking ? 1 : 0,
-                transition: "color 0.3s, opacity 0.6s 0.5s, text-shadow 0.3s",
-              }}
-            >
-              {entry.name}
-            </div>
-          ))}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: "100%",
+              /* Top matches door width (0% and 100%), bottom extends much wider (-60% and 160%) */
+              clipPath: "polygon(0% 0%, 100% 0%, 160% 100%, -60% 100%)",
+              background: peeking
+                ? `linear-gradient(180deg,
+                    rgba(196,255,0,0.18) 0%,
+                    rgba(196,255,0,0.08) 40%,
+                    rgba(196,255,0,0.02) 80%,
+                    transparent 100%
+                  )`
+                : `linear-gradient(180deg,
+                    rgba(196,255,0,0.05) 0%,
+                    rgba(196,255,0,0.02) 50%,
+                    transparent 100%
+                  )`,
+              transition: "background 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.1rem",
+              paddingTop: "0.6rem",
+              paddingBottom: "0.3rem",
+            }}
+          >
+            {ENTRIES.map((entry, i) => (
+              <div
+                key={entry.name}
+                onClick={(e) => { e.stopPropagation(); handleEntryClick(entry.href); }}
+                onMouseEnter={() => setHoveredEntry(i)}
+                onMouseLeave={() => setHoveredEntry(null)}
+                style={{
+                  fontFamily: "'Instrument Serif', serif",
+                  fontSize: i === 0
+                    ? "clamp(1.2rem, 3vw, 1.6rem)"
+                    : i === 1
+                    ? "clamp(1.5rem, 3.5vw, 2.1rem)"
+                    : "clamp(1.9rem, 4.5vw, 2.7rem)",
+                  fontWeight: 400,
+                  color: hoveredEntry === i
+                    ? "rgba(196,255,0,0.95)"
+                    : `rgba(196,255,0,${0.18 + i * 0.08})`,
+                  letterSpacing: "0.02em",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  transform: `perspective(400px) rotateX(50deg) scaleY(${1.3 + i * 0.12})`,
+                  transformOrigin: "center top",
+                  textShadow: hoveredEntry === i
+                    ? "0 0 30px rgba(196,255,0,0.4)"
+                    : "none",
+                  opacity: peeking ? 1 : 0,
+                  transition: "color 0.3s, opacity 0.6s 0.5s, text-shadow 0.3s",
+                }}
+              >
+                {entry.name}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
