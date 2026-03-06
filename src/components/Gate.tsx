@@ -150,7 +150,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         {/* FLOOR PROJECTION — clip-path trapezoid, text individually transformed */}
         <div style={{
           width: "min(200px, 42vw)",
-          height: "min(240px, 28vh)",
+          height: "min(240px, 22vh)",
           marginTop: "-1px",
           overflow: "visible",
         }}>
