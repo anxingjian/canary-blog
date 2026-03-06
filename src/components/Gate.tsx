@@ -217,8 +217,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   whiteSpace: "nowrap",
                   textAlign: "center",
                   transform: [
-                    "perspective(140px) rotateX(30deg)",
-                    "perspective(130px) rotateX(30deg)",
+                    "perspective(120px) rotateX(30deg)",
+                    "perspective(110px) rotateX(30deg)",
                     "perspective(100px) rotateX(30deg)",
                   ][i],
                   transformOrigin: "center top",
