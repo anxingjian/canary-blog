@@ -137,10 +137,10 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             <div style={{
               position: "absolute",
               top: "50%",
-              right: "18%",
-              width: "3px",
-              height: "20px",
-              borderRadius: "1.5px",
+              right: "12%",
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
               background: peeking ? "#333" : "#444",
               transition: "background 0.8s",
             }} />
@@ -150,9 +150,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         {/* FLOOR PROJECTION — clip-path trapezoid, text individually transformed */}
         <div style={{
           width: "min(420px, 90vw)",
-          height: peeking ? "min(280px, 24vh)" : "min(240px, 18vh)",
-          transition: "height 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-          marginTop: "0",
+          height: "min(240px, 18vh)",
+          marginTop: "-1px",
         }}>
           <div style={{
             width: "100%",
@@ -181,11 +180,11 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             position: "relative",
             overflow: "hidden",
             WebkitMaskImage: peeking
-              ? "linear-gradient(180deg, black 0%, black 85%, transparent 100%)"
-              : "linear-gradient(180deg, black 0%, black 10%, transparent 44%)",
+              ? "linear-gradient(180deg, black 0%, black 80%, transparent 100%)"
+              : "linear-gradient(180deg, black 0%, black 5%, transparent 45%)",
             maskImage: peeking
-              ? "linear-gradient(180deg, black 0%, black 85%, transparent 100%)"
-              : "linear-gradient(180deg, black 0%, black 10%, transparent 44%)",
+              ? "linear-gradient(180deg, black 0%, black 80%, transparent 100%)"
+              : "linear-gradient(180deg, black 0%, black 5%, transparent 45%)",
           }}>
             <div style={noiseOverlay} />
 
@@ -219,7 +218,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   transition: "color 0.3s, opacity 0.6s 0.5s, text-shadow 0.3s",
                   position: "relative",
                   zIndex: 1,
-                  marginTop: i === 0 ? "0" : i === 1 ? "-1.1rem" : "-1.5rem",
+                  marginTop: i === 0 ? "0" : i === 1 ? "-1.3rem" : "-1.7rem",
                 }}
               >
                 {entry.name}
