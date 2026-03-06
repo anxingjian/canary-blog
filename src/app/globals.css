@@ -306,3 +306,9 @@ body::after {
 .gate-back:hover { color: var(--accent) !important; }
 
 .essay-item:hover .essay-number { color: var(--accent) !important; }
+
+.mobile-close { display: none; }
+@media (max-width: 768px) {
+  .mobile-close { display: block !important; }
+  .gate-back { display: none !important; }
+}

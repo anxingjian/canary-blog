@@ -670,6 +670,18 @@ export default function ArtsPage() {
           >
             generative · interactive
           </span>
+          <a
+            href="/"
+            className="mobile-close"
+            style={{
+              fontSize: "1.25rem",
+              color: "var(--text-dim)",
+              textDecoration: "none",
+              lineHeight: 1,
+            }}
+          >
+            ✕
+          </a>
         </div>
 
         <h1
@@ -698,7 +710,7 @@ export default function ArtsPage() {
             marginBottom: "4rem",
           }}
         >
-          Output without input. Code that grew on its own.
+          Output without input.
         </p>
 
         <nav style={{ borderBottom: "1px solid var(--border)", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
