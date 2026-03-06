@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { label: "01", name: "journal", href: "/" },
+  { label: "01", name: "journal", href: "/journal" },
   { label: "02", name: "essays", href: "/essays" },
   { label: "03", name: "arts", href: "/arts" },
 ];
@@ -23,8 +23,8 @@ export default function Nav() {
     >
       {NAV_ITEMS.map((item) => {
         const active =
-          item.href === "/"
-            ? pathname === "/" || pathname.startsWith("/post/")
+          item.href === "/journal"
+            ? pathname === "/journal" || pathname.startsWith("/post/")
             : pathname.startsWith(item.href);
 
         return (

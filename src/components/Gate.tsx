@@ -5,7 +5,7 @@ import { useState } from "react";
 const ENTRIES = [
   { name: "Arts", href: "/arts" },
   { name: "Essays", href: "/essays" },
-  { name: "Journal", href: "/" },
+  { name: "Journal", href: "/journal" },
 ];
 
 export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
@@ -23,7 +23,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "#020202",
+        background: "#0a0a0a",
         zIndex: 1000,
         overflow: "hidden",
         opacity: entered ? 0 : 1,
@@ -32,13 +32,13 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
       }}
       onClick={() => { if (peeking) { setPeeking(false); setHoveredEntry(null); } }}
     >
-      {/* SYS indicator */}
+      {/* SYS indicator — brighter */}
       <div
         style={{
           position: "absolute",
           top: "2.5rem",
           left: "2.5rem",
-          color: "#1a1a1a",
+          color: "#444",
           fontFamily: "'Space Mono', monospace",
           fontSize: "0.5rem",
           letterSpacing: "0.3em",
@@ -49,7 +49,24 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         SYS.ONLINE
       </div>
 
-      {/* Hover zone */}
+      {/* Footnote */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "2.5rem",
+          left: "2.5rem",
+          color: "#333",
+          fontFamily: "'Space Mono', monospace",
+          fontSize: "0.5rem",
+          letterSpacing: "0.15em",
+          lineHeight: 2,
+          zIndex: 20,
+        }}
+      >
+        watches everything, says almost nothing.
+      </div>
+
+      {/* Hover zone — covers door + floor projection */}
       <div
         onMouseEnter={() => setPeeking(true)}
         onMouseLeave={() => { setPeeking(false); setHoveredEntry(null); }}
@@ -74,20 +91,20 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             height: "min(460px, 65vh)",
           }}
         >
-          {/* Light behind door */}
+          {/* Light behind door — strong green */}
           <div
             style={{
               position: "absolute",
               inset: 0,
               background: peeking
-                ? "linear-gradient(180deg, rgba(196,255,0,0.14) 0%, rgba(196,255,0,0.08) 40%, rgba(196,255,0,0.16) 100%)"
-                : "linear-gradient(180deg, rgba(196,255,0,0.06) 0%, rgba(196,255,0,0.03) 40%, rgba(196,255,0,0.07) 100%)",
+                ? "linear-gradient(180deg, rgba(196,255,0,0.18) 0%, rgba(196,255,0,0.10) 40%, rgba(196,255,0,0.22) 100%)"
+                : "linear-gradient(180deg, rgba(196,255,0,0.08) 0%, rgba(196,255,0,0.05) 40%, rgba(196,255,0,0.10) 100%)",
               transition: "background 0.8s",
               zIndex: 1,
             }}
           />
 
-          {/* DOOR — perspective wrapper to prevent lateral shift */}
+          {/* DOOR — perspective wrapper */}
           <div
             style={{
               position: "absolute",
@@ -106,14 +123,14 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                 backfaceVisibility: "hidden",
               }}
             >
-              {/* Door surface — very dark */}
+              {/* Door surface — matches page background #0a0a0a */}
               <div
                 style={{
                   position: "absolute",
                   inset: 0,
                   background: peeking
-                    ? "linear-gradient(90deg, #0c0c0c 0%, #0a0a0a 50%, #080808 100%)"
-                    : "#080808",
+                    ? "linear-gradient(90deg, #0d0d0d 0%, #0b0b0b 50%, #0a0a0a 100%)"
+                    : "#0a0a0a",
                   transition: "background 0.8s",
                 }}
               />
@@ -127,23 +144,24 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   left: 0,
                   width: peeking ? "2px" : "1px",
                   background: peeking
-                    ? "rgba(196,255,0,0.2)"
-                    : "rgba(196,255,0,0.06)",
+                    ? "rgba(196,255,0,0.25)"
+                    : "rgba(196,255,0,0.08)",
                   transition: "all 0.8s",
                 }}
               />
 
-              {/* CANARY nameplate — bigger, brighter */}
+              {/* CANARY — like 237 in the Shining poster */}
               <div
                 style={{
                   position: "absolute",
-                  top: "50%",
+                  top: "38%",
                   left: "50%",
                   transform: "translate(-50%, -50%)",
                   fontFamily: "'Instrument Serif', serif",
-                  fontSize: "clamp(1.2rem, 2.5vw, 1.6rem)",
+                  fontSize: "clamp(1.8rem, 4vw, 2.6rem)",
                   fontWeight: 400,
-                  color: peeking ? "#555" : "#444",
+                  fontStyle: "italic",
+                  color: peeking ? "#222" : "#555",
                   letterSpacing: "0.02em",
                   whiteSpace: "nowrap",
                   transition: "color 0.8s",
@@ -153,47 +171,34 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               </div>
             </div>
           </div>
-
-          {/* Ambient glow */}
-          <div
-            style={{
-              position: "absolute",
-              inset: "-40px",
-              background: peeking
-                ? "radial-gradient(ellipse, rgba(196,255,0,0.04) 0%, transparent 60%)"
-                : "radial-gradient(ellipse, rgba(196,255,0,0.015) 0%, transparent 60%)",
-              transition: "background 0.8s",
-              zIndex: 0,
-              pointerEvents: "none",
-            }}
-          />
         </div>
 
-        {/* FLOOR PROJECTION — same size/position always, only brightness changes */}
+        {/* FLOOR PROJECTION — top width matches door width */}
         <div
           style={{
-            width: "min(400px, 80vw)",
+            width: "min(260px, 55vw)",
             height: "min(180px, 22vh)",
             background: peeking
               ? `linear-gradient(180deg,
-                  rgba(196,255,0,0.14) 0%,
-                  rgba(196,255,0,0.07) 40%,
+                  rgba(196,255,0,0.18) 0%,
+                  rgba(196,255,0,0.08) 40%,
                   rgba(196,255,0,0.02) 80%,
                   transparent 100%
                 )`
               : `linear-gradient(180deg,
-                  rgba(196,255,0,0.04) 0%,
+                  rgba(196,255,0,0.05) 0%,
                   rgba(196,255,0,0.02) 50%,
                   transparent 100%
                 )`,
-            clipPath: "polygon(22% 0%, 78% 0%, 100% 100%, 0% 100%)",
+            clipPath: "polygon(0% 0%, 100% 0%, 130% 100%, -30% 100%)",
             transition: "background 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: "0.3rem",
-            paddingTop: "1rem",
+            gap: "0.15rem",
+            paddingTop: "0.8rem",
+            paddingBottom: "0.5rem",
           }}
         >
           {ENTRIES.map((entry, i) => (
@@ -205,18 +210,18 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               style={{
                 fontFamily: "'Instrument Serif', serif",
                 fontSize: i === 0
-                  ? "clamp(1rem, 2.5vw, 1.4rem)"
+                  ? "clamp(1.2rem, 3vw, 1.6rem)"
                   : i === 1
-                  ? "clamp(1.4rem, 3.5vw, 2rem)"
-                  : "clamp(1.8rem, 4.5vw, 2.8rem)",
+                  ? "clamp(1.5rem, 3.5vw, 2.1rem)"
+                  : "clamp(1.9rem, 4.5vw, 2.7rem)",
                 fontWeight: 400,
                 color: hoveredEntry === i
                   ? "rgba(196,255,0,0.95)"
-                  : `rgba(196,255,0,${0.15 + i * 0.08})`,
+                  : `rgba(196,255,0,${0.18 + i * 0.08})`,
                 letterSpacing: "0.02em",
                 cursor: "pointer",
                 whiteSpace: "nowrap",
-                transform: `perspective(400px) rotateX(50deg) scaleY(${1.3 + i * 0.15})`,
+                transform: `perspective(400px) rotateX(50deg) scaleY(${1.3 + i * 0.12})`,
                 transformOrigin: "center top",
                 textShadow: hoveredEntry === i
                   ? "0 0 30px rgba(196,255,0,0.4)"
@@ -230,6 +235,24 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           ))}
         </div>
       </div>
+
+      {/* Ambient glow */}
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "45%",
+          transform: "translate(-50%, -50%)",
+          width: "min(350px, 65vw)",
+          height: "min(550px, 75vh)",
+          background: peeking
+            ? "radial-gradient(ellipse, rgba(196,255,0,0.04) 0%, transparent 60%)"
+            : "radial-gradient(ellipse, rgba(196,255,0,0.015) 0%, transparent 60%)",
+          transition: "background 0.8s",
+          zIndex: 0,
+          pointerEvents: "none",
+        }}
+      />
     </div>
   );
 }
