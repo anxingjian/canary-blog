@@ -168,7 +168,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             position: "relative",
             overflow: "hidden",
             justifyContent: "flex-start",
-            paddingTop: "0.3rem",
+            paddingTop: "0",
             WebkitMaskImage: peeking
               ? "linear-gradient(180deg, black 0%, black 85%, transparent 100%)"
               : "linear-gradient(180deg, black 0%, black 20%, transparent 36%)",
@@ -190,7 +190,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   fontWeight: 400,
                   color: hoveredEntry === i
                     ? "rgba(196,255,0,0.95)"
-                    : `rgba(30,30,30,${0.55 + i * 0.1})`,
+                    : `rgba(30,30,30,0.95)`,
                   letterSpacing: "0.05em",
                   cursor: "pointer",
                   whiteSpace: "nowrap",
@@ -208,7 +208,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   transition: "color 0.3s, opacity 0.6s 0.5s, text-shadow 0.3s",
                   position: "relative",
                   zIndex: 1,
-                  marginTop: i === 0 ? "0" : i === 1 ? "-0.6rem" : "-0.8rem",
+                  marginTop: i === 0 ? "0" : i === 1 ? "-0.8rem" : "-1rem",
                 }}
               >
                 {entry.name}
