@@ -126,22 +126,19 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             />
           </div>
 
-          {/* DOOR PANEL — same container, overlays light */}
+          {/* DOOR PANEL */}
           <div style={{
             position: "absolute",
             inset: 0,
-            perspective: "800px",
+            transformOrigin: "left center",
+            transform: peeking
+              ? "perspective(800px) rotateY(25deg)"
+              : "perspective(800px) rotateY(12deg)",
+            transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+            backfaceVisibility: "hidden",
+            background: "#0a0a0a",
             zIndex: 3,
           }}>
-            <div style={{
-              position: "absolute",
-              inset: 0,
-              transformOrigin: "left center",
-              transform: peeking ? "rotateY(25deg)" : "rotateY(12deg)",
-              transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-              backfaceVisibility: "hidden",
-              background: "#0a0a0a",
-            }}>
               {/* CANARY */}
               <div style={{
                 position: "absolute",
@@ -158,7 +155,6 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               }}>
                 Canary
               </div>
-            </div>
           </div>
         </div>
 
