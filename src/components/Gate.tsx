@@ -168,11 +168,11 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             position: "relative",
             overflow: "hidden",
             WebkitMaskImage: peeking
-              ? "linear-gradient(180deg, black 0%, black 90%, transparent 100%)"
-              : "linear-gradient(180deg, black 0%, black 50%, transparent 70%)",
+              ? "linear-gradient(180deg, black 0%, black 80%, transparent 100%)"
+              : "linear-gradient(180deg, black 0%, black 50%, transparent 80%)",
             maskImage: peeking
-              ? "linear-gradient(180deg, black 0%, black 90%, transparent 100%)"
-              : "linear-gradient(180deg, black 0%, black 50%, transparent 70%)",
+              ? "linear-gradient(180deg, black 0%, black 80%, transparent 100%)"
+              : "linear-gradient(180deg, black 0%, black 50%, transparent 80%)",
           }}>
             <div style={noiseOverlay} />
 
