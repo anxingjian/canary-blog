@@ -183,7 +183,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                 onMouseEnter={() => setHoveredEntry(i)}
                 onMouseLeave={() => setHoveredEntry(null)}
                 style={{
-                  fontFamily: "'Young Serif', serif",
+                  fontFamily: "'DM Serif Display', serif",
                   fontSize: entryFontSizes[i],
                   fontWeight: 400,
                   color: hoveredEntry === i
