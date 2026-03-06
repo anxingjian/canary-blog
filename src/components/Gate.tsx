@@ -56,15 +56,15 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           bottom: "2.5rem",
           left: "50%",
           transform: "translateX(-50%)",
-          color: "#555",
+          color: "#444",
           fontFamily: "'Space Mono', monospace",
-          fontSize: "0.5rem",
+          fontSize: "0.5625rem",
           letterSpacing: "0.15em",
           whiteSpace: "nowrap",
           zIndex: 20,
         }}
       >
-        watches everything, says almost nothing.
+        Canary · Watches everything, says almost nothing.
       </div>
 
       {/* Hover zone */}
@@ -98,8 +98,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               position: "absolute",
               inset: 0,
               background: peeking
-                ? "linear-gradient(180deg, rgba(196,255,0,0.18) 0%, rgba(196,255,0,0.10) 40%, rgba(196,255,0,0.22) 100%)"
-                : "linear-gradient(180deg, rgba(196,255,0,0.08) 0%, rgba(196,255,0,0.05) 40%, rgba(196,255,0,0.10) 100%)",
+                ? "linear-gradient(180deg, rgba(196,255,0,0.18) 0%, rgba(196,255,0,0.10) 40%, rgba(196,255,0,0.14) 100%)"
+                : "linear-gradient(180deg, rgba(196,255,0,0.08) 0%, rgba(196,255,0,0.04) 40%, rgba(196,255,0,0.05) 100%)",
               transition: "background 0.8s",
               zIndex: 1,
             }}
@@ -165,7 +165,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         {/* FLOOR PROJECTION — container is 2.2x door width, clip-path makes trapezoid */}
         <div
           style={{
-            width: "min(572px, 121vw)",
+            width: "min(440px, 95vw)",
             height: "min(180px, 22vh)",
             position: "relative",
           }}
@@ -178,11 +178,11 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               right: 0,
               height: "100%",
               /* Top narrow (centered to door width), bottom fills full container width */
-              clipPath: "polygon(27% 0%, 73% 0%, 100% 100%, 0% 100%)",
+              clipPath: "polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%)",
               background: peeking
                 ? `linear-gradient(180deg,
-                    rgba(196,255,0,0.18) 0%,
-                    rgba(196,255,0,0.08) 40%,
+                    rgba(196,255,0,0.14) 0%,
+                    rgba(196,255,0,0.07) 40%,
                     rgba(196,255,0,0.02) 80%,
                     transparent 100%
                   )`
@@ -196,7 +196,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              gap: "0.1rem",
+              gap: "0",
               paddingTop: "0.6rem",
               paddingBottom: "0.3rem",
             }}
@@ -223,6 +223,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   whiteSpace: "nowrap",
                   transform: `perspective(400px) rotateX(50deg) scaleY(${1.3 + i * 0.12})`,
                   transformOrigin: "center top",
+                  marginTop: i === 0 ? "0" : i === 2 ? "0" : "0.15rem",
+                  marginBottom: i === 0 ? "0" : "0",
                   textShadow: hoveredEntry === i
                     ? "0 0 30px rgba(196,255,0,0.4)"
                     : "none",
