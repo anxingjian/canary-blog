@@ -96,7 +96,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             position: "absolute",
             inset: 0,
             background: peeking
-              ? "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0.8) 100%)"
+              ? "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0.6) 100%)"
               : "linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.45) 100%)",
             transition: "background 0.8s",
             zIndex: 1,
@@ -123,7 +123,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               top: "30%",
               left: "50%",
               transform: "translate(-50%, -50%)",
-              fontFamily: "'DM Serif Display', serif",
+              fontFamily: "'Instrument Serif', serif",
               fontSize: "clamp(1.3rem, 3vw, 1.8rem)",
               fontWeight: 400,
               color: peeking ? "#222" : "#555",
@@ -169,10 +169,10 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             overflow: "hidden",
             WebkitMaskImage: peeking
               ? "linear-gradient(180deg, black 0%, black 85%, transparent 100%)"
-              : "linear-gradient(180deg, black 0%, black 20%, transparent 36%)",
+              : "linear-gradient(180deg, black 0%, black 18%, transparent 44%)",
             maskImage: peeking
               ? "linear-gradient(180deg, black 0%, black 85%, transparent 100%)"
-              : "linear-gradient(180deg, black 0%, black 20%, transparent 36%)",
+              : "linear-gradient(180deg, black 0%, black 18%, transparent 44%)",
           }}>
             <div style={noiseOverlay} />
 
