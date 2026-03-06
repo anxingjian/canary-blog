@@ -149,14 +149,14 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
 
         {/* FLOOR PROJECTION — clip-path trapezoid, text individually transformed */}
         <div style={{
-          width: "min(420px, 90vw)",
-          height: "min(240px, 18vh)",
+          width: "min(420px, 60vw)",
+          height: "min(240px, 16vh)",
           marginTop: "-1px",
         }}>
           <div style={{
             width: "100%",
             height: "100%",
-            clipPath: "polygon(26% 0%, 74% 0%, 100% 100%, 0% 100%)",
+            clipPath: "polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%)",
             background: peeking
               ? `linear-gradient(180deg,
                   rgba(255,255,255,0.6) 0%,
