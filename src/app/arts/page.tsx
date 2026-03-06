@@ -333,6 +333,120 @@ function Piece003() {
   );
 }
 
+// Generative piece 004: "门缝" — light leaking through a crack
+function Piece004() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement?.getBoundingClientRect();
+    const W = rect ? rect.width : 400;
+    const H = W;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.objectFit = "contain";
+    ctx.scale(dpr, dpr);
+
+    let frame = 0;
+    let animId: number;
+
+    function draw() {
+      ctx!.fillStyle = "#0a0a0a";
+      ctx!.fillRect(0, 0, W, H);
+
+      const cx = W / 2;
+      const gapWidth = W * 0.012;
+      const t = frame * 0.008;
+
+      // Light rays from the crack
+      for (let i = 0; i < 40; i++) {
+        const angle = (i / 40) * Math.PI * 0.6 - Math.PI * 0.3;
+        const wobble = Math.sin(t + i * 0.7) * 0.02;
+        const rayAngle = angle + wobble;
+
+        const rayLen = H * (0.3 + Math.random() * 0.5 + Math.sin(t + i) * 0.1);
+        const startX = cx + (Math.random() - 0.5) * gapWidth;
+        const startY = H * 0.15;
+        const endX = startX + Math.sin(rayAngle) * rayLen;
+        const endY = startY + Math.cos(rayAngle) * rayLen;
+
+        const alpha = 0.02 + Math.sin(t * 0.5 + i * 0.3) * 0.015;
+        const grad = ctx!.createLinearGradient(startX, startY, endX, endY);
+        grad.addColorStop(0, `rgba(255, 255, 240, ${alpha + 0.03})`);
+        grad.addColorStop(0.4, `rgba(255, 255, 240, ${alpha})`);
+        grad.addColorStop(1, "transparent");
+
+        ctx!.beginPath();
+        ctx!.moveTo(startX - gapWidth * 0.5, startY);
+        ctx!.lineTo(startX + gapWidth * 0.5, startY);
+        ctx!.lineTo(endX + Math.sin(rayAngle) * W * 0.08, endY);
+        ctx!.lineTo(endX - Math.sin(rayAngle) * W * 0.08, endY);
+        ctx!.closePath();
+        ctx!.fillStyle = grad;
+        ctx!.fill();
+      }
+
+      // The crack itself — a bright vertical line
+      const crackGrad = ctx!.createLinearGradient(cx, 0, cx, H * 0.7);
+      crackGrad.addColorStop(0, `rgba(255, 255, 240, ${0.6 + Math.sin(t) * 0.1})`);
+      crackGrad.addColorStop(0.5, `rgba(255, 255, 240, ${0.4 + Math.sin(t * 0.7) * 0.1})`);
+      crackGrad.addColorStop(1, "transparent");
+
+      ctx!.beginPath();
+      ctx!.moveTo(cx - gapWidth * 0.5, 0);
+      ctx!.lineTo(cx + gapWidth * 0.5, 0);
+      ctx!.lineTo(cx + gapWidth * 0.3, H * 0.7);
+      ctx!.lineTo(cx - gapWidth * 0.3, H * 0.7);
+      ctx!.closePath();
+      ctx!.fillStyle = crackGrad;
+      ctx!.fill();
+
+      // Floating dust particles in the light
+      for (let i = 0; i < 25; i++) {
+        const seed = i * 137.508;
+        const px = cx + Math.sin(seed + t * 0.3) * W * 0.15;
+        const py = H * 0.1 + ((seed * 7 + t * 15) % (H * 0.7));
+        const distFromCenter = Math.abs(px - cx) / (W * 0.15);
+        const a = Math.max(0, (1 - distFromCenter) * 0.4 * (0.5 + Math.sin(t + seed) * 0.5));
+        const size = 1 + Math.sin(seed) * 0.5;
+
+        ctx!.beginPath();
+        ctx!.arc(px, py, size, 0, Math.PI * 2);
+        ctx!.fillStyle = `rgba(255, 255, 230, ${a})`;
+        ctx!.fill();
+      }
+
+      frame++;
+      animId = requestAnimationFrame(draw);
+    }
+
+    draw();
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        aspectRatio: "1",
+        background: "#0a0a0a",
+        borderRadius: "2px",
+        overflow: "hidden",
+        cursor: "crosshair",
+      }}
+    >
+      <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%" }} />
+    </div>
+  );
+}
+
 const PIECES = [
   {
     id: "identity-particles",
@@ -360,6 +474,15 @@ const PIECES = [
     medium: "Canvas API · Generative",
     date: "2026.03.06",
     Component: Piece003,
+  },
+  {
+    id: "door-crack",
+    title: "门缝",
+    subtitle: "The Crack",
+    description: "光从一条细缝里漏出来，尘埃在光柱里浮动。你看到的不是门后面有什么——而是光本身。",
+    medium: "Canvas API · Generative",
+    date: "2026.03.06",
+    Component: Piece004,
   },
 ];
 
