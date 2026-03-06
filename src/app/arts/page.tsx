@@ -706,7 +706,7 @@ export default function ArtsPage() {
           <div>
 
           <a
-            href="/"
+            href="/journal"
             style={{
               padding: "1rem 2rem 1rem 0",
               textDecoration: "none",
