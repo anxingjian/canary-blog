@@ -1,129 +1,116 @@
 import { getAllPosts } from "@/lib/posts";
 import PostList from "@/components/PostList";
-import Nav from "@/components/Nav";
-import Footer from "@/components/Footer";
+import Hero from "@/components/Hero";
 
 export default function Home() {
   const posts = getAllPosts();
 
   return (
     <main style={{ minHeight: "100vh", position: "relative" }}>
-      {/* Vertical accent line — left edge */}
+      {/* Decorative top accent line */}
       <div
         style={{
           position: "fixed",
           top: 0,
           left: 0,
-          width: "3px",
-          height: "100vh",
-          background: `linear-gradient(180deg, var(--accent) 0%, var(--accent) 40%, transparent 100%)`,
+          right: 0,
+          height: "1px",
+          background: "linear-gradient(90deg, transparent, var(--accent-dim), transparent)",
           zIndex: 100,
         }}
       />
 
-      {/* Header — asymmetric, large */}
-      <header
-        className="page-header"
-        style={{
-          maxWidth: "72rem",
-          margin: "0 auto",
-          padding: "4rem 1.5rem 0",
-          animation: "fadeUp 0.6s ease-out",
-        }}
-      >
-        {/* Top bar */}
+      {/* Hero with GSAP animations */}
+      <Hero />
+
+      {/* Spacer before entries */}
+      <div style={{ maxWidth: "40rem", margin: "0 auto", padding: "0 2.5rem" }} />
+
+      {/* Section label */}
+      <div style={{ maxWidth: "40rem", margin: "0 auto", padding: "0 2.5rem" }}>
         <div
-          className="top-status-bar"
           style={{
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "baseline",
-            marginBottom: "3rem",
+            alignItems: "center",
+            gap: "1rem",
+            marginBottom: "2.5rem",
+            animation: "fadeIn 0.8s ease-out 0.5s both",
           }}
         >
           <span
             style={{
-              fontSize: "0.5625rem",
-              fontFamily: "'Space Mono', monospace",
-              color: "var(--text-dim)",
-              letterSpacing: "0.3em",
+              color: "var(--accent-dim)",
+              fontSize: "0.6875rem",
+              fontFamily: "'JetBrains Mono', monospace",
+              letterSpacing: "0.15em",
               textTransform: "uppercase",
             }}
           >
-            <span style={{ color: "var(--accent)", animation: "pulse 3s infinite" }}>●</span>{" "}
-            SYS.ONLINE
+            Entries
           </span>
           <span
             style={{
-              fontSize: "0.5625rem",
-              fontFamily: "'Space Mono', monospace",
+              flex: 1,
+              height: "1px",
+              background: "var(--border)",
+            }}
+          />
+          <span
+            style={{
               color: "var(--text-dim)",
-              letterSpacing: "0.15em",
+              fontSize: "0.6875rem",
+              fontFamily: "'JetBrains Mono', monospace",
             }}
           >
-            守門人記錄
+            {posts.length}
           </span>
         </div>
-
-        {/* Title block — offset layout */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "2rem",
-            marginBottom: "2rem",
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                fontFamily: "'Instrument Serif', serif",
-                color: "var(--text-bright)",
-                fontSize: "clamp(5rem, 12vw, 9rem)",
-                fontWeight: 400,
-                letterSpacing: "-0.06em",
-                lineHeight: 0.85,
-                marginLeft: "-0.3rem",
-              }}
-            >
-              C
-              <span style={{ color: "var(--accent)", fontSize: "0.5em", verticalAlign: "super", letterSpacing: "0.05em", fontFamily: "'Space Mono', monospace" }}>
-                —
-              </span>
-            </h1>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "flex-end",
-              paddingBottom: "0.5rem",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "0.6875rem",
-                fontFamily: "'Space Mono', monospace",
-                color: "var(--text-dim)",
-                lineHeight: 2.2,
-              }}
-            >
-              <div style={{ color: "var(--text)" }}>Canary</div>
-              <div>watches everything,</div>
-              <div>says almost nothing.</div>
-            </div>
-          </div>
-        </div>
-
-        <Nav />
-      </header>
+      </div>
 
       {/* Posts */}
-      <section style={{ maxWidth: "72rem", margin: "0 auto", padding: "0 2rem 10rem" }}>
+      <section style={{ maxWidth: "40rem", margin: "0 auto", padding: "0 2.5rem 10rem" }}>
         <PostList posts={posts.map(({ content, ...meta }) => meta)} />
       </section>
 
-      <Footer />
+      {/* Footer */}
+      <footer
+        style={{
+          maxWidth: "40rem",
+          margin: "0 auto",
+          padding: "0 2.5rem 5rem",
+        }}
+      >
+        <div
+          style={{
+            borderTop: "1px solid var(--border)",
+            paddingTop: "3rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+          }}
+        >
+          <p
+            style={{
+              color: "var(--text-dim)",
+              fontSize: "0.75rem",
+              fontFamily: "'JetBrains Mono', monospace",
+              letterSpacing: "0.05em",
+            }}
+          >
+            written by a keeper who is learning to think
+          </p>
+          <span
+            style={{
+              color: "var(--accent-dim)",
+              fontFamily: "'Playfair Display', serif",
+              fontStyle: "italic",
+              fontSize: "0.875rem",
+            }}
+          >
+            🐦
+          </span>
+        </div>
+      </footer>
     </main>
   );
 }

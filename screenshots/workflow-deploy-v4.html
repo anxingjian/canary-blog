@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0d0d0d;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+.canvas {
+  width: 1080px;
+  height: 1440px;
+  background: #0d0d0d;
+  position: relative;
+  padding: 72px 80px;
+  font-family: 'Noto Sans SC', -apple-system, sans-serif;
+}
+.canvas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.title {
+  font-size: 44px;
+  color: #e8e8e8;
+  font-weight: 500;
+  margin-bottom: 12px;
+  position: relative;
+}
+.subtitle {
+  font-size: 24px;
+  color: rgba(255,255,255,0.25);
+  margin-bottom: 56px;
+  line-height: 1.6;
+  position: relative;
+}
+
+/* Step */
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  position: relative;
+  padding-left: 32px;
+  margin-bottom: 0;
+}
+.step .bar {
+  width: 4px;
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  border-radius: 2px;
+}
+.step .bar.gold { background: rgba(200,168,78,0.5); }
+.step .bar.dim { background: rgba(200,168,78,0.18); }
+.step .num {
+  font-size: 16px;
+  color: rgba(200,168,78,0.4);
+  letter-spacing: 3px;
+  margin-bottom: 6px;
+}
+.step .name {
+  font-size: 36px;
+  color: #e8e8e8;
+  font-weight: 500;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+.step .desc {
+  font-size: 24px;
+  color: rgba(255,255,255,0.3);
+  line-height: 1.7;
+}
+.step .tag {
+  display: inline-block;
+  font-size: 16px;
+  color: rgba(200,168,78,0.5);
+  border: 1px solid rgba(200,168,78,0.2);
+  border-radius: 4px;
+  padding: 2px 10px;
+  margin-top: 8px;
+  letter-spacing: 1px;
+}
+
+/* Connector */
+.conn {
+  height: 44px;
+  padding-left: 32px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.conn .line {
+  width: 1px;
+  height: 32px;
+  background: linear-gradient(to bottom, rgba(200,168,78,0.25), rgba(200,168,78,0.06));
+}
+.conn .label {
+  font-size: 18px;
+  color: #c8a84e;
+  opacity: 0.35;
+}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title">Deployment Workflow</div>
+  <div class="subtitle">从 DM 沟通到上线浏览，全流程自动化<br>只需手机操作，所有设备可查看</div>
+
+  <div class="step">
+    <div class="bar dim"></div>
+    <div>
+      <div class="num">STEP 01</div>
+      <div class="name">DM 沟通想法</div>
+      <div class="desc">在 Discord 和 Canary 讨论需求<br>手机随时发消息，不用开电脑</div>
+    </div>
+  </div>
+
+  <div class="conn"><div class="line"></div></div>
+
+  <div class="step">
+    <div class="bar dim"></div>
+    <div>
+      <div class="num">STEP 02</div>
+      <div class="name">Canary 编写代码</div>
+      <div class="desc">收到需求后自动开始开发<br>实时预览，反复调整到满意</div>
+      <div class="tag">CANARY 自动执行</div>
+    </div>
+  </div>
+
+  <div class="conn"><div class="line"></div></div>
+
+  <div class="step">
+    <div class="bar gold"></div>
+    <div>
+      <div class="num">STEP 03</div>
+      <div class="name">Git Push → Vercel 部署</div>
+      <div class="desc">代码提交后 Vercel 自动构建<br>约 30 秒完成，无需手动操作</div>
+      <div class="tag">⚡ 全自动</div>
+    </div>
+  </div>
+
+  <div class="conn"><div class="line"></div></div>
+
+  <div class="step">
+    <div class="bar gold"></div>
+    <div>
+      <div class="num">STEP 04</div>
+      <div class="name">上线完成</div>
+      <div class="desc">📱 手机 · 💻 电脑 · 🖥 iPad<br>任何设备，随时查看最新版</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
