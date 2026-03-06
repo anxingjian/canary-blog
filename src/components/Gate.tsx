@@ -96,15 +96,18 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             height: "min(460px, 65vh)",
           }}
         >
-          {/* Light behind door */}
+          {/* Light behind door — clipped to only show on the opening side */}
           <div
             style={{
               position: "absolute",
-              inset: 0,
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: peeking ? "45%" : "15%",
               background: peeking
                 ? "linear-gradient(180deg, rgba(196,255,0,0.18) 0%, rgba(196,255,0,0.10) 40%, rgba(196,255,0,0.14) 100%)"
                 : "linear-gradient(180deg, rgba(196,255,0,0.08) 0%, rgba(196,255,0,0.04) 40%, rgba(196,255,0,0.05) 100%)",
-              transition: "background 0.8s",
+              transition: "background 0.8s, width 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
               zIndex: 1,
             }}
           />
@@ -114,23 +117,15 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             style={{
               position: "absolute",
               inset: 0,
-              perspective: "800px",
+              transformOrigin: "left center",
+              transform: peeking
+                ? "perspective(800px) rotateY(25deg)"
+                : "perspective(800px) rotateY(12deg)",
+              transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+              backfaceVisibility: "hidden",
               zIndex: 3,
             }}
           >
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                left: "-10px",
-                width: "calc(100% + 10px)",
-                transformOrigin: "left center",
-                transform: peeking ? "rotateY(25deg)" : "rotateY(12deg)",
-                transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-                backfaceVisibility: "hidden",
-              }}
-            >
               {/* Door surface */}
               <div
                 style={{
@@ -176,7 +171,6 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               >
                 Canary
               </div>
-            </div>
           </div>
         </div>
 
