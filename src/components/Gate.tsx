@@ -25,7 +25,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         inset: 0,
         background: "#0a0a0a",
         zIndex: 1000,
-        overflow: "hidden",
+        overflow: "visible",
         opacity: entered ? 0 : 1,
         transition: "opacity 0.6s ease-out",
         pointerEvents: entered ? "none" : "auto",
@@ -162,25 +162,19 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           </div>
         </div>
 
-        {/* FLOOR PROJECTION — container is 2.2x door width, clip-path makes trapezoid */}
+        {/* FLOOR PROJECTION — wide container, trapezoid via clip-path */}
         <div
           style={{
-            width: "min(260px, 55vw)",
+            width: "min(500px, 105vw)",
             height: "min(180px, 22vh)",
-            position: "relative",
-            overflow: "visible",
           }}
         >
           <div
             style={{
-              position: "absolute",
-              top: 0,
-              /* Left/right extend beyond container to form trapezoid bottom */
-              left: "-35%",
-              right: "-35%",
+              width: "100%",
               height: "100%",
-              /* Top edges at 26%/74% = the 260px door width centered in the wider box */
-              clipPath: "polygon(26% 0%, 74% 0%, 100% 100%, 0% 100%)",
+              /* 260/500 = 52%. Top centered: (100-52)/2 = 24% from each side */
+              clipPath: "polygon(24% 0%, 76% 0%, 100% 100%, 0% 100%)",
               background: peeking
                 ? `linear-gradient(180deg,
                     rgba(196,255,0,0.14) 0%,
