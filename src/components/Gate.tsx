@@ -194,7 +194,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             clipPath: peeking
               ? "polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)"
               : "polygon(30% 0%, 70% 0%, 85% 100%, 15% 100%)",
-            transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+            transition: "all 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -229,7 +229,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   ? "0 0 30px rgba(196,255,0,0.4)"
                   : "none",
                 opacity: peeking ? 1 : 0,
-                transition: "color 0.3s, opacity 0.5s 0.3s, text-shadow 0.3s",
+                transition: "color 0.3s, opacity 0.6s 0.5s, text-shadow 0.3s",
               }}
             >
               {entry.name}
