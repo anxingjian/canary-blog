@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #020202; width: 1440px; height: 900px; overflow: hidden; font-family: 'Space Mono', monospace; }
+
+  .scene {
+    width: 100%; height: 100%;
+    position: relative;
+  }
+
+  .door-left, .door-right {
+    position: absolute;
+    top: 0; bottom: 0;
+    transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .door-left {
+    left: 0; width: 50%;
+    background: linear-gradient(90deg, #060606 0%, #0a0a0a 80%, #0e0e0e 100%);
+    border-right: 1px solid #151515;
+  }
+  .door-right {
+    right: 0; width: 50%;
+    background: linear-gradient(-90deg, #060606 0%, #0a0a0a 80%, #0e0e0e 100%);
+    border-left: 1px solid #151515;
+  }
+
+  .crack-glow {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%; transform: translateX(-50%);
+    width: 3px;
+    background: linear-gradient(180deg,
+      transparent 5%,
+      rgba(196,255,0,0.03) 15%,
+      rgba(196,255,0,0.08) 35%,
+      rgba(196,255,0,0.14) 50%,
+      rgba(196,255,0,0.08) 65%,
+      rgba(196,255,0,0.03) 85%,
+      transparent 95%
+    );
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 2;
+  }
+
+  .floor-light {
+    position: absolute;
+    bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100px; height: 80px;
+    background: radial-gradient(ellipse at center top, rgba(196,255,0,0.03) 0%, transparent 70%);
+    transition: width 0.8s, height 0.8s, opacity 0.8s;
+    z-index: 1;
+  }
+
+  .hover-zone {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 30%; right: 30%;
+    z-index: 10;
+    cursor: pointer;
+  }
+
+  /* Entries with perspective - vanishing point at the door crack */
+  .entries {
+    position: absolute;
+    left: calc(50% + 16px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.5s 0.3s;
+    transform-style: preserve-3d;
+    perspective: 400px;
+    perspective-origin: left center;
+  }
+
+  .entry {
+    font-family: 'Instrument Serif', serif;
+    color: #444;
+    letter-spacing: 0.02em;
+    padding: 0.6rem 0;
+    cursor: pointer;
+    transition: color 0.3s, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: left center;
+    white-space: nowrap;
+    position: relative;
+  }
+  .entry:hover { color: #c4ff00; }
+  .entry .num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.45rem;
+    letter-spacing: 0.1em;
+    margin-right: 0.6rem;
+    opacity: 0.4;
+    vertical-align: middle;
+  }
+
+  /* Near door = small, far from door = large. Perspective fan-out */
+  .entry:nth-child(1) {
+    font-size: 1.8rem;
+    transform: rotateY(-18deg) rotateX(6deg) translateZ(0px);
+    opacity: 0.7;
+  }
+  .entry:nth-child(2) {
+    font-size: 2.6rem;
+    transform: rotateY(-10deg) translateZ(15px);
+    opacity: 0.85;
+  }
+  .entry:nth-child(3) {
+    font-size: 1.8rem;
+    transform: rotateY(-18deg) rotateX(-6deg) translateZ(0px);
+    opacity: 0.7;
+  }
+
+  /* Hover state */
+  .scene.peeking .door-left { transform: translateX(-16px); }
+  .scene.peeking .door-right { transform: translateX(16px); }
+  .scene.peeking .crack-glow { width: 36px; }
+  .scene.peeking .floor-light { width: 500px; height: 150px; opacity: 1; }
+  .scene.peeking .entries { opacity: 1; }
+
+  .sys {
+    position: absolute;
+    top: 2.5rem; left: 2.5rem;
+    color: #1a1a1a;
+    font-size: 0.5rem;
+    letter-spacing: 0.3em;
+    z-index: 20;
+  }
+  .sys .dot { color: #c4ff00; animation: pulse 3s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .handle {
+    position: absolute;
+    right: 36px; top: 50%; transform: translateY(-50%);
+    width: 2px; height: 36px;
+    background: #1a1a1a;
+    border-radius: 1px;
+  }
+</style>
+</head>
+<body>
+  <div class="scene peeking" id="scene">
+    <div class="sys"><span class="dot">●</span> SYS.ONLINE</div>
+    <div class="door-left"><div class="handle"></div></div>
+    <div class="door-right"></div>
+    <div class="crack-glow"></div>
+    <div class="floor-light"></div>
+    <div class="entries">
+      <div class="entry"><span class="num">01</span>Journal</div>
+      <div class="entry"><span class="num">02</span>Essays</div>
+      <div class="entry"><span class="num">03</span>Arts</div>
+    </div>
+    <div class="hover-zone" id="hoverZone"></div>
+  </div>
+</body></html>

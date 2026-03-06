@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #020202; width: 1440px; height: 900px; overflow: hidden; font-family: 'Space Mono', monospace; }
+
+  .scene { width: 100%; height: 100%; position: relative; }
+
+  .door-left, .door-right {
+    position: absolute; top: 0; bottom: 0;
+    transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .door-left {
+    left: 0; width: 50%;
+    background: linear-gradient(90deg, #060606 0%, #0a0a0a 80%, #0e0e0e 100%);
+    border-right: 1px solid #151515;
+  }
+  .door-right {
+    right: 0; width: 50%;
+    background: linear-gradient(-90deg, #060606 0%, #0a0a0a 80%, #0e0e0e 100%);
+    border-left: 1px solid #151515;
+  }
+
+  .crack-glow {
+    position: absolute; top: 0; bottom: 0;
+    left: 50%; transform: translateX(-50%);
+    width: 3px;
+    background: linear-gradient(180deg,
+      transparent 5%, rgba(196,255,0,0.03) 15%, rgba(196,255,0,0.08) 35%,
+      rgba(196,255,0,0.14) 50%, rgba(196,255,0,0.08) 65%, rgba(196,255,0,0.03) 85%, transparent 95%);
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 2;
+  }
+
+  .floor-light {
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100px; height: 80px;
+    background: radial-gradient(ellipse at center top, rgba(196,255,0,0.03) 0%, transparent 70%);
+    transition: width 0.8s, height 0.8s;
+    z-index: 1;
+  }
+
+  .hover-zone {
+    position: absolute; top: 0; bottom: 0; left: 30%; right: 30%;
+    z-index: 10; cursor: pointer;
+  }
+
+  /* Entries container - positioned right of center crack */
+  .entries {
+    position: absolute;
+    left: calc(50% + 40px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 2.2rem;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.6s 0.2s;
+  }
+
+  .entry {
+    font-family: 'Instrument Serif', serif;
+    font-size: 2.8rem;
+    color: #333;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: color 0.3s;
+    white-space: nowrap;
+    /* The key: perspective transform on each word — left side (near crack) is small/receding,
+       right side (away from crack) fans out bigger */
+    transform: perspective(300px) rotateY(-35deg);
+    transform-origin: left center;
+  }
+  .entry:hover { color: #c4ff00; }
+
+  .scene.peeking .door-left { transform: translateX(-16px); }
+  .scene.peeking .door-right { transform: translateX(16px); }
+  .scene.peeking .crack-glow { width: 36px; }
+  .scene.peeking .floor-light { width: 500px; height: 150px; }
+  .scene.peeking .entries { opacity: 1; }
+
+  .sys {
+    position: absolute; top: 2.5rem; left: 2.5rem;
+    color: #1a1a1a; font-size: 0.5rem; letter-spacing: 0.3em; z-index: 20;
+  }
+  .sys .dot { color: #c4ff00; animation: pulse 3s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .handle {
+    position: absolute; right: 36px; top: 50%; transform: translateY(-50%);
+    width: 2px; height: 36px; background: #1a1a1a; border-radius: 1px;
+  }
+</style>
+</head>
+<body>
+  <div class="scene peeking" id="scene">
+    <div class="sys"><span class="dot">●</span> SYS.ONLINE</div>
+    <div class="door-left"><div class="handle"></div></div>
+    <div class="door-right"></div>
+    <div class="crack-glow"></div>
+    <div class="floor-light"></div>
+    <div class="entries">
+      <div class="entry">Journal</div>
+      <div class="entry">Essays</div>
+      <div class="entry">Arts</div>
+    </div>
+    <div class="hover-zone" id="hoverZone"></div>
+  </div>
+</body></html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #020202; width: 1440px; height: 900px; overflow: hidden; font-family: 'Space Mono', monospace; }
+
+  .scene {
+    width: 100%; height: 100%;
+    position: relative;
+    cursor: default;
+  }
+
+  /* Door panels */
+  .door-left, .door-right {
+    position: absolute;
+    top: 0; bottom: 0;
+    background: #080808;
+    transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .door-left {
+    left: 0;
+    width: 50%;
+    border-right: 1px solid #111;
+    /* Subtle door texture */
+    background: linear-gradient(180deg, #080808 0%, #0a0a0a 30%, #070707 70%, #080808 100%);
+  }
+  .door-right {
+    right: 0;
+    width: 50%;
+    border-left: 1px solid #111;
+    background: linear-gradient(180deg, #080808 0%, #0a0a0a 30%, #070707 70%, #080808 100%);
+  }
+
+  /* Door frame edges */
+  .door-left::after, .door-right::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+  }
+  .door-left::after {
+    right: 0;
+    background: linear-gradient(180deg, transparent 10%, #1a1a1a 30%, #222 50%, #1a1a1a 70%, transparent 90%);
+  }
+  .door-right::after {
+    left: 0;
+    background: linear-gradient(180deg, transparent 10%, #1a1a1a 30%, #222 50%, #1a1a1a 70%, transparent 90%);
+  }
+
+  /* The crack / gap light */
+  .crack-glow {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    background: linear-gradient(180deg,
+      transparent 5%,
+      rgba(196, 255, 0, 0.03) 15%,
+      rgba(196, 255, 0, 0.08) 30%,
+      rgba(196, 255, 0, 0.15) 50%,
+      rgba(196, 255, 0, 0.08) 70%,
+      rgba(196, 255, 0, 0.03) 85%,
+      transparent 95%
+    );
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s;
+    z-index: 2;
+  }
+
+  /* Ambient light spill on floor */
+  .floor-light {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 120px;
+    background: radial-gradient(ellipse at center top, rgba(196, 255, 0, 0.04) 0%, transparent 70%);
+    transition: width 0.8s, opacity 0.8s;
+    z-index: 1;
+  }
+
+  /* Hover zone - invisible, centered */
+  .hover-zone {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 35%; right: 35%;
+    z-index: 10;
+    cursor: pointer;
+  }
+
+  /* Entries - perspective container */
+  .entries {
+    position: absolute;
+    right: calc(50% - 140px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.6s 0.2s;
+    perspective: 600px;
+  }
+
+  .entry {
+    color: #3a3a3a;
+    font-size: 0.6875rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 1.2rem 2rem;
+    transition: color 0.3s, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
+    transform-origin: left center;
+    white-space: nowrap;
+    cursor: pointer;
+    position: relative;
+  }
+  .entry:hover {
+    color: #c4ff00;
+  }
+  .entry span.num {
+    font-size: 0.5rem;
+    margin-right: 0.75rem;
+    opacity: 0.5;
+  }
+
+  /* Fan-out perspective: top entry tilts up, bottom tilts down */
+  .entry:nth-child(1) { transform: rotateX(12deg) translateZ(20px); }
+  .entry:nth-child(2) { transform: rotateX(0deg) translateZ(30px); }
+  .entry:nth-child(3) { transform: rotateX(-12deg) translateZ(20px); }
+
+  /* Hover state for the whole scene */
+  .scene.peeking .door-left { transform: translateX(-12px); }
+  .scene.peeking .door-right { transform: translateX(12px); }
+  .scene.peeking .crack-glow { width: 28px; }
+  .scene.peeking .floor-light { width: 400px; opacity: 1; }
+  .scene.peeking .entries { opacity: 1; }
+
+  /* SYS indicator */
+  .sys {
+    position: absolute;
+    top: 2.5rem;
+    left: 2.5rem;
+    color: #1a1a1a;
+    font-size: 0.5rem;
+    letter-spacing: 0.3em;
+    z-index: 20;
+  }
+  .sys .dot {
+    color: #c4ff00;
+    animation: pulse 3s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Door handle hint */
+  .handle {
+    position: absolute;
+    right: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 40px;
+    background: #1a1a1a;
+    border-radius: 2px;
+    z-index: 3;
+    transition: background 0.5s;
+  }
+  .scene.peeking .door-left .handle { background: #2a2a2a; }
+</style>
+</head>
+<body>
+  <div class="scene" id="scene">
+    <div class="sys"><span class="dot">●</span> SYS.ONLINE</div>
+
+    <div class="door-left">
+      <div class="handle"></div>
+    </div>
+    <div class="door-right"></div>
+
+    <div class="crack-glow"></div>
+    <div class="floor-light"></div>
+
+    <div class="entries">
+      <div class="entry"><span class="num">01</span>JOURNAL</div>
+      <div class="entry"><span class="num">02</span>ESSAYS</div>
+      <div class="entry"><span class="num">03</span>ARTS</div>
+    </div>
+
+    <div class="hover-zone" id="hoverZone"></div>
+  </div>
+
+  <script>
+    const scene = document.getElementById('scene');
+    const zone = document.getElementById('hoverZone');
+    zone.addEventListener('mouseenter', () => scene.classList.add('peeking'));
+    zone.addEventListener('mouseleave', () => scene.classList.remove('peeking'));
+  </script>
+</body></html>
