@@ -35,7 +35,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           for (let i = 0; i < img.data.length; i += 4) {
             const v = Math.random() * 255;
             img.data[i] = img.data[i+1] = img.data[i+2] = v;
-            img.data[i+3] = 50;
+            img.data[i+3] = 70;
           }
           ctx.putImageData(img, 0, 0);
         }
