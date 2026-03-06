@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0a; width: 1440px; height: 900px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+
+  .sys { position: absolute; top: 2.5rem; left: 2.5rem; color: #666; font-family: 'Space Mono', monospace; font-size: 0.5rem; letter-spacing: 0.3em; }
+  .sys .dot { color: #c4ff00; }
+  .footnote { position: absolute; top: 2.5rem; right: 2.5rem; color: #444; font-family: 'Space Mono', monospace; font-size: 0.5625rem; letter-spacing: 0.15em; }
+
+  .assembly { display: flex; flex-direction: column; align-items: center; }
+
+  .door-wrap { position: relative; width: 260px; height: 460px; }
+  .door-light { position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(196,255,0,0.18) 0%, rgba(196,255,0,0.10) 40%, rgba(196,255,0,0.14) 100%);
+    z-index: 1; }
+  .door-perspective { position: absolute; inset: 0; perspective: 800px; z-index: 3; }
+  .door { position: absolute; inset: 0; transform-origin: left center; transform: rotateY(25deg); }
+  .door-face { position: absolute; inset: 0;
+    background: linear-gradient(90deg, #0d0d0d 0%, #0b0b0b 50%, #0a0a0a 100%); }
+  .door-edge { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: rgba(196,255,0,0.25); }
+  .door-name { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+    font-family: 'Instrument Serif', serif; font-size: 1.8rem; color: #222; letter-spacing: -0.02em; }
+
+  .floor-outer { width: 500px; height: 180px; }
+  .floor {
+    width: 100%; height: 100%;
+    clip-path: polygon(24% 0%, 76% 0%, 100% 100%, 0% 100%);
+    background: linear-gradient(180deg, rgba(196,255,0,0.14) 0%, rgba(196,255,0,0.07) 40%, rgba(196,255,0,0.02) 80%, transparent 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0; padding-top: 0.5rem;
+  }
+  .entry {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    white-space: nowrap;
+    text-align: center;
+    transform-origin: center top;
+  }
+  .e-arts {
+    font-size: 1.6rem; color: rgba(196,255,0,0.18);
+    width: 56%; transform: scaleX(1.3) perspective(400px) rotateX(50deg) scaleY(1.3);
+  }
+  .e-essays {
+    font-size: 2.1rem; color: rgba(196,255,0,0.26);
+    width: 72%; transform: scaleX(1.5) perspective(400px) rotateX(50deg) scaleY(1.42);
+    margin-top: -0.1rem;
+  }
+  .e-journal {
+    font-size: 2.7rem; color: rgba(196,255,0,0.34);
+    width: 90%; transform: scaleX(1.7) perspective(400px) rotateX(50deg) scaleY(1.54);
+    margin-top: -0.15rem;
+  }
+</style>
+</head>
+<body>
+  <div class="sys"><span class="dot">●</span> SYS.ONLINE</div>
+  <div class="footnote">Canary · 守門人記錄</div>
+  <div class="assembly">
+    <div class="door-wrap">
+      <div class="door-light"></div>
+      <div class="door-perspective">
+        <div class="door">
+          <div class="door-face"></div>
+          <div class="door-edge"></div>
+          <div class="door-name">Canary</div>
+        </div>
+      </div>
+    </div>
+    <div class="floor-outer">
+      <div class="floor">
+        <div class="entry e-arts">Arts</div>
+        <div class="entry e-essays">Essays</div>
+        <div class="entry e-journal">Journal</div>
+      </div>
+    </div>
+  </div>
+</body></html>
