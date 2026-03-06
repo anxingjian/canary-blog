@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const ENTRIES = [
   { name: "Arts", href: "/arts" },
@@ -13,35 +13,44 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
   const [hoveredEntry, setHoveredEntry] = useState<number | null>(null);
   const [entered, setEntered] = useState(false);
   const noiseCanvasRef = useRef<HTMLCanvasElement>(null);
+  const frameRef = useRef<number>(0);
+  const lastDrawRef = useRef<number>(0);
 
   const handleEntryClick = (href: string) => {
     setEntered(true);
     setTimeout(() => onEnter(href), 600);
   };
 
-  /* Animated noise on canvas */
+  /* Slow, fine-grained noise — updates every ~150ms for a calm static feel */
+  const drawNoise = useCallback((time: number) => {
+    if (time - lastDrawRef.current > 150) {
+      const canvas = noiseCanvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          const w = canvas.width, h = canvas.height;
+          const img = ctx.createImageData(w, h);
+          for (let i = 0; i < img.data.length; i += 4) {
+            const v = Math.random() * 255;
+            img.data[i] = img.data[i+1] = img.data[i+2] = v;
+            img.data[i+3] = 25; // subtle
+          }
+          ctx.putImageData(img, 0, 0);
+        }
+      }
+      lastDrawRef.current = time;
+    }
+    frameRef.current = requestAnimationFrame(drawNoise);
+  }, []);
+
   useEffect(() => {
     const canvas = noiseCanvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const w = 128, h = 256;
-    canvas.width = w;
-    canvas.height = h;
-    let frame: number;
-    const draw = () => {
-      const img = ctx.createImageData(w, h);
-      for (let i = 0; i < img.data.length; i += 4) {
-        const v = Math.random() * 255;
-        img.data[i] = img.data[i+1] = img.data[i+2] = v;
-        img.data[i+3] = 40;
-      }
-      ctx.putImageData(img, 0, 0);
-      frame = requestAnimationFrame(draw);
-    };
-    frame = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(frame);
-  }, []);
+    canvas.width = 256;
+    canvas.height = 512;
+    frameRef.current = requestAnimationFrame(drawNoise);
+    return () => cancelAnimationFrame(frameRef.current);
+  }, [drawNoise]);
 
   const entryWidths = ["56%", "72%", "90%"];
 
@@ -77,7 +86,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         Canary · 守門人記錄
       </div>
 
-      {/* Main assembly — everything in one container */}
+      {/* Main assembly */}
       <div
         onMouseEnter={() => setPeeking(true)}
         onMouseLeave={() => { setPeeking(false); setHoveredEntry(null); }}
@@ -94,37 +103,22 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           zIndex: 5,
         }}
       >
-        {/* Door frame — contains light + door panel */}
+        {/* Door frame — light + door */}
         <div style={{
           position: "relative",
           width: "min(260px, 55vw)",
           height: "min(460px, 65vh)",
         }}>
-          {/* LIGHT behind door — full rectangle */}
+          {/* LIGHT behind door */}
           <div style={{
             position: "absolute",
             inset: 0,
             background: peeking
               ? "linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.6) 100%)"
-              : "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.08) 100%)",
+              : "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.14) 100%)",
             transition: "background 0.8s",
             zIndex: 1,
-          }}>
-            {/* Noise canvas overlay */}
-            <canvas
-              ref={noiseCanvasRef}
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                opacity: peeking ? 0 : 0.8,
-                transition: "opacity 0.8s",
-                mixBlendMode: "overlay",
-                pointerEvents: "none",
-              }}
-            />
-          </div>
+          }} />
 
           {/* DOOR PANEL */}
           <div style={{
@@ -139,26 +133,26 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             background: "#0a0a0a",
             zIndex: 3,
           }}>
-              {/* CANARY */}
-              <div style={{
-                position: "absolute",
-                top: "30%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                fontFamily: "'Instrument Serif', serif",
-                fontSize: "clamp(1.3rem, 3vw, 1.8rem)",
-                fontWeight: 400,
-                color: peeking ? "#222" : "#555",
-                letterSpacing: "-0.02em",
-                whiteSpace: "nowrap",
-                transition: "color 0.8s",
-              }}>
-                Canary
-              </div>
+            {/* CANARY */}
+            <div style={{
+              position: "absolute",
+              top: "30%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              fontFamily: "'Instrument Serif', serif",
+              fontSize: "clamp(1.3rem, 3vw, 1.8rem)",
+              fontWeight: 400,
+              color: peeking ? "#222" : "#555",
+              letterSpacing: "-0.02em",
+              whiteSpace: "nowrap",
+              transition: "color 0.8s",
+            }}>
+              Canary
+            </div>
           </div>
         </div>
 
-        {/* FLOOR PROJECTION — continuous with door light */}
+        {/* FLOOR PROJECTION */}
         <div style={{
           width: "min(500px, 105vw)",
           height: "min(180px, 22vh)",
@@ -175,8 +169,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   transparent 100%
                 )`
               : `linear-gradient(180deg,
-                  rgba(255,255,255,0.08) 0%,
-                  rgba(255,255,255,0.03) 50%,
+                  rgba(255,255,255,0.14) 0%,
+                  rgba(255,255,255,0.06) 50%,
                   transparent 100%
                 )`,
             transition: "background 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -225,6 +219,24 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             ))}
           </div>
         </div>
+
+        {/* NOISE OVERLAY — covers entire light area (door + projection) as one layer */}
+        <canvas
+          ref={noiseCanvasRef}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "min(500px, 105vw)",
+            height: "100%",
+            opacity: peeking ? 0 : 0.5,
+            transition: "opacity 0.8s",
+            mixBlendMode: "overlay",
+            pointerEvents: "none",
+            zIndex: 4,
+          }}
+        />
       </div>
 
       {/* Ambient glow */}
