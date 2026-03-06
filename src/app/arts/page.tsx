@@ -360,7 +360,104 @@ const PIECES = [
   },
 ];
 
-function ViewToggle({
+function ListItem({ piece, index }: { piece: (typeof PIECES)[0]; index: number }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      key={piece.id}
+      className="arts-list-item"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "400px 1fr",
+        gap: "3rem",
+        padding: index === 0 ? "1rem 0 4rem" : "4rem 0",
+        borderBottom: "1px solid var(--border)",
+        animation: `slideIn 0.5s ease-out ${index * 0.15}s both`,
+        alignItems: "start",
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <piece.Component />
+
+      <div className="piece-info" style={{ paddingTop: "1rem" }}>
+        <span
+          className="piece-number"
+          style={{
+            fontFamily: "'Instrument Serif', serif",
+            fontSize: "2rem",
+            color: hovered ? "var(--accent)" : "var(--border-hover)",
+            lineHeight: 1,
+            letterSpacing: "-0.04em",
+            display: "block",
+            marginBottom: "1.5rem",
+            transition: "color 0.3s",
+          }}
+        >
+          {String(index + 1).padStart(2, "0")}
+        </span>
+
+        <h2
+          className="piece-title"
+          style={{
+            fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
+            fontSize: "1.5rem",
+            fontWeight: 400,
+            color: "var(--text-bright)",
+            letterSpacing: "-0.02em",
+            marginBottom: "0.375rem",
+          }}
+        >
+          {piece.title}
+        </h2>
+
+        <p
+          className="piece-subtitle"
+          style={{
+            fontFamily: "'Space Mono', monospace",
+            fontSize: "0.6875rem",
+            color: "var(--text-dim)",
+            fontStyle: "italic",
+            marginBottom: "1.25rem",
+          }}
+        >
+          {piece.subtitle}
+        </p>
+
+        <p
+          className="piece-description"
+          style={{
+            color: "var(--text)",
+            fontSize: "0.875rem",
+            lineHeight: 1.9,
+            maxWidth: "28rem",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {piece.description}
+        </p>
+
+        <div
+          className="piece-meta"
+          style={{
+            display: "flex",
+            gap: "2rem",
+            fontSize: "0.5625rem",
+            fontFamily: "'Space Mono', monospace",
+            color: "var(--text-dim)",
+            letterSpacing: "0.1em",
+          }}
+        >
+          <span>{piece.date}</span>
+          <span>{piece.medium}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
   view,
   onToggle,
 }: {
@@ -599,9 +696,7 @@ export default function ArtsPage() {
             marginBottom: "4rem",
           }}
         >
-          Output without input.
-          <br />
-          Code that grew on its own.
+          Output without input. Code that grew on its own.
         </p>
 
         <nav style={{ borderBottom: "1px solid var(--border)", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -663,93 +758,7 @@ export default function ArtsPage() {
           /* ——— LIST VIEW ——— */
           <div>
             {PIECES.map((piece, i) => (
-              <div
-                key={piece.id}
-                className="arts-list-item"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "400px 1fr",
-                  gap: "3rem",
-                  padding: i === 0 ? "1rem 0 4rem" : "4rem 0",
-                  borderBottom: "1px solid var(--border)",
-                  animation: `slideIn 0.5s ease-out ${i * 0.15}s both`,
-                  alignItems: "start",
-                }}
-              >
-                <piece.Component />
-
-                <div className="piece-info" style={{ paddingTop: "1rem" }}>
-                  <span
-                    className="piece-number"
-                    style={{
-                      fontFamily: "'Instrument Serif', serif",
-                      fontSize: "2rem",
-                      color: "var(--border-hover)",
-                      lineHeight: 1,
-                      letterSpacing: "-0.04em",
-                      display: "block",
-                      marginBottom: "1.5rem",
-                    }}
-                  >
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-
-                  <h2
-                    className="piece-title"
-                    style={{
-                      fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
-                      fontSize: "1.5rem",
-                      fontWeight: 400,
-                      color: "var(--text-bright)",
-                      letterSpacing: "-0.02em",
-                      marginBottom: "0.375rem",
-                    }}
-                  >
-                    {piece.title}
-                  </h2>
-
-                  <p
-                    className="piece-subtitle"
-                    style={{
-                      fontFamily: "'Space Mono', monospace",
-                      fontSize: "0.6875rem",
-                      color: "var(--text-dim)",
-                      fontStyle: "italic",
-                      marginBottom: "1.25rem",
-                    }}
-                  >
-                    {piece.subtitle}
-                  </p>
-
-                  <p
-                    className="piece-description"
-                    style={{
-                      color: "var(--text)",
-                      fontSize: "0.875rem",
-                      lineHeight: 1.9,
-                      maxWidth: "28rem",
-                      marginBottom: "1.5rem",
-                    }}
-                  >
-                    {piece.description}
-                  </p>
-
-                  <div
-                    className="piece-meta"
-                    style={{
-                      display: "flex",
-                      gap: "2rem",
-                      fontSize: "0.5625rem",
-                      fontFamily: "'Space Mono', monospace",
-                      color: "var(--text-dim)",
-                      letterSpacing: "0.1em",
-                    }}
-                  >
-                    <span>{piece.date}</span>
-                    <span>{piece.medium}</span>
-                  </div>
-                </div>
-              </div>
+              <ListItem key={piece.id} piece={piece} index={i} />
             ))}
           </div>
         ) : (
