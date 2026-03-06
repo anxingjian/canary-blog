@@ -648,10 +648,10 @@ export default function ArtsPage() {
           <a
             href="/"
             style={{
-              fontSize: "0.5625rem",
+              fontSize: "0.875rem",
               fontFamily: "'Space Mono', monospace",
               color: "var(--text-dim)",
-              letterSpacing: "0.15em",
+              letterSpacing: "0.1em",
               textDecoration: "none",
               transition: "color 0.3s",
             }}

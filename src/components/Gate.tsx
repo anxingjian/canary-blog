@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 
 const ENTRIES = [
   { name: "Arts", href: "/arts" },
@@ -12,49 +12,11 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
   const [peeking, setPeeking] = useState(false);
   const [hoveredEntry, setHoveredEntry] = useState<number | null>(null);
   const [entered, setEntered] = useState(false);
-  const noise1Ref = useRef<HTMLCanvasElement>(null);
-  const noise2Ref = useRef<HTMLCanvasElement>(null);
-  const frameRef = useRef<number>(0);
-  const lastDrawRef = useRef<number>(0);
 
   const handleEntryClick = (href: string) => {
     setEntered(true);
     setTimeout(() => onEnter(href), 600);
   };
-
-  useEffect(() => {
-    const oc = document.createElement("canvas");
-    oc.width = 512;
-    oc.height = 512;
-
-    const draw = (time: number) => {
-      if (time - lastDrawRef.current > 150) {
-        const ctx = oc.getContext("2d");
-        if (ctx) {
-          const img = ctx.createImageData(512, 512);
-          for (let i = 0; i < img.data.length; i += 4) {
-            const v = Math.random() * 255;
-            img.data[i] = img.data[i+1] = img.data[i+2] = v;
-            img.data[i+3] = 70;
-          }
-          ctx.putImageData(img, 0, 0);
-        }
-        for (const ref of [noise1Ref, noise2Ref]) {
-          const c = ref.current;
-          if (c) {
-            c.width = c.offsetWidth || 512;
-            c.height = c.offsetHeight || 512;
-            const cctx = c.getContext("2d");
-            if (cctx) cctx.drawImage(oc, 0, 0, c.width, c.height);
-          }
-        }
-        lastDrawRef.current = time;
-      }
-      frameRef.current = requestAnimationFrame(draw);
-    };
-    frameRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(frameRef.current);
-  }, []);
 
   const entryFontSizes = [
     "clamp(1.1rem, 2.2vw, 1.4rem)",
@@ -62,15 +24,17 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
     "clamp(1.8rem, 4vw, 2.5rem)",
   ];
 
-  const noiseCanvas: React.CSSProperties = {
+  /* Noise overlay style — uses noise.gif via CSS pseudo-element in globals.css */
+  const noiseOverlay: React.CSSProperties = {
     position: "absolute",
     inset: 0,
-    width: "100%",
-    height: "100%",
-    mixBlendMode: "overlay",
-    opacity: peeking ? 0 : 0.7,
+    backgroundImage: "url('/noise.gif')",
+    backgroundSize: "150px",
+    backgroundRepeat: "repeat",
+    opacity: peeking ? 0 : 0.12,
     transition: "opacity 0.8s",
     pointerEvents: "none",
+    mixBlendMode: "overlay",
   };
 
   return (
@@ -138,7 +102,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             zIndex: 1,
             overflow: "hidden",
           }}>
-            <canvas ref={noise1Ref} style={noiseCanvas} />
+            <div style={noiseOverlay} />
           </div>
 
           {/* DOOR — z3 */}
@@ -208,7 +172,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
             WebkitMaskImage: "linear-gradient(180deg, black 0%, black 70%, transparent 100%)",
             maskImage: "linear-gradient(180deg, black 0%, black 70%, transparent 100%)",
           }}>
-            <canvas ref={noise2Ref} style={noiseCanvas} />
+            <div style={noiseOverlay} />
 
             {ENTRIES.map((entry, i) => (
               <div
