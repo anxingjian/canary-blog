@@ -152,14 +152,14 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         <div style={{
           width: "min(200px, 42vw)",
           height: "min(240px, 20vh)",
-          marginTop: "-1px",
+          marginTop: "-3px",
           overflow: "visible",
         }}>
           <div style={{
             width: "260%",
             height: "100%",
             marginLeft: "-80%",
-            clipPath: "polygon(31% 0%, 69% 0%, 85% 100%, 15% 100%)",
+            clipPath: "polygon(29% 0%, 71% 0%, 85% 100%, 15% 100%)",
             background: peeking
               ? `linear-gradient(180deg,
                   rgba(255,255,255,0.6) 0%,
