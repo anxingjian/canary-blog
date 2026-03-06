@@ -113,6 +113,7 @@ export default function EssaysPage() {
           <Link
             key={essay.slug}
             href={`/essays/${essay.slug}`}
+            className="essay-item"
             style={{
               display: "grid",
               gridTemplateColumns: "4.5rem 1fr",
@@ -124,6 +125,7 @@ export default function EssaysPage() {
             }}
           >
             <span
+              className="essay-number"
               style={{
                 fontFamily: "'Instrument Serif', serif",
                 fontSize: "2rem",
