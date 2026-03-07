@@ -510,8 +510,8 @@ export default function MoodPalette() {
   if (!palette) {
     return (
       <div style={{ width: "100vw", height: "100vh", background: "#0a0a0a", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ fontFamily: "'Noto Serif SC', serif", fontWeight: 300, fontSize: "1rem", color: "rgba(255,250,240,0.45)", letterSpacing: "0.15em", marginBottom: "0.4rem" }}>情绪调色板</p>
-        <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "rgba(255,250,240,0.18)", letterSpacing: "0.12em", marginBottom: "3rem" }}>MOOD PALETTE</p>
+        <p style={{ fontFamily: "'Noto Serif SC', serif", fontWeight: 300, fontSize: "1rem", color: "rgba(255,250,240,0.45)", letterSpacing: "0.15em", marginBottom: "0.4rem" }}>意象调色板</p>
+        <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "rgba(255,250,240,0.18)", letterSpacing: "0.12em", marginBottom: "3rem" }}>IMAGERY PALETTE</p>
         <input type="text" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="深海、温柔、科技感、咖啡、莫兰迪..." autoFocus
           style={{ background: "transparent", border: "none", borderBottom: "1px solid rgba(255,250,240,0.12)", color: "rgba(255,250,240,0.7)", fontFamily: "'Noto Serif SC', serif", fontSize: "1rem", fontWeight: 300, padding: "0.75rem 0", width: "min(80vw, 420px)", textAlign: "center", outline: "none" }} />
         <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.55rem", color: "rgba(255,250,240,0.1)", marginTop: "2rem" }}>press enter</p>
