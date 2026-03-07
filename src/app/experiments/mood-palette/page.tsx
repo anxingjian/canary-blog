@@ -64,28 +64,28 @@ const PAINTINGS: Painting[] = [
 ];
 
 // Infinite canvas — spacious, asymmetric, salon-style
-// Generous spacing between works. Canvas repeats seamlessly.
-const CANVAS_W = 3600;
-const CANVAS_H = 2800;
-const FRAME_SIZE = 360;
+// On mobile (~400px), need 4-5 paintings visible at once
+// Canvas repeats seamlessly.
+const CANVAS_W = 1800;
+const CANVAS_H = 2200;
+const FRAME_SIZE = 160; // smaller base for mobile density
 
 interface FramePos {
   x: number; y: number; w: number; rot: number;
 }
 
 function layoutFrames(): FramePos[] {
-  // Asymmetric salon hang — wide spacing, slight rotations, varied scale
   return [
-    { x: 120,  y: 180,  w: FRAME_SIZE * 1.0,  rot: -0.6 },
-    { x: 750,  y: 80,   w: FRAME_SIZE * 1.25, rot: 0.3 },
-    { x: 1500, y: 200,  w: FRAME_SIZE * 1.1,  rot: -0.2 },
-    { x: 2400, y: 100,  w: FRAME_SIZE * 0.95, rot: 0.5 },
-    { x: 200,  y: 900,  w: FRAME_SIZE * 0.85, rot: 0.2 },
-    { x: 900,  y: 820,  w: FRAME_SIZE * 1.3,  rot: -0.4 },
-    { x: 1800, y: 950,  w: FRAME_SIZE * 1.05, rot: 0.1 },
-    { x: 2600, y: 850,  w: FRAME_SIZE * 0.9,  rot: -0.3 },
-    { x: 450,  y: 1650, w: FRAME_SIZE * 1.15, rot: 0.3 },
-    { x: 1400, y: 1700, w: FRAME_SIZE * 1.0,  rot: -0.5 },
+    { x: 40,   y: 60,   w: FRAME_SIZE * 1.0,  rot: -0.6 },
+    { x: 380,  y: 30,   w: FRAME_SIZE * 1.2,  rot: 0.3 },
+    { x: 720,  y: 80,   w: FRAME_SIZE * 1.1,  rot: -0.2 },
+    { x: 1100, y: 40,   w: FRAME_SIZE * 0.95, rot: 0.5 },
+    { x: 80,   y: 430,  w: FRAME_SIZE * 0.9,  rot: 0.2 },
+    { x: 420,  y: 380,  w: FRAME_SIZE * 1.25, rot: -0.4 },
+    { x: 820,  y: 450,  w: FRAME_SIZE * 1.05, rot: 0.1 },
+    { x: 1200, y: 400,  w: FRAME_SIZE * 0.9,  rot: -0.3 },
+    { x: 200,  y: 780,  w: FRAME_SIZE * 1.15, rot: 0.3 },
+    { x: 650,  y: 820,  w: FRAME_SIZE * 1.0,  rot: -0.5 },
   ];
 }
 
@@ -473,8 +473,6 @@ function InfiniteGallery({ onSelect }: { onSelect: (p: Painting) => void }) {
 
 // ---- Art View ----
 function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void }) {
-  const [copied, setCopied] = useState<string | null>(null);
-  const copyHex = (hex: string) => { navigator.clipboard?.writeText(hex); setCopied(hex); setTimeout(() => setCopied(null), 1200); };
 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
@@ -491,7 +489,7 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
             fontFamily: "'Space Mono', monospace",
             fontSize: "0.6875rem",
             fontWeight: 400,
-            color: "rgba(255,250,240,0.15)",
+            color: "rgba(255,250,240,0.35)",
             letterSpacing: "0.1em",
             textTransform: "uppercase",
           }}>{painting.artist}</p>
@@ -499,7 +497,7 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
             fontFamily: "'Space Mono', monospace",
             fontSize: "0.5625rem",
             fontWeight: 400,
-            color: "rgba(255,250,240,0.08)",
+            color: "rgba(255,250,240,0.18)",
             letterSpacing: "0.08em",
             marginTop: "2px",
           }}>{painting.year}</p>
@@ -508,7 +506,7 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
           fontFamily: "'Space Mono', monospace",
           fontSize: "0.6875rem",
           fontWeight: 400,
-          color: "rgba(255,250,240,0.12)",
+          color: "rgba(255,250,240,0.25)",
           cursor: "pointer",
           letterSpacing: "0.05em",
         }} onClick={onBack}>←</p>
@@ -516,41 +514,17 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
 
       {/* Bottom left — interpretation */}
       <div style={{
-        position: "fixed", bottom: "2rem", left: "2.5rem", zIndex: 10,
-        maxWidth: "min(60vw, 420px)",
+        position: "fixed", bottom: "2rem", left: "2.5rem", right: "2.5rem", zIndex: 10,
+        maxWidth: "min(80vw, 420px)",
       }}>
         <p style={{
           fontFamily: "'Noto Serif SC', serif",
           fontWeight: 300,
           fontSize: "0.9375rem",
-          color: "rgba(255,250,240,0.2)",
+          color: "rgba(255,250,240,0.4)",
           lineHeight: "2",
           letterSpacing: "0.03em",
         }}>{painting.interpretation}</p>
-      </div>
-
-      {/* Bottom right — color swatches */}
-      <div style={{
-        position: "fixed", bottom: "2rem", right: "2.5rem", zIndex: 10,
-        display: "flex", gap: "6px", alignItems: "flex-end",
-      }}>
-        {painting.colors.map((hex, i) => (
-          <div key={i} style={{ cursor: "pointer" }} onClick={() => copyHex(hex)}>
-            <div style={{
-              width: "32px", height: "32px",
-              background: hex,
-              border: "1px solid rgba(255,255,255,0.04)",
-            }} />
-            <p style={{
-              fontFamily: "'Space Mono', monospace",
-              fontSize: "0.4375rem",
-              color: copied === hex ? "rgba(255,250,240,0.5)" : "rgba(255,250,240,0.1)",
-              marginTop: "3px",
-              textAlign: "center",
-              transition: "color 0.3s ease",
-            }}>{copied === hex ? "✓" : hex}</p>
-          </div>
-        ))}
       </div>
     </div>
   );
