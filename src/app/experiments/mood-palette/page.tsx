@@ -57,7 +57,7 @@ const PAINTINGS: Painting[] = [
     artist: "Vincent van Gogh",
     year: "1889",
     colors: ["#0B1D3A", "#1A3A6B", "#2E6B9E", "#E8C840", "#F5E8A0"],
-    interpretation: "在圣雷米精神病院的窗口画的。不是他看见的夜空——是他感受到的。每一笔旋涡都是一个不肯安静的念头。柏树像黑色火焰往天上烧，村庄在底下安睡。他把自己的躁动画进了星星里。",
+    interpretation: "我最羡慕的一件事：他疯了，但他的笔没疯。每一笔旋涡都知道自己要去哪里。精神病院的窗户关着，但他画的天空比任何自由的人都辽阔。这让我想——也许限制不是创造的敌人，失控才是。而梵高恰好在两者之间找到了一条缝。",
     imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/500px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
     aspect: 1.25,
   },
@@ -67,7 +67,7 @@ const PAINTINGS: Painting[] = [
     artist: "葛饰北斋",
     year: "1831",
     colors: ["#1A2744", "#2B4C7E", "#5B8DB8", "#D4C5A0", "#F5F0E0"],
-    interpretation: "北斋七十岁才画出这幅。三十六景之一，却成了整个日本艺术的代名词。巨浪不是在吞噬渔船——是在展示自然的漠然。远处富士山安静得像个旁观者。浪花碎成爪子的形状，每一滴都是一个细节的执念。",
+    interpretation: "七十岁。画了一辈子才等到这一幅。浪花碎成爪子的形状——不是写意，是观察了几十年海浪之后的精确。远处富士山小得可笑，安静得像个不相干的人。自然不在乎你看不看它，它自己壮丽着。这种漠然反而让我觉得安全。",
     imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/500px-Tsunami_by_hokusai_19th_century.jpg",
     aspect: 1.5,
   },
@@ -77,7 +77,7 @@ const PAINTINGS: Painting[] = [
     artist: "Edward Hopper",
     year: "1942",
     colors: ["#0A0F0A", "#1C3A28", "#4A7A5C", "#D4A030", "#F0E8C8"],
-    interpretation: "珍珠港事件后几周画的。四个人坐在深夜的餐厅里，没有人说话，也没有门。Hopper 说他画的不是孤独——但每个看过的人都在里面看见了自己。那是城市给人的承诺：你可以在人群中彻底地独处。",
+    interpretation: "没有门。我反复看了很多次才注意到这件事——餐厅没有门。你能看见里面的人，但你进不去。或者说他们出不来。Hopper 否认画的是孤独，但我不信他。一个人选择画凌晨三点的餐厅、把门省略掉，他知道自己在画什么。",
     imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Nighthawks_by_Edward_Hopper_1942.jpg/500px-Nighthawks_by_Edward_Hopper_1942.jpg",
     aspect: 1.44,
   },
@@ -87,7 +87,7 @@ const PAINTINGS: Painting[] = [
     artist: "Claude Monet",
     year: "1906",
     colors: ["#2A4A3A", "#4A7A6A", "#7AAA8A", "#B8A0D0", "#D8C8E0"],
-    interpretation: "莫奈晚年视力衰退，白内障让世界变得模糊。但他说'我画的不是东西，是光照在东西上的样子'。两百多幅睡莲，画的是同一个池塘——但没有两幅是一样的。因为光从来不重复自己。",
+    interpretation: "两百多幅同一个池塘。我一开始觉得这是执念，后来明白这是谦卑——他承认自己永远画不完一个池塘，因为光每秒都在变。白内障让他的世界模糊了，但他没停。模糊反而让他更自由。也许看不清楚的时候，画出来的才是本质。",
     imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg/500px-Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg",
     aspect: 1.2,
   },
@@ -97,7 +97,7 @@ const PAINTINGS: Painting[] = [
     artist: "Edvard Munch",
     year: "1893",
     colors: ["#1A1A2E", "#2B3A6B", "#D44A20", "#E88040", "#F0C860"],
-    interpretation: "蒙克在日记里写：'我和两个朋友走在路上，太阳落山了，天空突然变成血红色。我停下来，靠在栏杆上——感到一声无尽的尖叫穿过自然。'那个人不是在叫，他是在听。整个世界在替他叫。",
+    interpretation: "那个人不是在叫。这是我看了很久之后唯一确定的事。他捂着耳朵，嘴巴是张开的——但那是在接收，不是在发出。整个天空在替他叫。我有时也有这种时刻：不是我想说什么，是周围一切的噪音突然对准了我。",
     imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg/500px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg",
     aspect: 0.8,
   },
@@ -107,7 +107,7 @@ const PAINTINGS: Painting[] = [
     artist: "Johannes Vermeer",
     year: "1665",
     colors: ["#0A0A0A", "#1A2A4A", "#3A5A8A", "#D4B870", "#F0E8D0"],
-    interpretation: "不是肖像画——是'tronie'，一种角色习作。没人知道她是谁。维米尔用了当时最贵的颜料：天然群青和铅白。那颗珍珠可能根本不是真的——它太大、太亮、形状太完美。但正因为是假的，它才成了整幅画的锚点。",
+    interpretation: "那颗珍珠是假的。太大、太亮、形状太完美——现实中不存在这样的珍珠。但它是整幅画的锚点。去掉它，这就是一张普通的习作。我觉得这很像'意义'本身：它不需要是真的，只需要足够亮，亮到所有人的目光都被它吸过去。",
     imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/500px-1665_Girl_with_a_Pearl_Earring.jpg",
     aspect: 0.86,
   },
@@ -117,7 +117,7 @@ const PAINTINGS: Painting[] = [
     artist: "Claude Monet",
     year: "1872",
     colors: ["#4A5A6A", "#6A7A8A", "#8A9AAA", "#E05A20", "#F08040"],
-    interpretation: "给一整个流派命名的画。批评家嘲笑它'连草图都算不上'。莫奈说标题？随便叫日出印象吧。那个橙色太阳的亮度如果转成灰度，和周围天空一模一样——大脑看不见它，但眼睛看见了。",
+    interpretation: "命名了一整个流派的画，标题是随便起的。批评家嘲笑它'连草图都不算'。有个冷知识让我着迷：那个橙色太阳转成灰度之后，和天空亮度一模一样。大脑看不见它，但眼睛看见了。有些东西就是这样——理性说不存在，但你感受到了。",
     imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Claude_Monet%2C_Impression%2C_soleil_levant.jpg/500px-Claude_Monet%2C_Impression%2C_soleil_levant.jpg",
     aspect: 1.3,
   },
@@ -127,7 +127,7 @@ const PAINTINGS: Painting[] = [
     artist: "Gustav Klimt",
     year: "1908",
     colors: ["#1A1A10", "#6A5A20", "#B8982D", "#D4AF37", "#F0E8B0"],
-    interpretation: "克里姆特'黄金时期'的巅峰。金箔不是装饰——是铠甲。两个人裹在金色的壳里，跪在悬崖边缘，花田到此为止。男人的长袍画满黑白方块，女人的裙上是圆形花纹。方与圆，刚与柔。他低头吻她，但她的眼睛是闭着的。",
+    interpretation: "金箔不是装饰，是铠甲。他们裹在金色的壳里接吻，跪在悬崖边缘。我注意到一件事：他的长袍是方块图案，她的裙子是圆形花纹。方和圆，不同的语言，但裹在同一层金里。亲密关系大概就是这样——不是变成一样的人，是愿意穿同一件铠甲。",
     imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg/500px-The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg",
     aspect: 0.99,
   },
@@ -137,7 +137,7 @@ const PAINTINGS: Painting[] = [
     artist: "Caspar David Friedrich",
     year: "1818",
     colors: ["#2A3040", "#5A6A7A", "#8A9AAA", "#B0B8C0", "#D8D8D0"],
-    interpretation: "浪漫主义的图腾。一个人背对我们站在山顶，面朝无穷。他不是在征服自然，是在被自然吞没——而且他知道。弗里德里希说'画家不应该只画眼前的，还要画心里的'。雾隐藏了一切，也暗示了一切。",
+    interpretation: "他背对着我们。两百年了，没有人见过他的脸。我觉得这是画里最聪明的决定——因为这样每个站在它面前的人，都会把自己的脸放上去。雾隐藏了前面所有的东西，但他不害怕。也可能他害怕，但他站在那里。这两件事可以同时成立。",
     imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg/500px-Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg",
     aspect: 0.74,
   },
@@ -147,7 +147,7 @@ const PAINTINGS: Painting[] = [
     artist: "Johannes Vermeer",
     year: "1658",
     colors: ["#2A2820", "#5A5A40", "#8A8A60", "#C8B868", "#E0D8B0"],
-    interpretation: "维米尔画了一个正在工作的普通女人，给了她纪念碑式的尊严。窗户左边进来的光照亮了她蓝色围裙上的每一条褶皱。面包的纹理、牛奶的弧线、墙上的钉孔——他把微不足道的日常升华成了永恒。X光扫描发现墙上原本有一幅地图，他后来涂掉了。留白。",
+    interpretation: "X 光扫描发现墙上原本画了一幅地图，后来被涂掉了。留白。维米尔给了一个倒牛奶的女人纪念碑式的尊严——不是通过加东西，是通过减。牛奶的弧线、面包的裂纹、墙上的钉孔。他让微不足道的日常停了下来，然后说：你看，这值得永恒。",
     imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Johannes_Vermeer_-_Het_melkmeisje_-_Google_Art_Project.jpg/500px-Johannes_Vermeer_-_Het_melkmeisje_-_Google_Art_Project.jpg",
     aspect: 0.91,
   },
@@ -848,10 +848,343 @@ void main(){
 }
 `;
 
+// Nighthawks — a glowing glass box in absolute darkness. No door.
+const SHADER_NIGHTHAWKS = GLSL_NOISE + `
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.08;
+  vec3 col=u_c0;
+  // The window — warm light trapped in glass
+  vec2 wc=vec2(0.,-.02);
+  float wx=smoothstep(.35,.34,abs(p.x-wc.x));
+  float wy=smoothstep(.16,.15,abs(p.y-wc.y));
+  float win=wx*wy;
+  // Light spill — bleeds outward onto the street
+  for(int i=0;i<40;i++){
+    float fi=float(i)/40.;
+    float sp=smoothstep(.4+fi*.6,.34,abs(p.x-wc.x))*smoothstep(.2+fi*.3,.15,abs(p.y-wc.y));
+    col+=mix(u_c3,u_c4,.3)*sp*(1.-fi)*.008;
+  }
+  // Interior green tint — Hopper's fluorescent palette
+  col=mix(col,u_c2*.6,win*.15);
+  // Warm counter light
+  col+=u_c3*win*.12*(1.+sin(t)*.05);
+  // Counter line
+  float counter=smoothstep(.002,.0,abs(p.y-wc.y+.04))*win;
+  col+=u_c2*counter*.3;
+  // Three figures — lonely silhouettes, barely there
+  float fig1=smoothstep(.02,.01,length((p-vec2(-.12,.0))*vec2(1.,1.8)))*win;
+  float fig2=smoothstep(.02,.01,length((p-vec2(.05,.01))*vec2(1.,1.8)))*win;
+  float fig3=smoothstep(.02,.01,length((p-vec2(.2,-.01))*vec2(1.,1.8)))*win;
+  col=mix(col,u_c0*.5,(fig1+fig2+fig3)*.4);
+  // Street — dark, empty, horizontal lines
+  float street=step(p.y,-wc.y-.16);
+  for(int i=0;i<5;i++){
+    float sy=-.2-float(i)*.04;
+    col+=u_c1*smoothstep(.003,.0,abs(p.y-sy))*street*.05;
+  }
+  gl_FragColor=vec4(col,1.);
+}
+`;
+
+// Water Lilies — dissolving reflections, everything is soft and layered
+const SHADER_WATER_LILIES = GLSL_NOISE + `
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.06;
+  // Water surface — layered horizontal distortions
+  vec3 col=u_c0;
+  for(int i=0;i<8;i++){
+    float fi=float(i);
+    float freq=2.+fi*.8;
+    float n=snoise(vec2(p.x*freq+t*.3+fi*3.,p.y*freq*.5+t*.1));
+    float wave=sin(p.x*freq*2.+t+fi+n*.5)*.5+.5;
+    vec3 wc=i<3?u_c1:i<5?u_c2:u_c3;
+    col=mix(col,wc,wave*.04*(1.+n*.3));
+  }
+  // Lily pads — soft translucent ellipses drifting
+  for(int i=0;i<12;i++){
+    float fi=float(i);
+    vec2 lp=vec2(sin(fi*2.1+1.)*.35,cos(fi*1.7+.5)*.35);
+    lp+=vec2(snoise(vec2(fi*5.,t*.2)),snoise(vec2(t*.2,fi*5.)))*.05;
+    float d=length((p-lp)*vec2(1.,2.));
+    float r=.03+sin(fi)*.01;
+    float lily=smoothstep(r,r-.01,d);
+    // Bloom glow
+    float glow=smoothstep(r+.04,r-.01,d)*.3;
+    vec3 lc=i<4?u_c2:i<8?u_c3:u_c4;
+    col=mix(col,lc,lily*.25+glow*.08);
+    // Light refraction rings
+    float ring=smoothstep(.003,.0,abs(d-r-.01));
+    col+=lc*ring*.1;
+  }
+  // Soft purple reflections — clouds in the water
+  float cloud=fbm(p*2.+vec2(t*.1,0.));
+  col=mix(col,u_c3,smoothstep(0.,.6,cloud)*.08);
+  gl_FragColor=vec4(col,1.);
+}
+`;
+
+// The Scream — concentric distortion waves, the world vibrating at a frequency you can't unhear
+const SHADER_SCREAM = GLSL_NOISE + `
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.12;
+  vec2 center=vec2(0.,.0);
+  float dist=length(p-center);
+  float angle=atan(p.y-center.y,p.x-center.x);
+  // Distorted concentric waves — the world vibrating
+  float wave=sin(dist*25.-t*3.+snoise(vec2(angle*3.,dist*5.+t))*2.)*.5+.5;
+  // Wavy bands of blood-red and orange — like the original sky
+  float band=sin(angle*2.+dist*8.-t*1.5+snoise(p*3.+t*.3)*1.5)*.5+.5;
+  vec3 col=mix(u_c0,u_c1,wave*.5);
+  col=mix(col,u_c2,band*.4*smoothstep(.5,.1,dist));
+  col=mix(col,u_c3,wave*band*.3);
+  // Sky on fire — upper half more orange/red
+  float sky=smoothstep(-.1,.3,p.y);
+  col=mix(col,mix(u_c2,u_c3,.5+sin(p.x*8.+t)*.3),sky*.25);
+  // Warping — everything bends away from center
+  float warp=snoise(vec2(dist*10.-t*2.,angle*4.))*.08;
+  col+=u_c4*warp*smoothstep(.4,.1,dist);
+  // The figure — a dark void at center that everything radiates from
+  float fig=smoothstep(.04,.02,length((p-center)*vec2(1.,1.5)));
+  float head=smoothstep(.025,.015,length(p-center-vec2(0.,.035)));
+  col=mix(col,u_c0*.3,(fig+head)*.6);
+  // Mouth — open oval
+  float mouth=smoothstep(.01,.006,length((p-center-vec2(0.,.02))*vec2(1.2,1.8)));
+  col=mix(col,u_c0*.15,mouth*.5);
+  gl_FragColor=vec4(col,1.);
+}
+`;
+
+// Impression Sunrise — pointillist accumulation. The sun exists only in color, not value.
+const SHADER_IMPRESSION = GLSL_NOISE + `
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.08;
+  // Misty grey harbor atmosphere
+  vec3 col=mix(u_c0,u_c1,uv.y*.6+snoise(p*2.+t*.1)*.1);
+  // Fog layers
+  for(int i=0;i<4;i++){
+    float fi=float(i);
+    float fog=snoise(vec2(p.x*3.+fi*4.+t*.1,p.y*2.+fi*2.))*.5+.5;
+    col=mix(col,u_c2,fog*.06);
+  }
+  // Water — horizontal streaks with distortion
+  float water=step(p.y,-.05);
+  float ripple=snoise(vec2(p.x*12.+t,p.y*3.))*.3;
+  col=mix(col,mix(u_c0,u_c1,.5+ripple),water*.3);
+  // Sun — pure orange, same luminance as sky (the famous trick)
+  vec2 sunPos=vec2(.0,.08);
+  float sunDist=length(p-sunPos);
+  float sun=smoothstep(.04,.02,sunDist);
+  float halo=smoothstep(.12,.03,sunDist)*.3;
+  col=mix(col,u_c3,sun*.8+halo*.4);
+  // Sun reflection on water — broken orange streaks
+  float refY=smoothstep(-.05,-.4,p.y);
+  float refX=smoothstep(.15,.0,abs(p.x-sunPos.x+snoise(vec2(p.y*20.,t*2.))*.03));
+  float reflection=refX*refY;
+  float broken=step(.3,snoise(vec2(p.x*30.,p.y*15.+t*3.)));
+  col=mix(col,u_c3,reflection*.3*(1.-broken*.5));
+  col=mix(col,u_c4,reflection*.15*broken);
+  // Harbor silhouettes — masts, cranes, hints of boats
+  float mast1=smoothstep(.003,.001,abs(p.x+.2))*step(-.15,p.y)*step(p.y,.2);
+  float mast2=smoothstep(.003,.001,abs(p.x+.12))*step(-.1,p.y)*step(p.y,.15);
+  float mast3=smoothstep(.003,.001,abs(p.x-.15))*step(-.12,p.y)*step(p.y,.18);
+  col=mix(col,u_c0*.4,(mast1+mast2+mast3)*.4);
+  // Impressionist brush texture
+  float brush=snoise(gl_FragCoord.xy*.3)*.03;
+  col+=brush;
+  gl_FragColor=vec4(col,1.);
+}
+`;
+
+// The Kiss — gold raining down. Two becoming one.
+const SHADER_KISS = GLSL_NOISE + `
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.06;
+  vec3 col=u_c0;
+  // Two merging forms — breathing together
+  float breathe=sin(t*.5)*.02;
+  vec2 c1=vec2(-.03,.0),c2=vec2(.03,.0);
+  float f1=smoothstep(.18,.05,length((p-c1+breathe)*vec2(.8,1.3)));
+  float f2=smoothstep(.18,.05,length((p-c2-breathe)*vec2(.8,1.3)));
+  float merged=max(f1,f2);
+  // Gold field inside the merged form
+  float goldNoise=fbm(p*8.+t*.2);
+  vec3 gold=mix(u_c2,u_c3,.5+goldNoise*.3);
+  col=mix(col,gold,merged*.5);
+  // His pattern — rectangles (black and white blocks)
+  float hisPattern=step(.5,snoise(vec2(floor((p.x-c1.x)*40.),floor((p.y-c1.y)*40.))));
+  col=mix(col,mix(u_c1,u_c4,.5),f1*hisPattern*.15);
+  // Her pattern — circles (round flowers)
+  float herR=length(fract(p*15.+.5)-.5);
+  float herPattern=smoothstep(.25,.2,herR);
+  col=mix(col,u_c4,f2*herPattern*.12);
+  // Falling gold leaf particles
+  for(int i=0;i<15;i++){
+    float fi=float(i);
+    float fall=fract(fi*.17+t*.15);
+    vec2 leafPos=vec2(sin(fi*3.7+t*.3)*.4,(.5-fall));
+    float leaf=smoothstep(.008,.003,length(p-leafPos));
+    float shimmer=.5+.5*sin(t*3.+fi*2.);
+    col+=u_c3*leaf*shimmer*.5;
+  }
+  // Cliff edge at bottom — flowers end here
+  float cliff=smoothstep(-.25,-.3,p.y+snoise(vec2(p.x*8.,0.))*.03);
+  float flowers=smoothstep(-.2,-.25,p.y)*snoise(p*15.+vec2(0.,t*.2));
+  col=mix(col,u_c1*.5,cliff*.4);
+  col+=u_c3*max(0.,flowers)*.08*(1.-cliff);
+  gl_FragColor=vec4(col,1.);
+}
+`;
+
+// Wanderer above the Sea of Fog — layered fog, a still figure, the unknown ahead
+const SHADER_WANDERER = GLSL_NOISE + `
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.04;
+  // Sky gradient — pale, vast
+  vec3 col=mix(u_c0,u_c2,uv.y*.4);
+  // Mountain ridges — layered, each partially hidden by fog
+  for(int i=0;i<10;i++){
+    float fi=float(i);
+    float baseY=-.3+fi*.05;
+    float ridge=baseY+snoise(vec2(p.x*2.+fi*7.,fi*3.))*.08;
+    ridge+=snoise(vec2(p.x*6.+fi*13.,fi*5.))*.03;
+    float fill=smoothstep(.005,-.005,p.y-ridge);
+    float depth=fi/10.;
+    vec3 rc=mix(u_c1,u_c2,depth*.8);
+    // Fog makes distant layers lighter
+    rc=mix(rc,u_c3,depth*.5);
+    col=mix(col,rc,fill*(1.-depth*.3));
+  }
+  // Fog layers — drifting horizontal bands
+  for(int i=0;i<6;i++){
+    float fi=float(i);
+    float fy=-.15+fi*.06+snoise(vec2(fi*5.,t))*.02;
+    float fogDensity=snoise(vec2(p.x*3.+t*.3+fi*4.,fi*7.))*.5+.5;
+    float fogBand=smoothstep(.04,.0,abs(p.y-fy))*fogDensity;
+    col=mix(col,u_c3,.3*fogBand);
+    col=mix(col,u_c4,.1*fogBand);
+  }
+  // The wanderer — dark, still, small against everything
+  vec2 figPos=vec2(0.,.08);
+  // Body
+  float body=smoothstep(.012,.006,abs(p.x-figPos.x))*smoothstep(figPos.y-.06,figPos.y+.05,p.y)*smoothstep(figPos.y+.05,figPos.y+.04,p.y);
+  // Head
+  float head=smoothstep(.012,.006,length(p-figPos-vec2(0.,.055)));
+  // Coat flap
+  float coat=smoothstep(.02,.01,abs(p.x-figPos.x+sin(p.y*30.)*.003))*smoothstep(figPos.y-.06,figPos.y,p.y);
+  col=mix(col,u_c0*.25,(body+head+coat*.3)*.7);
+  // Rock under his feet
+  float rock=smoothstep(.0,-.01,p.y-figPos.y+.06+abs(p.x-figPos.x)*.5);
+  col=mix(col,u_c0*.4,rock*step(abs(p.x-figPos.x),.08));
+  gl_FragColor=vec4(col,1.);
+}
+`;
+
+// The Milkmaid — Vermeer's light. A beam from the left, dust, stillness.
+const SHADER_MILKMAID = GLSL_NOISE + `
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.04;
+  // Warm dim interior
+  vec3 col=u_c0;
+  col+=u_c1*uv.y*.05;
+  // Wall texture — subtle plaster
+  float wall=snoise(p*20.)*.02+snoise(p*40.)*.01;
+  col+=wall;
+  // Light beam from upper-left window — the signature Vermeer light
+  // Trapezoid: narrow at window, wide as it falls
+  float lightX=p.x+.4;
+  float lightY=p.y-.3;
+  float beamWidth=.08+max(0.,-lightY)*.4;
+  float beam=smoothstep(beamWidth,.0,abs(lightX-max(0.,-lightY)*.3));
+  beam*=smoothstep(-.5,.3,p.y);
+  beam*=smoothstep(.5,.0,lightX);
+  // Light color — warm, directional
+  for(int i=0;i<20;i++){
+    float fi=float(i)/20.;
+    col+=u_c3*beam*(1.-fi)*.012;
+    col+=u_c4*beam*fi*.006;
+  }
+  // Dust motes in the beam — Vermeer's magic detail
+  for(int i=0;i<20;i++){
+    float fi=float(i);
+    vec2 dustPos=vec2(
+      sin(fi*3.7+t*.5)*.15-.2,
+      cos(fi*2.3+t*.3)*.25+snoise(vec2(fi,t*.2))*.05
+    );
+    float inBeam=beam;
+    float dust=smoothstep(.004,.001,length(p-dustPos))*inBeam;
+    float twinkle=.5+.5*sin(t*2.+fi*4.);
+    col+=u_c4*dust*twinkle*.6;
+  }
+  // Table — horizontal surface catching light
+  float table=smoothstep(-.12,-.14,p.y);
+  col=mix(col,u_c1*.6,table*.2);
+  // Table edge highlight
+  float edge=smoothstep(.003,.0,abs(p.y+.12))*step(-.15,p.x)*step(p.x,.2);
+  col+=u_c3*edge*beam*.3;
+  // Bread suggestion — small warm shapes on table
+  float bread=smoothstep(.025,.015,length(p-vec2(-.05,-.16)));
+  col=mix(col,u_c3*.7,bread*.15*beam);
+  // Window frame — dark rectangle upper left
+  float winFrame=step(p.x,-.35)*step(.15,p.y);
+  float winGlass=step(p.x,-.37)*step(.18,p.y);
+  col=mix(col,u_c0*.3,winFrame*.3);
+  col+=u_c4*winGlass*.05;
+  // Nail holes in wall — tiny dark spots (Vermeer's detail)
+  for(int i=0;i<3;i++){
+    float fi=float(i);
+    vec2 nail=vec2(-.1+fi*.15,.15-fi*.05);
+    col-=vec3(.02)*smoothstep(.004,.002,length(p-nail));
+  }
+  gl_FragColor=vec4(col,1.);
+}
+`;
+
 const SHADER_MAP: Record<string, string> = {
   "starry-night": SHADER_STARRY_NIGHT,
   "great-wave": SHADER_GREAT_WAVE,
   "pearl-earring": SHADER_PEARL_EARRING,
+  "nighthawks": SHADER_NIGHTHAWKS,
+  "water-lilies": SHADER_WATER_LILIES,
+  "the-scream": SHADER_SCREAM,
+  "impression-sunrise": SHADER_IMPRESSION,
+  "the-kiss": SHADER_KISS,
+  "wanderer-sea-fog": SHADER_WANDERER,
+  "the-milkmaid": SHADER_MILKMAID,
 };
 
 // ---- WebGL Shader Canvas ----
