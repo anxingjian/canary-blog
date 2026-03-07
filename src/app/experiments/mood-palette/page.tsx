@@ -10,6 +10,7 @@ interface CuratedPalette {
 }
 
 const PALETTES: CuratedPalette[] = [
+  // ===== Curated originals =====
   // Warm & Gentle
   { tags: ["温柔", "柔", "gentle", "soft", "轻"], colors: ["#F2E6D9", "#D4A59A", "#C97C5D", "#B36A5E", "#8C5E58"], artType: "flow" },
   { tags: ["温柔", "粉", "pink", "blush", "甜"], colors: ["#FADADD", "#F4B6C2", "#D291A4", "#A76D8E", "#6B4C5A"], artType: "bloom" },
@@ -66,6 +67,48 @@ const PALETTES: CuratedPalette[] = [
   { tags: ["薰衣草", "lavender", "紫", "purple", "violet"], colors: ["#1A0A2E", "#2D1B69", "#7B68AE", "#B39DDB", "#E1D5F0"], artType: "mist" },
   { tags: ["薄荷", "mint", "清凉"], colors: ["#E0F7F1", "#A7E8D0", "#66CDAA", "#3CB371", "#1B5E3A"], artType: "bloom" },
   { tags: ["沙漠", "desert", "sand", "大地", "earth"], colors: ["#F5E6CA", "#D4A76A", "#B87333", "#8B6914", "#3D2B1F"], artType: "flow" },
+
+  // ===== Color Hunt Popular (community-voted) =====
+  { tags: ["珊瑚", "coral", "甜", "少女", "粉"], colors: ["#F57799", "#FB9B8F", "#FDC3A1", "#FFF7CD", "#F4B6C2"], artType: "bloom" },
+  { tags: ["天空", "sky", "蓝", "blue", "清新"], colors: ["#F7F8F0", "#9CD5FF", "#7AAACE", "#355872", "#B3C7E6"], artType: "mist" },
+  { tags: ["热带", "tropical", "海洋", "蓝绿"], colors: ["#F6E7BC", "#0AC4E0", "#0992C2", "#0B2D72", "#45B7D1"], artType: "waves" },
+  { tags: ["茶", "tea", "自然", "素雅"], colors: ["#7EACB5", "#FFF4EA", "#EDDCC6", "#BF4646", "#D4C5B2"], artType: "flow" },
+  { tags: ["大地", "earth", "亚麻", "linen", "素"], colors: ["#DBCDA5", "#ECEDE7D1", "#8E977D", "#8A7650", "#A89882"], artType: "flow" },
+  { tags: ["红", "red", "热情", "passion"], colors: ["#FFA4A4", "#FF7070", "#EB4C4C", "#E8F5D3", "#FFD5D5"], artType: "collision" },
+  { tags: ["抹茶", "matcha", "绿", "清新"], colors: ["#6D9E51", "#BCD9A2", "#FEFFD3", "#A82323", "#E8F5E9"], artType: "bloom" },
+  { tags: ["绿", "green", "叶", "leaf", "生机"], colors: ["#E8F5BD", "#C7EABB", "#A2CB8B", "#84B179", "#4A7C59"], artType: "flow" },
+  { tags: ["奶油", "cream", "米", "beige", "素雅"], colors: ["#F8F3E1", "#E3DBB7", "#AEBB84", "#41431B", "#D4C5B2"], artType: "flow" },
+  { tags: ["粉红", "blush", "温柔", "rose"], colors: ["#E36A6A", "#FFB2B2", "#FFF2D0", "#FFFBF1", "#F4B6C2"], artType: "bloom" },
+  { tags: ["渐变", "gradient", "橙", "orange", "能量"], colors: ["#FFA47F", "#FF52A0", "#B500B2", "#8100D1", "#FF7E5F"], artType: "collision" },
+  { tags: ["撞色", "contrast", "配色", "大胆", "bold"], colors: ["#EC8F8D", "#537D96", "#44A194", "#F4F0E4", "#FFB74D"], artType: "orbit" },
+  { tags: ["橙", "orange", "活力", "阳光"], colors: ["#FF5F00", "#FF8C00", "#FFC300", "#FFD400", "#FFE0B2"], artType: "collision" },
+  { tags: ["紫粉", "purple", "pink", "梦幻", "fairy"], colors: ["#FFDBFB", "#C9BEFF", "#8494FF", "#6367FF", "#C49AE8"], artType: "mist" },
+  { tags: ["丛林", "jungle", "深绿", "探险"], colors: ["#458B73", "#FFD150", "#FF9760", "#F26076", "#2D5016"], artType: "flow" },
+  { tags: ["鲜明", "vivid", "黄蓝", "对比"], colors: ["#F1FF5F", "#3A9AFF", "#261CC1", "#1C0770", "#7B61FF"], artType: "orbit" },
+  { tags: ["水粉", "teal", "粉", "少女", "清新"], colors: ["#66D0BC", "#3A8B95", "#FF88BA", "#FF3E9B", "#A7E8D0"], artType: "bloom" },
+  { tags: ["烈焰", "flame", "热", "激情"], colors: ["#134E8E", "#FFB33F", "#FF4400", "#C00707", "#FF6B6B"], artType: "collision" },
+  { tags: ["暖阳", "golden", "黄", "yellow", "温暖"], colors: ["#FFF19B", "#F88430", "#DA3D22", "#3D45AA", "#FFD93D"], artType: "bloom" },
+
+  // ===== Color Hunt Dark (community-voted) =====
+  { tags: ["科技", "tech", "蓝", "dark", "电子"], colors: ["#F68048", "#2845D6", "#1A2CA3", "#0D1A63", "#00F5FF"], artType: "orbit" },
+  { tags: ["火焰", "flame", "暗红", "激烈"], colors: ["#E6501B", "#C3110C", "#740A03", "#280905", "#FF4D00"], artType: "collision" },
+  { tags: ["暗夜", "dark", "红", "神秘", "gothic"], colors: ["#3A2525", "#9E2A3A", "#FF0000", "#000080", "#E94560"], artType: "mist" },
+  { tags: ["森夜", "forest", "dark", "自然", "暗绿"], colors: ["#EBD5AB", "#8BAE66", "#628141", "#1B211A", "#4A7C59"], artType: "flow" },
+  { tags: ["深海", "ocean", "dark", "teal"], colors: ["#3B9797", "#16476A", "#132440", "#BF092F", "#5BC0BE"], artType: "waves" },
+  { tags: ["暗紫", "purple", "dark", "神秘", "魔法"], colors: ["#211832", "#412B6B", "#5C3E94", "#F25912", "#8B5FBF"], artType: "orbit" },
+  { tags: ["工业", "industrial", "灰", "dark", "质感"], colors: ["#E0D0D9", "#5A9690", "#2F5755", "#432323", "#627D98"], artType: "flow" },
+  { tags: ["海岸", "coast", "蓝灰", "克制"], colors: ["#D2C1B6", "#456882", "#234C6A", "#1B3C53", "#778DA9"], artType: "waves" },
+  { tags: ["都市", "urban", "灰", "city", "中性"], colors: ["#D3DAD9", "#715A5A", "#44444E", "#37353E", "#4A4A6A"], artType: "mist" },
+  { tags: ["霓虹", "neon", "暗", "赛博", "电子"], colors: ["#F78D60", "#EA2264", "#640D5F", "#0D1164", "#FF2281"], artType: "collision" },
+  { tags: ["琥珀", "amber", "dark", "高级"], colors: ["#FFCC00", "#EB5B00", "#B12C00", "#640D5F", "#D4AF37"], artType: "orbit" },
+  { tags: ["暗翠", "teal", "dark", "宝石"], colors: ["#320A6B", "#065084", "#0F828C", "#78B9B9", "#2EC4B6"], artType: "waves" },
+  { tags: ["紫金", "purple", "gold", "奢华", "dark"], colors: ["#FFCC00", "#B159FF", "#471396", "#090040", "#C9A96E"], artType: "orbit" },
+  { tags: ["圣诞", "christmas", "红绿", "节日"], colors: ["#9BC09C", "#DC2525", "#901E1E", "#511D43", "#2E7D32"], artType: "collision" },
+  { tags: ["暗粉", "pink", "dark", "玫瑰"], colors: ["#EF88AD", "#A53860", "#670D2F", "#3A0519", "#C2185B"], artType: "bloom" },
+  { tags: ["沙岩", "sandstone", "质感", "high-end"], colors: ["#DFD0C0", "#948979", "#393E46", "#222831", "#D4C5B2"], artType: "flow" },
+  { tags: ["暗潮", "dark", "玫红", "night"], colors: ["#2C2C2C", "#522546", "#883050", "#F7374F", "#FF2E63"], artType: "collision" },
+  { tags: ["晚霞", "dusk", "暖", "brown", "紫"], colors: ["#DCA06D", "#A55B4B", "#4F1C51", "#210F37", "#B36A5E"], artType: "flow" },
+  { tags: ["密林", "deep forest", "绿", "幽"], colors: ["#1F7D53", "#255F38", "#27391C", "#18230F", "#2D5016"], artType: "flow" },
 ];
 
 function findPalette(text: string): CuratedPalette {
