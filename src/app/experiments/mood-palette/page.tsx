@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 
 // ---- Mood Detection ----
 interface MoodProfile {
@@ -60,8 +60,8 @@ function analyzeMood(text: string): MoodProfile {
 }
 
 type HSL = { h: number; s: number; l: number };
-
 function hslStr(c: HSL) { return `hsl(${c.h}, ${c.s}%, ${c.l}%)`; }
+function hsla(c: HSL, a: number) { return `hsla(${c.h}, ${c.s}%, ${c.l}%, ${a})`; }
 function hslToHex(h: number, s: number, l: number): string {
   const a = s / 100 * Math.min(l / 100, 1 - l / 100);
   const f = (n: number) => {
@@ -72,20 +72,16 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-// Generate 3 palette schemes
-function generateSchemes(text: string, mood: MoodProfile): { name: string; nameEn: string; colors: HSL[] }[] {
+function generateSchemes(text: string, mood: MoodProfile): { name: string; nameEn: string; artType: string; colors: HSL[] }[] {
   const hash = text.split("").reduce((s, c) => ((s << 5) - s + c.charCodeAt(0)) & 0x7fffffff, 0);
-
   let baseHue: number;
   if (mood.temperature > 0.5) baseHue = 10 + (hash % 30);
   else if (mood.temperature > 0) baseHue = 35 + (hash % 35);
   else if (mood.temperature > -0.5) baseHue = 180 + (hash % 50);
   else baseHue = 220 + (hash % 40);
-
   const satBase = mood.energy > 0 ? 50 + mood.energy * 30 : 25 + (1 + mood.energy) * 25;
   const lightBase = mood.brightness > 0 ? 50 + mood.brightness * 15 : 30 + (1 + mood.brightness) * 20;
 
-  // Scheme 1: Analogous (类比)
   const analogous: HSL[] = [];
   for (let i = 0; i < 5; i++) {
     analogous.push({
@@ -95,7 +91,6 @@ function generateSchemes(text: string, mood: MoodProfile): { name: string; nameE
     });
   }
 
-  // Scheme 2: Complementary split (互补分裂)
   const complement: HSL[] = [
     { h: baseHue, s: satBase, l: lightBase },
     { h: (baseHue + 15) % 360, s: Math.max(20, satBase - 10), l: Math.min(70, lightBase + 10) },
@@ -104,7 +99,6 @@ function generateSchemes(text: string, mood: MoodProfile): { name: string; nameE
     { h: (baseHue + 210 + (hash % 15)) % 360, s: Math.max(20, satBase - 8), l: Math.max(22, lightBase - 8) },
   ];
 
-  // Scheme 3: Triadic (三角)
   const triadic: HSL[] = [
     { h: baseHue, s: satBase, l: lightBase },
     { h: (baseHue + 20) % 360, s: Math.max(20, satBase - 15), l: Math.min(72, lightBase + 12) },
@@ -114,144 +108,210 @@ function generateSchemes(text: string, mood: MoodProfile): { name: string; nameE
   ];
 
   return [
-    { name: "类比", nameEn: "Analogous", colors: analogous },
-    { name: "互补", nameEn: "Complementary", colors: complement },
-    { name: "三角", nameEn: "Triadic", colors: triadic },
+    { name: "类比", nameEn: "Analogous", artType: "flow", colors: analogous },
+    { name: "互补", nameEn: "Complementary", artType: "collision", colors: complement },
+    { name: "三角", nameEn: "Triadic", artType: "orbit", colors: triadic },
   ];
 }
 
-// ---- Visualization Components ----
-function GradientBlend({ colors }: { colors: HSL[] }) {
+// ---- Generative Art Canvas ----
+function GenArtCanvas({ colors, artType, mood }: { colors: HSL[]; artType: string; mood: MoodProfile }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const frameRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const w = rect.width;
+    const h = rect.height;
+
+    const bgL = mood.brightness > 0 ? 95 : 8;
+    ctx.fillStyle = `hsl(${colors[0].h}, ${colors[0].s * 0.2}%, ${bgL}%)`;
+    ctx.fillRect(0, 0, w, h);
+
+    let time = 0;
+
+    // Flow art: smooth flowing curves
+    const flowParticles: { x: number; y: number; ci: number; age: number }[] = [];
+    for (let i = 0; i < 200; i++) {
+      flowParticles.push({ x: Math.random() * w, y: Math.random() * h, ci: i % 5, age: Math.random() * 100 });
+    }
+
+    // Collision art: particles that bounce and leave trails
+    const colliders: { x: number; y: number; vx: number; vy: number; ci: number; r: number }[] = [];
+    for (let i = 0; i < 40; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.5 + Math.random() * 1.5;
+      colliders.push({
+        x: Math.random() * w, y: Math.random() * h,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        ci: i % 5, r: 3 + Math.random() * 8,
+      });
+    }
+
+    // Orbit art: rotating shapes around centers
+    const orbiters: { cx: number; cy: number; r: number; angle: number; speed: number; ci: number; size: number }[] = [];
+    const centers = [
+      { x: w * 0.3, y: h * 0.4 },
+      { x: w * 0.7, y: h * 0.5 },
+      { x: w * 0.5, y: h * 0.7 },
+    ];
+    for (let i = 0; i < 60; i++) {
+      const center = centers[i % 3];
+      orbiters.push({
+        cx: center.x, cy: center.y,
+        r: 20 + Math.random() * 80,
+        angle: Math.random() * Math.PI * 2,
+        speed: (0.005 + Math.random() * 0.015) * (Math.random() > 0.5 ? 1 : -1),
+        ci: i % 5,
+        size: 2 + Math.random() * 5,
+      });
+    }
+
+    const animate = () => {
+      frameRef.current = requestAnimationFrame(animate);
+      time += 1 / 60;
+
+      // Soft fade
+      ctx.fillStyle = `hsla(${colors[0].h}, ${colors[0].s * 0.2}%, ${bgL}%, 0.03)`;
+      ctx.fillRect(0, 0, w, h);
+
+      if (artType === "flow") {
+        // Perlin-like flow field
+        for (const p of flowParticles) {
+          const angle = (Math.sin(p.x * 0.008 + time * 0.3) + Math.cos(p.y * 0.006 + time * 0.2)) * Math.PI;
+          const speed = 0.6 + mood.energy * 0.4;
+          p.x += Math.cos(angle) * speed;
+          p.y += Math.sin(angle) * speed;
+          p.age++;
+
+          if (p.x < 0 || p.x > w || p.y < 0 || p.y > h || p.age > 300) {
+            p.x = Math.random() * w;
+            p.y = Math.random() * h;
+            p.age = 0;
+            p.ci = Math.floor(Math.random() * 5);
+          }
+
+          const c = colors[p.ci];
+          const alpha = Math.min(p.age / 30, 1) * 0.6;
+          ctx.fillStyle = hsla(c, alpha);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (artType === "collision") {
+        for (const p of colliders) {
+          p.x += p.vx;
+          p.y += p.vy;
+
+          if (p.x < 0 || p.x > w) p.vx *= -1;
+          if (p.y < 0 || p.y > h) p.vy *= -1;
+          p.x = Math.max(0, Math.min(w, p.x));
+          p.y = Math.max(0, Math.min(h, p.y));
+
+          const c = colors[p.ci];
+
+          // Glow trail
+          const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3);
+          g.addColorStop(0, hsla(c, 0.15));
+          g.addColorStop(1, hsla(c, 0));
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Core
+          ctx.fillStyle = hsla(c, 0.7);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Connection lines between nearby particles
+        for (let i = 0; i < colliders.length; i++) {
+          for (let j = i + 1; j < colliders.length; j++) {
+            const dx = colliders[i].x - colliders[j].x;
+            const dy = colliders[i].y - colliders[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 80) {
+              const c = colors[colliders[i].ci];
+              ctx.strokeStyle = hsla(c, (1 - dist / 80) * 0.2);
+              ctx.lineWidth = 0.5;
+              ctx.beginPath();
+              ctx.moveTo(colliders[i].x, colliders[i].y);
+              ctx.lineTo(colliders[j].x, colliders[j].y);
+              ctx.stroke();
+            }
+          }
+        }
+      } else if (artType === "orbit") {
+        for (const o of orbiters) {
+          o.angle += o.speed;
+          const x = o.cx + Math.cos(o.angle) * o.r;
+          const y = o.cy + Math.sin(o.angle) * o.r * 0.6; // Elliptical
+
+          const c = colors[o.ci];
+          ctx.fillStyle = hsla(c, 0.5);
+          ctx.beginPath();
+          ctx.arc(x, y, o.size, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Trail
+          const trailX = o.cx + Math.cos(o.angle - o.speed * 3) * o.r;
+          const trailY = o.cy + Math.sin(o.angle - o.speed * 3) * o.r * 0.6;
+          ctx.strokeStyle = hsla(c, 0.12);
+          ctx.lineWidth = o.size * 0.5;
+          ctx.beginPath();
+          ctx.moveTo(trailX, trailY);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+
+        // Center glows
+        for (const center of centers) {
+          const ci = centers.indexOf(center);
+          const c = colors[ci];
+          const g = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, 25);
+          g.addColorStop(0, hsla(c, 0.2));
+          g.addColorStop(1, hsla(c, 0));
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, 25, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    };
+
+    animate();
+
+    return () => cancelAnimationFrame(frameRef.current);
+  }, [colors, artType, mood]);
+
   return (
-    <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: "8px", overflow: "hidden", position: "relative" }}>
-      <div style={{
-        width: "100%", height: "100%",
-        background: `linear-gradient(135deg, ${colors.map((c, i) => `${hslStr(c)} ${i * 25}%`).join(", ")})`,
-      }} />
-    </div>
+    <canvas
+      ref={canvasRef}
+      style={{
+        width: "100%",
+        aspectRatio: "16 / 9",
+        borderRadius: "8px",
+        display: "block",
+      }}
+    />
   );
 }
-
-function GeometricBlocks({ colors }: { colors: HSL[] }) {
-  // Mondrian-ish layout
-  return (
-    <div style={{
-      width: "100%", aspectRatio: "16/9", borderRadius: "8px", overflow: "hidden",
-      display: "grid",
-      gridTemplateColumns: "2fr 1fr 1fr",
-      gridTemplateRows: "1fr 1fr 1fr",
-      gap: "3px",
-      background: "#1a1a1a",
-    }}>
-      <div style={{ gridRow: "1 / 3", background: hslStr(colors[0]) }} />
-      <div style={{ background: hslStr(colors[1]) }} />
-      <div style={{ gridRow: "1 / 4", background: hslStr(colors[2]) }} />
-      <div style={{ background: hslStr(colors[3]) }} />
-      <div style={{ gridColumn: "1 / 3", background: hslStr(colors[4]) }} />
-    </div>
-  );
-}
-
-function ConcentricCircles({ colors }: { colors: HSL[] }) {
-  return (
-    <div style={{
-      width: "100%", aspectRatio: "16/9", borderRadius: "8px", overflow: "hidden",
-      background: hslStr({ ...colors[0], l: Math.max(8, colors[0].l - 30) }),
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <svg viewBox="0 0 200 120" style={{ width: "80%", height: "80%" }}>
-        {[...colors].reverse().map((c, i) => (
-          <circle key={i} cx="100" cy="60" r={55 - i * 10}
-            fill={hslStr(c)} opacity={0.85} />
-        ))}
-      </svg>
-    </div>
-  );
-}
-
-function Stripes({ colors }: { colors: HSL[] }) {
-  return (
-    <div style={{
-      width: "100%", aspectRatio: "16/9", borderRadius: "8px", overflow: "hidden",
-      display: "flex",
-    }}>
-      {colors.map((c, i) => (
-        <div key={i} style={{
-          flex: i === 0 ? 2.5 : i === 1 ? 1.8 : i === 2 ? 1.5 : i === 3 ? 1.2 : 1,
-          background: hslStr(c),
-        }} />
-      ))}
-    </div>
-  );
-}
-
-function UIPreview({ colors }: { colors: HSL[] }) {
-  const bg = colors[4];
-  const primary = colors[0];
-  const secondary = colors[1];
-  const accent = colors[2];
-  const text = colors[3];
-  return (
-    <div style={{
-      width: "100%", aspectRatio: "16/9", borderRadius: "8px", overflow: "hidden",
-      background: hslStr({ ...bg, l: Math.min(95, bg.l + 30) }),
-      padding: "16px",
-      display: "flex", flexDirection: "column", gap: "8px",
-    }}>
-      {/* Nav bar */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ width: "40px", height: "8px", borderRadius: "4px", background: hslStr(primary) }} />
-        <div style={{ display: "flex", gap: "8px" }}>
-          <div style={{ width: "24px", height: "6px", borderRadius: "3px", background: hslStr(text), opacity: 0.4 }} />
-          <div style={{ width: "24px", height: "6px", borderRadius: "3px", background: hslStr(text), opacity: 0.4 }} />
-          <div style={{ width: "24px", height: "6px", borderRadius: "3px", background: hslStr(text), opacity: 0.4 }} />
-        </div>
-      </div>
-      {/* Hero */}
-      <div style={{ flex: 1, display: "flex", gap: "10px", alignItems: "center" }}>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
-          <div style={{ width: "70%", height: "8px", borderRadius: "4px", background: hslStr(text) }} />
-          <div style={{ width: "90%", height: "5px", borderRadius: "3px", background: hslStr(text), opacity: 0.25 }} />
-          <div style={{ width: "50%", height: "5px", borderRadius: "3px", background: hslStr(text), opacity: 0.25 }} />
-          <div style={{
-            width: "50px", height: "18px", borderRadius: "9px", marginTop: "4px",
-            background: hslStr(primary), display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <div style={{ width: "20px", height: "4px", borderRadius: "2px", background: "white", opacity: 0.9 }} />
-          </div>
-        </div>
-        <div style={{
-          width: "45%", aspectRatio: "4/3", borderRadius: "6px",
-          background: `linear-gradient(135deg, ${hslStr(secondary)}, ${hslStr(accent)})`,
-        }} />
-      </div>
-      {/* Cards */}
-      <div style={{ display: "flex", gap: "6px" }}>
-        {[primary, secondary, accent].map((c, i) => (
-          <div key={i} style={{
-            flex: 1, height: "28px", borderRadius: "4px",
-            background: hslStr({ ...c, l: Math.min(92, c.l + 25) }),
-            border: `1px solid ${hslStr({ ...c, l: c.l, s: c.s * 0.5 })}`,
-          }} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-const visualizations = [
-  { id: "gradient", label: "渐变", render: GradientBlend },
-  { id: "blocks", label: "色块", render: GeometricBlocks },
-  { id: "stripes", label: "条纹", render: Stripes },
-  { id: "circles", label: "同心圆", render: ConcentricCircles },
-  { id: "ui", label: "UI 预览", render: UIPreview },
-];
 
 // ---- Main Component ----
 export default function MoodPalette() {
   const [text, setText] = useState("");
   const [submittedText, setSubmittedText] = useState("");
-  const [visIdx, setVisIdx] = useState(0);
   const [copied, setCopied] = useState<string | null>(null);
 
   const result = useMemo(() => {
@@ -272,10 +332,10 @@ export default function MoodPalette() {
     setTimeout(() => setCopied(null), 1200);
   };
 
-  const copyAll = (colors: HSL[]) => {
+  const copyAll = (colors: HSL[], id: string) => {
     const hexes = colors.map(c => hslToHex(c.h, c.s, c.l)).join(", ");
     navigator.clipboard?.writeText(hexes);
-    setCopied("all");
+    setCopied(id);
     setTimeout(() => setCopied(null), 1200);
   };
 
@@ -324,15 +384,13 @@ export default function MoodPalette() {
     );
   }
 
-  const VisComponent = visualizations[visIdx].render;
-
   return (
     <div style={{
       minHeight: "100vh", background: "#0a0a0a",
-      padding: "2rem 1rem", display: "flex", flexDirection: "column", alignItems: "center",
+      padding: "2rem 1rem 4rem", display: "flex", flexDirection: "column", alignItems: "center",
     }}>
       {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+      <div style={{ textAlign: "center", marginBottom: "2rem" }}>
         <p style={{
           fontFamily: "'Noto Serif SC', serif", fontWeight: 300,
           fontSize: "0.85rem", color: "rgba(255,250,240,0.35)", letterSpacing: "0.1em",
@@ -350,31 +408,14 @@ export default function MoodPalette() {
         </p>
       </div>
 
-      {/* Visualization toggle */}
+      {/* Schemes with generative art */}
       <div style={{
-        display: "flex", gap: "0.5rem", marginBottom: "2rem", flexWrap: "wrap", justifyContent: "center",
-      }}>
-        {visualizations.map((v, i) => (
-          <button key={v.id} onClick={() => setVisIdx(i)} style={{
-            background: i === visIdx ? "rgba(255,250,240,0.1)" : "transparent",
-            border: "1px solid rgba(255,250,240,0.08)",
-            borderRadius: "4px", padding: "4px 12px", cursor: "pointer",
-            fontFamily: "'Space Mono', monospace", fontSize: "0.6rem",
-            color: i === visIdx ? "rgba(255,250,240,0.6)" : "rgba(255,250,240,0.2)",
-          }}>
-            {v.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Schemes */}
-      <div style={{
-        display: "flex", flexDirection: "column", gap: "2.5rem",
+        display: "flex", flexDirection: "column", gap: "3rem",
         width: "min(92vw, 520px)",
       }}>
         {result.schemes.map((scheme) => (
           <div key={scheme.nameEn} style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-            {/* Scheme label */}
+            {/* Label */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
               <div>
                 <span style={{
@@ -395,14 +436,14 @@ export default function MoodPalette() {
                   fontFamily: "'Space Mono', monospace",
                   fontSize: "0.5rem", color: "rgba(255,250,240,0.15)", cursor: "pointer",
                 }}
-                onClick={() => copyAll(scheme.colors)}
+                onClick={() => copyAll(scheme.colors, scheme.nameEn)}
               >
-                {copied === "all" ? "✓ copied" : "copy all"}
+                {copied === scheme.nameEn ? "✓ copied" : "copy all"}
               </span>
             </div>
 
-            {/* Visualization */}
-            <VisComponent colors={scheme.colors} />
+            {/* Generative Art Canvas */}
+            <GenArtCanvas colors={scheme.colors} artType={scheme.artType} mood={result.mood} />
 
             {/* Swatches */}
             <div style={{ display: "flex", gap: "6px" }}>
@@ -414,7 +455,6 @@ export default function MoodPalette() {
                       width: "100%", aspectRatio: "1", borderRadius: "6px",
                       background: hslStr(c),
                       border: "1px solid rgba(255,255,255,0.06)",
-                      transition: "transform 0.15s",
                     }} />
                     <p style={{
                       fontFamily: "'Space Mono', monospace",
@@ -432,12 +472,11 @@ export default function MoodPalette() {
         ))}
       </div>
 
-      {/* Footer */}
       <p style={{
         fontFamily: "'Space Mono', monospace", fontSize: "0.5rem",
         color: "rgba(255,250,240,0.1)", marginTop: "3rem",
       }}>
-        click swatch to copy hex · click &quot;copy all&quot; for full palette
+        click swatch to copy · each canvas shows your palette alive
       </p>
     </div>
   );
