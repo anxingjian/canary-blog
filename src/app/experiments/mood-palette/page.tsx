@@ -164,17 +164,18 @@ const FRAME_SIZE = 300;
 interface FramePos { x: number; y: number; w: number; rot: number; }
 
 function layoutFrames(): FramePos[] {
+  // Even spacing: ~320px cols, ~340px rows, slight offsets for asymmetry
   return [
-    { x: 15,  y: 15,   w: FRAME_SIZE * 1.05, rot: -0.4 },
-    { x: 360, y: 5,    w: FRAME_SIZE * 1.2,  rot: 0.3 },
-    { x: 740, y: 25,   w: FRAME_SIZE * 0.95, rot: -0.2 },
-    { x: 1080,y: 10,   w: FRAME_SIZE * 1.1,  rot: 0.5 },
-    { x: 30,  y: 420,  w: FRAME_SIZE * 0.95, rot: 0.2 },
-    { x: 380, y: 390,  w: FRAME_SIZE * 1.15, rot: -0.3 },
-    { x: 770, y: 410,  w: FRAME_SIZE * 1.0,  rot: 0.1 },
-    { x: 1100,y: 380,  w: FRAME_SIZE * 0.95, rot: -0.5 },
-    { x: 150, y: 780,  w: FRAME_SIZE * 1.1,  rot: 0.3 },
-    { x: 550, y: 760,  w: FRAME_SIZE * 1.0,  rot: -0.2 },
+    { x: 20,   y: 20,   w: FRAME_SIZE * 1.05, rot: -0.4 },
+    { x: 370,  y: 30,   w: FRAME_SIZE * 1.15, rot: 0.3 },
+    { x: 740,  y: 15,   w: FRAME_SIZE * 1.0,  rot: -0.2 },
+    { x: 1100, y: 25,   w: FRAME_SIZE * 1.1,  rot: 0.4 },
+    { x: 50,   y: 400,  w: FRAME_SIZE * 1.0,  rot: 0.2 },
+    { x: 400,  y: 380,  w: FRAME_SIZE * 1.1,  rot: -0.3 },
+    { x: 770,  y: 400,  w: FRAME_SIZE * 1.05, rot: 0.1 },
+    { x: 1120, y: 390,  w: FRAME_SIZE * 0.95, rot: -0.4 },
+    { x: 160,  y: 770,  w: FRAME_SIZE * 1.1,  rot: 0.3 },
+    { x: 560,  y: 760,  w: FRAME_SIZE * 1.0,  rot: -0.2 },
   ];
 }
 
@@ -590,6 +591,7 @@ const SKETCH_MAP: Record<string, SketchFn> = {
 // ---- GLSL Shaders ----
 // Shared noise functions injected into every shader
 const GLSL_NOISE = `
+precision highp float;
 vec3 mod289(vec3 x){return x-floor(x*(1./289.))*289.;}
 vec2 mod289(vec2 x){return x-floor(x*(1./289.))*289.;}
 vec3 permute(vec3 x){return mod289(((x*34.)+1.)*x);}
@@ -611,7 +613,6 @@ float fbm(vec2 p){float f=0.;float w=.5;for(int i=0;i<5;i++){f+=w*snoise(p);p*=2
 `;
 
 const SHADER_STARRY_NIGHT = GLSL_NOISE + `
-precision highp float;
 uniform float u_time;
 uniform vec2 u_resolution;
 uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
@@ -691,7 +692,6 @@ void main(){
 `;
 
 const SHADER_GREAT_WAVE = GLSL_NOISE + `
-precision highp float;
 uniform float u_time;
 uniform vec2 u_resolution;
 uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
@@ -765,7 +765,6 @@ void main(){
 `;
 
 const SHADER_PEARL_EARRING = GLSL_NOISE + `
-precision highp float;
 uniform float u_time;
 uniform vec2 u_resolution;
 uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
