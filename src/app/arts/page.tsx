@@ -671,7 +671,7 @@ function Piece005() {
       ref={containerRef}
       style={{
         width: "100%",
-        height: "100%",
+        aspectRatio: "1 / 1",
         background: "#0a0a0a",
         cursor: "pointer",
       }}
