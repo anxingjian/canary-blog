@@ -20,7 +20,13 @@ export default function Nav() {
         gap: "0",
         marginBottom: "3rem",
         borderBottom: "1px solid var(--border)",
+        overflowX: "auto",
+        WebkitOverflowScrolling: "touch",
+        scrollbarWidth: "none",
+        msOverflowStyle: "none",
+        whiteSpace: "nowrap",
       }}
+      className="nav-scroll"
     >
       {NAV_ITEMS.map((item) => {
         const active =
@@ -40,6 +46,7 @@ export default function Nav() {
               gap: "0.75rem",
               transition: "all 0.2s",
               position: "relative",
+              flexShrink: 0,
             }}
           >
             <span

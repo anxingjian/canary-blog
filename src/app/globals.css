@@ -313,3 +313,7 @@ body::after {
   .gate-back { display: none !important; }
   .gate-assembly { transform: translate(-50%, -33%) !important; }
 }
+
+.nav-scroll::-webkit-scrollbar {
+  display: none;
+}
