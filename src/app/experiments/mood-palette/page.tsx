@@ -157,24 +157,24 @@ const PAINTINGS: Painting[] = [
 const WALL_COLOR = "#1a2820";
 
 // Tighter layout for mobile density — ~4-5 visible at once on 400px screen
-const CANVAS_W = 1200;
-const CANVAS_H = 1600;
-const FRAME_SIZE = 130;
+const CANVAS_W = 1600;
+const CANVAS_H = 2000;
+const FRAME_SIZE = 200;
 
 interface FramePos { x: number; y: number; w: number; rot: number; }
 
 function layoutFrames(): FramePos[] {
   return [
-    { x: 30,  y: 30,   w: FRAME_SIZE * 1.05, rot: -0.4 },
-    { x: 250, y: 20,   w: FRAME_SIZE * 1.2,  rot: 0.3 },
-    { x: 520, y: 40,   w: FRAME_SIZE * 0.95, rot: -0.2 },
-    { x: 780, y: 15,   w: FRAME_SIZE * 1.1,  rot: 0.5 },
-    { x: 50,  y: 310,  w: FRAME_SIZE * 0.9,  rot: 0.2 },
-    { x: 280, y: 290,  w: FRAME_SIZE * 1.15, rot: -0.3 },
-    { x: 560, y: 320,  w: FRAME_SIZE * 1.0,  rot: 0.1 },
-    { x: 800, y: 280,  w: FRAME_SIZE * 0.95, rot: -0.5 },
-    { x: 120, y: 580,  w: FRAME_SIZE * 1.1,  rot: 0.3 },
-    { x: 420, y: 560,  w: FRAME_SIZE * 1.0,  rot: -0.2 },
+    { x: 20,  y: 20,   w: FRAME_SIZE * 1.05, rot: -0.4 },
+    { x: 300, y: 10,   w: FRAME_SIZE * 1.2,  rot: 0.3 },
+    { x: 620, y: 30,   w: FRAME_SIZE * 0.95, rot: -0.2 },
+    { x: 920, y: 10,   w: FRAME_SIZE * 1.1,  rot: 0.5 },
+    { x: 40,  y: 380,  w: FRAME_SIZE * 0.95, rot: 0.2 },
+    { x: 340, y: 350,  w: FRAME_SIZE * 1.15, rot: -0.3 },
+    { x: 660, y: 370,  w: FRAME_SIZE * 1.0,  rot: 0.1 },
+    { x: 960, y: 340,  w: FRAME_SIZE * 0.95, rot: -0.5 },
+    { x: 140, y: 700,  w: FRAME_SIZE * 1.1,  rot: 0.3 },
+    { x: 500, y: 680,  w: FRAME_SIZE * 1.0,  rot: -0.2 },
   ];
 }
 
