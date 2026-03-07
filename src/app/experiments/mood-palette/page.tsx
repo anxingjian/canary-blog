@@ -587,6 +587,339 @@ const SKETCH_MAP: Record<string, SketchFn> = {
   "wanderer-sea-fog": sketchWanderer, "the-milkmaid": sketchMilkmaid,
 };
 
+// ---- GLSL Shaders ----
+// Shared noise functions injected into every shader
+const GLSL_NOISE = `
+vec3 mod289(vec3 x){return x-floor(x*(1./289.))*289.;}
+vec2 mod289(vec2 x){return x-floor(x*(1./289.))*289.;}
+vec3 permute(vec3 x){return mod289(((x*34.)+1.)*x);}
+float snoise(vec2 v){
+  const vec4 C=vec4(.211324865405187,.366025403784439,-.577350269189626,.024390243902439);
+  vec2 i=floor(v+dot(v,C.yy)),x0=v-i+dot(i,C.xx),i1;
+  i1=(x0.x>x0.y)?vec2(1.,0.):vec2(0.,1.);
+  vec4 x12=x0.xyxy+C.xxzz;x12.xy-=i1;
+  i=mod289(i);
+  vec3 p=permute(permute(i.y+vec3(0.,i1.y,1.))+i.x+vec3(0.,i1.x,1.));
+  vec3 m=max(.5-vec3(dot(x0,x0),dot(x12.xy,x12.xy),dot(x12.zw,x12.zw)),0.);
+  m=m*m;m=m*m;
+  vec3 x=2.*fract(p*C.www)-1.,h=abs(x)-.5,a0=x-floor(x+.5);
+  m*=1.79284291400159-.85373472095314*(a0*a0+h*h);
+  vec3 g;g.x=a0.x*x0.x+h.x*x0.y;g.yz=a0.yz*x12.xz+h.yz*x12.yw;
+  return 130.*dot(m,g);
+}
+float fbm(vec2 p){float f=0.;float w=.5;for(int i=0;i<5;i++){f+=w*snoise(p);p*=2.;w*=.5;}return f;}
+`;
+
+const SHADER_STARRY_NIGHT = GLSL_NOISE + `
+precision highp float;
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.15;
+  
+  // Turbulent flow field — multiple vortex centers like Van Gogh's spirals
+  vec2 v1=vec2(-.2,.15),v2=vec2(.25,.2),v3=vec2(0.,-.1);
+  float angle=0.;
+  // Vortex influence
+  for(int i=0;i<3;i++){
+    vec2 vc=i==0?v1:i==1?v2:v3;
+    float str=i==0?1.2:i==1?-.9:.7;
+    vec2 d=p-vc;
+    float dist=length(d);
+    angle+=str*atan(d.y,d.x)/(dist*4.+.3);
+  }
+  // Noise turbulence layered on top
+  angle+=fbm(p*3.+t*.3)*3.14;
+  
+  // Trace the flow — accumulate color along flow direction
+  vec2 flow=vec2(cos(angle),sin(angle));
+  float streak=0.;
+  for(int i=0;i<6;i++){
+    float fi=float(i)*.15;
+    vec2 sp=p+flow*fi*.08;
+    streak+=abs(snoise(sp*8.+t*.5))*.16;
+  }
+  
+  // Sky color mixing based on height and turbulence
+  float skyGrad=smoothstep(-.3,.5,p.y);
+  vec3 deep=u_c0;
+  vec3 mid=mix(u_c1,u_c2,streak);
+  vec3 sky=mix(deep,mid,skyGrad+streak*.3);
+  
+  // Swirling highlights — the thick impasto strokes
+  float swirl=snoise(p*4.+vec2(cos(angle),sin(angle))*t*.2);
+  float highlight=smoothstep(.3,.8,swirl);
+  sky=mix(sky,u_c2,highlight*.4);
+  
+  // Stars — bright pulsing dots
+  for(int i=0;i<8;i++){
+    float fi=float(i);
+    vec2 starPos=vec2(sin(fi*1.7+.3)*.35,cos(fi*2.1+.7)*.2+.15);
+    float d=length(p-starPos);
+    float pulse=.5+.5*sin(t*2.+fi*1.3);
+    float star=smoothstep(.025,.005,d)*pulse;
+    float halo=smoothstep(.08,.02,d)*pulse*.3;
+    sky+=u_c3*(star+halo);
+  }
+  
+  // Moon — large bright area
+  float moon=smoothstep(.06,.02,length(p-vec2(.3,.25)));
+  float moonHalo=smoothstep(.12,.04,length(p-vec2(.3,.25)))*.4;
+  sky+=u_c4*(moon+moonHalo);
+  
+  // Village silhouette at bottom
+  float ground=smoothstep(-.35,-.38,p.y+snoise(vec2(p.x*12.,0.))*.03);
+  // Church spire
+  float spire=smoothstep(.008,.003,abs(p.x+.05))*smoothstep(-.25,-.18,p.y)*step(p.y,-.18);
+  sky=mix(sky,u_c0*.3,ground+spire*.8);
+  
+  // Cypress tree — dark flame shape on left
+  float cx=p.x+.38;
+  float cy=p.y+.1;
+  float cypress=smoothstep(.04,.01,abs(cx)*(1.+cy*.8))*smoothstep(-.4,.3,p.y);
+  sky=mix(sky,u_c0*.2,cypress);
+  
+  // Impasto texture
+  float tex=snoise(gl_FragCoord.xy*.5)*.04;
+  sky+=tex;
+  
+  gl_FragColor=vec4(sky,1.);
+}
+`;
+
+const SHADER_GREAT_WAVE = GLSL_NOISE + `
+precision highp float;
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.2;
+  
+  // Sky gradient
+  vec3 col=mix(u_c3*.6,u_c4*.8,uv.y);
+  
+  // Multiple wave layers with fractal detail — Hokusai's obsession
+  for(int layer=0;layer<7;layer++){
+    float fl=float(layer);
+    float baseY=-.15+fl*.08;
+    float amp=.18-fl*.015;
+    
+    // Main wave shape
+    float wave=sin(p.x*3.-t*1.5+fl*.7)*amp;
+    // Fractal harmonics — self-similar detail
+    wave+=sin(p.x*7.-t*2.3+fl*1.3)*amp*.35;
+    wave+=snoise(vec2(p.x*4.+fl*3.,t*.4+fl))*amp*.25;
+    wave+=snoise(vec2(p.x*12.+fl*7.,t*.8))*amp*.1;
+    
+    // Wave crest — curling over
+    float crest=smoothstep(.0,.15,sin(p.x*2.5-t*1.8+fl*.4)-.5);
+    wave-=crest*.08;
+    
+    float waveLine=p.y-baseY-wave;
+    float fill=smoothstep(.005,-.005,waveLine);
+    
+    // Color: deeper layers are darker
+    float depth=fl/7.;
+    vec3 waveCol=mix(u_c2,u_c1,depth);
+    waveCol=mix(waveCol,u_c0,depth*depth);
+    
+    col=mix(col,waveCol,fill*(1.-depth*.3));
+    
+    // Foam on crests — white frothy lines
+    float foam=smoothstep(.01,.002,abs(waveLine))*(1.-depth*.5);
+    foam*=smoothstep(-.05,.1,wave); // only on peaks
+    col=mix(col,u_c4,foam*.6);
+    
+    // Spray — small dots breaking off crests
+    if(crest>.3){
+      float spray=snoise(vec2(p.x*40.+fl*20.,p.y*40.+t*3.));
+      float sprayMask=smoothstep(.02,.0,abs(waveLine-.01))*smoothstep(.4,1.,crest);
+      col=mix(col,u_c4,step(.6,spray)*sprayMask*.4);
+    }
+  }
+  
+  // The great wave crest — a massive curling form
+  float greatX=p.x+.1;
+  float greatWave=.2+sin(greatX*2.-t)*.15+snoise(vec2(greatX*5.,t*.3))*.06;
+  float curl=smoothstep(.0,.1,greatX)*smoothstep(.5,.2,greatX);
+  greatWave+=curl*.1;
+  float gwFill=smoothstep(.01,-.01,p.y-greatWave)*step(-.3,greatX)*step(greatX,.5);
+  col=mix(col,mix(u_c1,u_c2,.5),gwFill*.3);
+  
+  // Foam texture on great wave
+  float foamTex=snoise(vec2(p.x*30.,p.y*30.-t*2.));
+  float foamMask=smoothstep(.01,.0,abs(p.y-greatWave))*gwFill;
+  col=mix(col,u_c4,step(.3,foamTex)*foamMask*.5);
+  
+  // Distant Fuji — small, calm
+  float fuji=smoothstep(.01,.0,p.y+.1-max(0.,.04-abs(p.x-.35)*.3));
+  col=mix(col,u_c4*.9,fuji*.3);
+  
+  gl_FragColor=vec4(col,1.);
+}
+`;
+
+const SHADER_PEARL_EARRING = GLSL_NOISE + `
+precision highp float;
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.1;
+  
+  // Vermeer's black void — not empty, but velvet-deep
+  vec3 col=u_c0;
+  
+  // Subtle warmth from the right — ambient reflected light
+  float ambient=smoothstep(.8,.0,length(p-vec2(.3,-.1)))*.08;
+  col+=u_c3*ambient;
+  
+  // The turban — ultramarine blue, the most expensive pigment
+  vec2 turbanCenter=vec2(.02,.08);
+  float turbanDist=length(p-turbanCenter);
+  float turban=smoothstep(.22,.08,turbanDist);
+  // Fabric folds via noise
+  float folds=snoise(vec2(atan(p.y-turbanCenter.y,p.x-turbanCenter.x)*3.,turbanDist*8.+t*.3))*.15;
+  vec3 turbanCol=mix(u_c1,u_c2,.5+folds);
+  col=mix(col,turbanCol,turban*.5);
+  
+  // Skin — warm light from the left, Vermeer's signature directional light
+  vec2 faceCenter=vec2(.0,-.02);
+  float faceDist=length((p-faceCenter)*vec2(1.,1.2));
+  float face=smoothstep(.15,.06,faceDist);
+  vec3 skinCol=mix(u_c3,u_c4,.3);
+  // Light direction: upper-left
+  float faceLight=smoothstep(.15,.04,length(p-faceCenter-vec2(-.05,.03)));
+  col=mix(col,skinCol,face*.35);
+  col+=u_c4*faceLight*.1;
+  
+  // The glance — she's looking right at you
+  // Subtle eye highlight
+  vec2 eyePos=vec2(-.02,.01);
+  float eyeLight=smoothstep(.015,.005,length(p-eyePos));
+  col+=u_c4*eyeLight*.2;
+  
+  // THE PEARL — the anchor of the entire painting
+  vec2 pearlPos=vec2(.04,-.1);
+  float pearlDist=length(p-pearlPos);
+  float breathe=1.+sin(t*.6)*.08;
+  
+  // Outer glow — light scattered through the pearl
+  float glow=smoothstep(.08,.01,pearlDist)*breathe;
+  col+=mix(u_c4,u_c3,.3)*glow*.3;
+  
+  // Pearl body — luminous, slightly warm
+  float pearl=smoothstep(.025,.015,pearlDist)*breathe;
+  col=mix(col,u_c4*.95,pearl*.7);
+  
+  // Specular highlight — the bright spot that makes it "real"
+  // Vermeer probably used a tiny dot of pure lead white
+  vec2 specPos=pearlPos+vec2(-.008,.008);
+  float spec=smoothstep(.006,.001,length(p-specPos))*breathe;
+  col+=vec3(1.,.98,.95)*spec*.8;
+  
+  // Secondary reflection — bottom of pearl catches fabric color
+  vec2 refPos=pearlPos+vec2(.005,-.01);
+  float ref2=smoothstep(.008,.003,length(p-refPos))*breathe;
+  col+=u_c2*ref2*.15;
+  
+  // Yellow headband draping down
+  float band=smoothstep(.01,.004,abs(p.x-.06+sin(p.y*8.)*.01))*smoothstep(.1,-.05,p.y)*smoothstep(-.2,-.05,p.y);
+  col=mix(col,u_c3,band*.25);
+  
+  // Very subtle canvas texture
+  float grain=snoise(gl_FragCoord.xy*.8)*.02;
+  col+=grain;
+  
+  // Vignette — drawing eye to center/pearl
+  float vig=smoothstep(.7,.3,length(p));
+  col*=.7+vig*.3;
+  
+  gl_FragColor=vec4(col,1.);
+}
+`;
+
+const SHADER_MAP: Record<string, string> = {
+  "starry-night": SHADER_STARRY_NIGHT,
+  "great-wave": SHADER_GREAT_WAVE,
+  "pearl-earring": SHADER_PEARL_EARRING,
+};
+
+// ---- WebGL Shader Canvas ----
+function ShaderCanvas({ painting }: { painting: Painting }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const gl = canvas.getContext("webgl", { antialias: true, alpha: false });
+    if (!gl) return;
+
+    const w = window.innerWidth, h = window.innerHeight;
+    canvas.width = w; canvas.height = h;
+    gl.viewport(0, 0, w, h);
+
+    const vertSrc = `attribute vec2 a_position;void main(){gl_Position=vec4(a_position,0.,1.);}`;
+    const fragSrc = SHADER_MAP[painting.id]!;
+
+    function compileShader(gl: WebGLRenderingContext, type: number, src: string) {
+      const s = gl.createShader(type)!;
+      gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); gl.deleteShader(s); return null; }
+      return s;
+    }
+
+    const vs = compileShader(gl, gl.VERTEX_SHADER, vertSrc);
+    const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragSrc);
+    if (!vs || !fs) return;
+
+    const prog = gl.createProgram()!;
+    gl.attachShader(prog, vs); gl.attachShader(prog, fs);
+    gl.linkProgram(prog); gl.useProgram(prog);
+
+    // Full-screen quad
+    const buf = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+    const aPos = gl.getAttribLocation(prog, "a_position");
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    // Uniforms
+    const uTime = gl.getUniformLocation(prog, "u_time");
+    const uRes = gl.getUniformLocation(prog, "u_resolution");
+    gl.uniform2f(uRes, w, h);
+
+    // Color uniforms
+    for (let i = 0; i < 5; i++) {
+      const loc = gl.getUniformLocation(prog, `u_c${i}`);
+      const [r, g, b] = hexToRGB(painting.colors[i]);
+      gl.uniform3f(loc, r / 255, g / 255, b / 255);
+    }
+
+    const startTime = performance.now();
+    function render() {
+      const elapsed = (performance.now() - startTime) / 1000;
+      gl!.uniform1f(uTime, elapsed);
+      gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
+      rafRef.current = requestAnimationFrame(render);
+    }
+    render();
+
+    return () => { cancelAnimationFrame(rafRef.current); };
+  }, [painting]);
+
+  return <canvas ref={canvasRef} style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 0 }} />;
+}
+
 // ---- p5 Canvas for full view ----
 function P5Canvas({ painting }: { painting: Painting }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -708,9 +1041,10 @@ function InfiniteGallery({ onSelect }: { onSelect: (p: Painting) => void }) {
 
 // ---- Art View ----
 function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void }) {
+  const hasShader = painting.id in SHADER_MAP;
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
-      <P5Canvas painting={painting} />
+      {hasShader ? <ShaderCanvas painting={painting} /> : <P5Canvas painting={painting} />}
 
       {/* Top — painting identity */}
       <div style={{
