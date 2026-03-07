@@ -43,25 +43,25 @@ interface CuratedPalette {
 }
 
 const PALETTES: CuratedPalette[] = [
-  { tags: ["温柔", "柔", "gentle", "soft", "轻"], colors: ["#F2E6D9", "#D4A59A", "#C97C5D", "#B36A5E", "#8C5E58"], artType: "noiseField" },
-  { tags: ["温柔", "粉", "pink", "blush", "甜"], colors: ["#FADADD", "#F4B6C2", "#D291A4", "#A76D8E", "#6B4C5A"], artType: "metaball" },
-  { tags: ["温暖", "warm", "阳光", "amber"], colors: ["#FFF3E0", "#FFE0B2", "#FFB74D", "#F57C00", "#E65100"], artType: "aurora" },
-  { tags: ["sunset", "日落", "黄昏"], colors: ["#FF6B6B", "#FFA07A", "#FFD93D", "#6BCB77", "#4D96FF"], artType: "terrain" },
+  { tags: ["温柔", "柔", "gentle", "soft", "轻", "柔和", "柔软", "温柔的"], colors: ["#F2E6D9", "#D4A59A", "#C97C5D", "#B36A5E", "#8C5E58"], artType: "noiseField" },
+  { tags: ["温柔", "粉", "pink", "blush", "甜", "粉色", "粉红", "甜美"], colors: ["#FADADD", "#F4B6C2", "#D291A4", "#A76D8E", "#6B4C5A"], artType: "metaball" },
+  { tags: ["温暖", "warm", "阳光", "amber", "暖", "暖色", "暖调"], colors: ["#FFF3E0", "#FFE0B2", "#FFB74D", "#F57C00", "#E65100"], artType: "aurora" },
+  { tags: ["sunset", "日落", "黄昏", "夕阳", "傍晚"], colors: ["#FF6B6B", "#FFA07A", "#FFD93D", "#6BCB77", "#4D96FF"], artType: "terrain" },
   { tags: ["宁静", "平静", "calm", "peace", "安静", "静"], colors: ["#E8F0FE", "#B3C7E6", "#7096C4", "#4A6FA5", "#2D4A7A"], artType: "ink" },
-  { tags: ["海", "ocean", "sea", "水", "wave", "浪"], colors: ["#0A1628", "#1A3A5C", "#2E86AB", "#45B7D1", "#96E6FF"], artType: "terrain" },
+  { tags: ["海", "大海", "ocean", "sea", "水", "wave", "浪", "海洋", "蓝海", "海边", "海浪"], colors: ["#0A1628", "#1A3A5C", "#2E86AB", "#45B7D1", "#96E6FF"], artType: "terrain" },
   { tags: ["深海", "deep", "abyss"], colors: ["#0B132B", "#1C2541", "#3A506B", "#5BC0BE", "#6FFFE9"], artType: "terrain" },
   { tags: ["冰", "ice", "冷", "cold", "冬", "winter", "snow", "雪"], colors: ["#F0F4F8", "#D9E2EC", "#9FB3C8", "#627D98", "#334E68"], artType: "crystal" },
-  { tags: ["森", "forest", "tree", "自然", "nature", "green", "草"], colors: ["#1B2D1B", "#2D5016", "#4A7C59", "#8FBC8F", "#C5E1A5"], artType: "noiseField" },
-  { tags: ["春", "spring", "morning", "早", "fresh", "清"], colors: ["#FAFDF6", "#E8F5E9", "#A5D6A7", "#66BB6A", "#2E7D32"], artType: "metaball" },
-  { tags: ["花", "flower", "garden", "bloom", "樱"], colors: ["#FFF0F3", "#FFCCD5", "#FF8FA3", "#C9184A", "#590D22"], artType: "metaball" },
-  { tags: ["秋", "autumn", "fall", "枫"], colors: ["#582F0E", "#7F4F24", "#936639", "#B6AD90", "#A68A64"], artType: "noiseField" },
-  { tags: ["夏", "summer", "热", "hot", "sun", "太阳"], colors: ["#FFBE0B", "#FB5607", "#FF006E", "#8338EC", "#3A86FF"], artType: "aurora" },
-  { tags: ["夜", "night", "dark", "暗", "黑"], colors: ["#0D0D0D", "#1A1A2E", "#16213E", "#0F3460", "#E94560"], artType: "ink" },
+  { tags: ["森", "forest", "tree", "自然", "nature", "green", "草", "森林", "树林", "绿色"], colors: ["#1B2D1B", "#2D5016", "#4A7C59", "#8FBC8F", "#C5E1A5"], artType: "noiseField" },
+  { tags: ["春", "spring", "morning", "早", "fresh", "清", "春天", "早晨", "清新", "新生"], colors: ["#FAFDF6", "#E8F5E9", "#A5D6A7", "#66BB6A", "#2E7D32"], artType: "metaball" },
+  { tags: ["花", "flower", "garden", "bloom", "樱", "花园", "樱花", "花开", "鲜花", "玫瑰"], colors: ["#FFF0F3", "#FFCCD5", "#FF8FA3", "#C9184A", "#590D22"], artType: "metaball" },
+  { tags: ["秋", "autumn", "fall", "枫", "秋天", "落叶", "枫叶", "金秋"], colors: ["#582F0E", "#7F4F24", "#936639", "#B6AD90", "#A68A64"], artType: "noiseField" },
+  { tags: ["夏", "summer", "热", "hot", "sun", "太阳", "夏天", "炎热"], colors: ["#FFBE0B", "#FB5607", "#FF006E", "#8338EC", "#3A86FF"], artType: "aurora" },
+  { tags: ["夜", "night", "dark", "暗", "黑", "夜晚", "黑暗", "深夜", "午夜", "黑色"], colors: ["#0D0D0D", "#1A1A2E", "#16213E", "#0F3460", "#E94560"], artType: "ink" },
   { tags: ["月", "moon", "星", "star"], colors: ["#0C0F1A", "#1B1F3A", "#2E3A5C", "#546A8D", "#F4E8C1"], artType: "crystal" },
   { tags: ["孤独", "lonely", "alone", "寂寞", "empty", "空"], colors: ["#1A1A2E", "#2D2D44", "#4A4A6A", "#7B7B9E", "#B8B8D1"], artType: "ink" },
   { tags: ["悲伤", "sad", "sorrow", "忧", "melanchol"], colors: ["#1B1B2F", "#2E3047", "#43455C", "#707793", "#A5A5C0"], artType: "noiseField" },
   { tags: ["雨", "rain"], colors: ["#0D1B2A", "#1B263B", "#415A77", "#778DA9", "#E0E1DD"], artType: "ink" },
-  { tags: ["愤怒", "anger", "rage", "火", "fire", "烈", "burn", "燃"], colors: ["#1A0000", "#590000", "#9B0000", "#D00000", "#FF4D00"], artType: "aurora" },
+  { tags: ["愤怒", "anger", "rage", "火", "fire", "烈", "burn", "燃", "火焰", "烈火", "燃烧"], colors: ["#1A0000", "#590000", "#9B0000", "#D00000", "#FF4D00"], artType: "aurora" },
   { tags: ["焦虑", "anxiety", "chaos", "乱", "崩", "panic"], colors: ["#2B2D42", "#8D0801", "#BC3908", "#F6AE2D", "#F2F4F3"], artType: "crystal" },
   { tags: ["暴", "storm", "thunder", "雷", "暴风"], colors: ["#0D1B2A", "#1B263B", "#415A77", "#778DA9", "#E0E1DD"], artType: "terrain" },
   { tags: ["活力", "energetic", "vibrant", "vivid", "活泼", "playful"], colors: ["#FF006E", "#FB5607", "#FFBE0B", "#3A86FF", "#8338EC"], artType: "aurora" },
@@ -106,16 +106,22 @@ function findPalette(text: string): CuratedPalette {
   let best: CuratedPalette | null = null, bestScore = 0;
   for (const p of PALETTES) {
     let score = 0;
-    for (const tag of p.tags) { if (text.includes(tag)) score += tag.length; }
+    // Exact substring match (weighted by tag length)
+    for (const tag of p.tags) { if (text.includes(tag)) score += tag.length * 2; }
+    // Single-character match for Chinese (each char is meaningful)
+    if (score === 0) {
+      for (const char of text) {
+        if (char.charCodeAt(0) > 0x4e00) { // CJK character
+          for (const tag of p.tags) { if (tag.includes(char)) score += 1; }
+        }
+      }
+    }
     if (score > bestScore) { bestScore = score; best = p; }
   }
   if (!best) {
-    // No tag match — generate a palette from text hash
     const hash = text.split("").reduce((s, c) => s + c.charCodeAt(0), 0);
-    // Pick a base palette and rotate its hues based on hash
-    const base = PALETTES[hash % PALETTES.length];
     const artTypes: CuratedPalette["artType"][] = ["noiseField", "metaball", "aurora", "ink", "terrain", "crystal"];
-    best = { ...base, artType: artTypes[hash % artTypes.length] };
+    best = { ...PALETTES[hash % PALETTES.length], artType: artTypes[hash % artTypes.length] };
   }
   return best;
 }
