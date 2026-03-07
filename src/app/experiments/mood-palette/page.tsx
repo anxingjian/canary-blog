@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import dynamic from "next/dynamic";
+import { useState, useRef, useEffect } from "react";
 
 // ---- Simplex Noise ----
 class SimplexNoise {
@@ -35,470 +34,640 @@ class SimplexNoise {
   }
 }
 
-// ---- Palette DB ----
-interface CuratedPalette {
-  tags: string[];
-  colors: string[];
-  artType: "noiseField" | "metaball" | "aurora" | "ink" | "terrain" | "crystal";
-}
-
-const PALETTES: CuratedPalette[] = [
-  { tags: ["温柔", "柔", "gentle", "soft", "轻", "柔和", "柔软", "温柔的"], colors: ["#F2E6D9", "#D4A59A", "#C97C5D", "#B36A5E", "#8C5E58"], artType: "noiseField" },
-  { tags: ["温柔", "粉", "pink", "blush", "甜", "粉色", "粉红", "甜美"], colors: ["#FADADD", "#F4B6C2", "#D291A4", "#A76D8E", "#6B4C5A"], artType: "metaball" },
-  { tags: ["温暖", "warm", "阳光", "amber", "暖", "暖色", "暖调"], colors: ["#FFF3E0", "#FFE0B2", "#FFB74D", "#F57C00", "#E65100"], artType: "aurora" },
-  { tags: ["sunset", "日落", "黄昏", "夕阳", "傍晚"], colors: ["#FF6B6B", "#FFA07A", "#FFD93D", "#6BCB77", "#4D96FF"], artType: "terrain" },
-  { tags: ["宁静", "平静", "calm", "peace", "安静", "静"], colors: ["#E8F0FE", "#B3C7E6", "#7096C4", "#4A6FA5", "#2D4A7A"], artType: "ink" },
-  { tags: ["海", "大海", "ocean", "sea", "水", "wave", "浪", "海洋", "蓝海", "海边", "海浪"], colors: ["#0A1628", "#1A3A5C", "#2E86AB", "#45B7D1", "#96E6FF"], artType: "terrain" },
-  { tags: ["深海", "deep", "abyss"], colors: ["#0B132B", "#1C2541", "#3A506B", "#5BC0BE", "#6FFFE9"], artType: "terrain" },
-  { tags: ["冰", "ice", "冷", "cold", "冬", "winter", "snow", "雪"], colors: ["#F0F4F8", "#D9E2EC", "#9FB3C8", "#627D98", "#334E68"], artType: "crystal" },
-  { tags: ["森", "forest", "tree", "自然", "nature", "green", "草", "森林", "树林", "绿色"], colors: ["#1B2D1B", "#2D5016", "#4A7C59", "#8FBC8F", "#C5E1A5"], artType: "noiseField" },
-  { tags: ["春", "spring", "morning", "早", "fresh", "清", "春天", "早晨", "清新", "新生"], colors: ["#FAFDF6", "#E8F5E9", "#A5D6A7", "#66BB6A", "#2E7D32"], artType: "metaball" },
-  { tags: ["花", "flower", "garden", "bloom", "樱", "花园", "樱花", "花开", "鲜花", "玫瑰"], colors: ["#FFF0F3", "#FFCCD5", "#FF8FA3", "#C9184A", "#590D22"], artType: "metaball" },
-  { tags: ["秋", "autumn", "fall", "枫", "秋天", "落叶", "枫叶", "金秋"], colors: ["#582F0E", "#7F4F24", "#936639", "#B6AD90", "#A68A64"], artType: "noiseField" },
-  { tags: ["夏", "summer", "热", "hot", "sun", "太阳", "夏天", "炎热"], colors: ["#FFBE0B", "#FB5607", "#FF006E", "#8338EC", "#3A86FF"], artType: "aurora" },
-  { tags: ["夜", "night", "dark", "暗", "黑", "夜晚", "黑暗", "深夜", "午夜", "黑色"], colors: ["#0D0D0D", "#1A1A2E", "#16213E", "#0F3460", "#E94560"], artType: "ink" },
-  { tags: ["月", "moon", "星", "star"], colors: ["#0C0F1A", "#1B1F3A", "#2E3A5C", "#546A8D", "#F4E8C1"], artType: "crystal" },
-  { tags: ["孤独", "lonely", "alone", "寂寞", "empty", "空"], colors: ["#1A1A2E", "#2D2D44", "#4A4A6A", "#7B7B9E", "#B8B8D1"], artType: "ink" },
-  { tags: ["悲伤", "sad", "sorrow", "忧", "melanchol"], colors: ["#1B1B2F", "#2E3047", "#43455C", "#707793", "#A5A5C0"], artType: "noiseField" },
-  { tags: ["雨", "rain"], colors: ["#0D1B2A", "#1B263B", "#415A77", "#778DA9", "#E0E1DD"], artType: "ink" },
-  { tags: ["愤怒", "anger", "rage", "火", "fire", "烈", "burn", "燃", "火焰", "烈火", "燃烧"], colors: ["#1A0000", "#590000", "#9B0000", "#D00000", "#FF4D00"], artType: "aurora" },
-  { tags: ["焦虑", "anxiety", "chaos", "乱", "崩", "panic"], colors: ["#2B2D42", "#8D0801", "#BC3908", "#F6AE2D", "#F2F4F3"], artType: "crystal" },
-  { tags: ["暴", "storm", "thunder", "雷", "暴风"], colors: ["#0D1B2A", "#1B263B", "#415A77", "#778DA9", "#E0E1DD"], artType: "terrain" },
-  { tags: ["活力", "energetic", "vibrant", "vivid", "活泼", "playful"], colors: ["#FF006E", "#FB5607", "#FFBE0B", "#3A86FF", "#8338EC"], artType: "aurora" },
-  { tags: ["梦", "dream", "幻", "fantasy", "朦", "haze"], colors: ["#2D1B69", "#5B3A8C", "#8B5FBF", "#C49AE8", "#E8D5F5"], artType: "metaball" },
-  { tags: ["雾", "fog", "mist", "迷"], colors: ["#D6D6D6", "#B8B8B8", "#969696", "#6E6E6E", "#484848"], artType: "ink" },
-  { tags: ["极光", "aurora"], colors: ["#0B0C10", "#1A3C40", "#2EC4B6", "#CBF3F0", "#FF6B6B"], artType: "aurora" },
-  { tags: ["科技", "tech", "digital", "cyber", "未来", "future"], colors: ["#0A0A0F", "#1A1A2E", "#00F5FF", "#7B61FF", "#FF2E63"], artType: "crystal" },
-  { tags: ["霓虹", "neon", "cyberpunk"], colors: ["#0D0221", "#0F084B", "#26086B", "#FF2281", "#00FFAB"], artType: "aurora" },
-  { tags: ["极简", "minimal", "简约", "clean", "pure", "纯"], colors: ["#FFFFFF", "#F5F5F5", "#E0E0E0", "#424242", "#212121"], artType: "noiseField" },
-  { tags: ["复古", "retro", "vintage", "旧", "怀旧", "nostalg"], colors: ["#F4E4C1", "#E2C391", "#CE8147", "#8B4513", "#3C1518"], artType: "noiseField" },
-  { tags: ["奢华", "luxury", "elegant", "优雅", "高级", "premium"], colors: ["#0A0A0A", "#1C1C1C", "#C9A96E", "#D4AF37", "#F5F0E1"], artType: "crystal" },
-  { tags: ["日系", "japanese", "muji", "侘寂", "wabi"], colors: ["#F5F0EB", "#D4C5B2", "#A89882", "#746859", "#4A3F35"], artType: "ink" },
-  { tags: ["莫兰迪", "morandi", "muted", "灰调"], colors: ["#A09B8C", "#8E9AAF", "#B8A9C9", "#CBC0D3", "#D8C3A5"], artType: "metaball" },
-  { tags: ["爱", "love", "heart", "心", "拥抱", "吻", "想你", "miss"], colors: ["#2D0A1F", "#6B1839", "#C2185B", "#F06292", "#FCE4EC"], artType: "metaball" },
-  { tags: ["希望", "hope", "光", "light", "dawn", "晨"], colors: ["#1A1A2E", "#16213E", "#E2B714", "#F5E6CA", "#FEFCFB"], artType: "aurora" },
-  { tags: ["咖啡", "coffee", "cafe", "拿铁", "mocha"], colors: ["#1B0E04", "#3C2415", "#6F4E37", "#A67B5B", "#D4B59E"], artType: "noiseField" },
-  { tags: ["巧克力", "chocolate", "cocoa"], colors: ["#2C1608", "#4E2A0C", "#7B3F00", "#D2691E", "#FFDEAD"], artType: "noiseField" },
-  { tags: ["薰衣草", "lavender", "紫", "purple", "violet"], colors: ["#1A0A2E", "#2D1B69", "#7B68AE", "#B39DDB", "#E1D5F0"], artType: "metaball" },
-  { tags: ["薄荷", "mint", "清凉"], colors: ["#E0F7F1", "#A7E8D0", "#66CDAA", "#3CB371", "#1B5E3A"], artType: "terrain" },
-  { tags: ["沙漠", "desert", "sand", "大地", "earth"], colors: ["#F5E6CA", "#D4A76A", "#B87333", "#8B6914", "#3D2B1F"], artType: "terrain" },
-  { tags: ["珊瑚", "coral", "甜", "少女", "粉"], colors: ["#F57799", "#FB9B8F", "#FDC3A1", "#FFF7CD", "#F4B6C2"], artType: "metaball" },
-  { tags: ["天空", "sky", "蓝", "blue", "清新"], colors: ["#F7F8F0", "#9CD5FF", "#7AAACE", "#355872", "#B3C7E6"], artType: "ink" },
-  { tags: ["热带", "tropical", "海洋", "蓝绿"], colors: ["#F6E7BC", "#0AC4E0", "#0992C2", "#0B2D72", "#45B7D1"], artType: "terrain" },
-  { tags: ["茶", "tea", "自然", "素雅"], colors: ["#7EACB5", "#FFF4EA", "#EDDCC6", "#BF4646", "#D4C5B2"], artType: "noiseField" },
-  { tags: ["大地", "earth", "亚麻", "linen", "素"], colors: ["#DBCDA5", "#ECEDE7", "#8E977D", "#8A7650", "#A89882"], artType: "noiseField" },
-  { tags: ["红", "red", "热情", "passion"], colors: ["#FFA4A4", "#FF7070", "#EB4C4C", "#E8F5D3", "#FFD5D5"], artType: "aurora" },
-  { tags: ["抹茶", "matcha", "绿", "清新"], colors: ["#6D9E51", "#BCD9A2", "#FEFFD3", "#A82323", "#E8F5E9"], artType: "terrain" },
-  { tags: ["奶油", "cream", "米", "beige", "素雅"], colors: ["#F8F3E1", "#E3DBB7", "#AEBB84", "#41431B", "#D4C5B2"], artType: "noiseField" },
-  { tags: ["渐变", "gradient", "橙", "orange", "能量"], colors: ["#FFA47F", "#FF52A0", "#B500B2", "#8100D1", "#FF7E5F"], artType: "aurora" },
-  { tags: ["橙", "orange", "活力", "阳光"], colors: ["#FF5F00", "#FF8C00", "#FFC300", "#FFD400", "#FFE0B2"], artType: "aurora" },
-  { tags: ["紫粉", "purple", "pink", "梦幻", "fairy"], colors: ["#FFDBFB", "#C9BEFF", "#8494FF", "#6367FF", "#C49AE8"], artType: "metaball" },
-  { tags: ["都市", "urban", "灰", "city", "中性"], colors: ["#D3DAD9", "#715A5A", "#44444E", "#37353E", "#4A4A6A"], artType: "ink" },
-  { tags: ["暗粉", "pink", "dark", "玫瑰"], colors: ["#EF88AD", "#A53860", "#670D2F", "#3A0519", "#C2185B"], artType: "metaball" },
-  { tags: ["沙岩", "sandstone", "质感", "high-end"], colors: ["#DFD0C0", "#948979", "#393E46", "#222831", "#D4C5B2"], artType: "ink" },
-  { tags: ["晚霞", "dusk", "暖", "brown", "紫"], colors: ["#DCA06D", "#A55B4B", "#4F1C51", "#210F37", "#B36A5E"], artType: "noiseField" },
-  { tags: ["琥珀", "amber", "dark", "高级"], colors: ["#FFCC00", "#EB5B00", "#B12C00", "#640D5F", "#D4AF37"], artType: "crystal" },
-  { tags: ["暗翠", "teal", "dark", "宝石"], colors: ["#320A6B", "#065084", "#0F828C", "#78B9B9", "#2EC4B6"], artType: "terrain" },
-  { tags: ["密林", "deep forest", "绿", "幽"], colors: ["#1F7D53", "#255F38", "#27391C", "#18230F", "#2D5016"], artType: "noiseField" },
-];
-
-function findPalette(text: string): CuratedPalette {
-  let best: CuratedPalette | null = null, bestScore = 0;
-  for (const p of PALETTES) {
-    let score = 0;
-    // Exact substring match (weighted by tag length)
-    for (const tag of p.tags) { if (text.includes(tag)) score += tag.length * 2; }
-    // Single-character match for Chinese (each char is meaningful)
-    if (score === 0) {
-      for (const char of text) {
-        if (char.charCodeAt(0) > 0x4e00) { // CJK character
-          for (const tag of p.tags) { if (tag.includes(char)) score += 1; }
-        }
-      }
-    }
-    if (score > bestScore) { bestScore = score; best = p; }
-  }
-  if (!best) {
-    const hash = text.split("").reduce((s, c) => s + c.charCodeAt(0), 0);
-    const artTypes: CuratedPalette["artType"][] = ["noiseField", "metaball", "aurora", "ink", "terrain", "crystal"];
-    best = { ...PALETTES[hash % PALETTES.length], artType: artTypes[hash % artTypes.length] };
-  }
-  return best;
-}
-
 function hexToRGB(hex: string): [number, number, number] {
   return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
 }
 
-// ---- p5 Sketch Factories ----
+// ---- Painting Data ----
+interface Painting {
+  id: string;
+  title: string;
+  titleEn: string;
+  artist: string;
+  year: string;
+  colors: string[];
+  interpretation: string;
+  thumb: string;
+  aspect: "landscape" | "portrait" | "square";
+}
+
+const PAINTINGS: Painting[] = [
+  {
+    id: "starry-night",
+    title: "星月夜",
+    titleEn: "The Starry Night",
+    artist: "Vincent van Gogh",
+    year: "1889",
+    colors: ["#0B1D3A", "#1A3A6B", "#2E6B9E", "#E8C840", "#F5E8A0"],
+    interpretation: "不是看见的夜空，是感受到的。每颗星都在旋转，像思绪不肯安静。",
+    thumb: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/300px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
+    aspect: "landscape",
+  },
+  {
+    id: "great-wave",
+    title: "神奈川冲浪里",
+    titleEn: "The Great Wave off Kanagawa",
+    artist: "Katsushika Hokusai",
+    year: "1831",
+    colors: ["#1A2744", "#2B4C7E", "#5B8DB8", "#D4C5A0", "#F5F0E0"],
+    interpretation: "巨浪不是在摧毁什么。它只是在做它自己——而人类恰好在那里。",
+    thumb: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/300px-Tsunami_by_hokusai_19th_century.jpg",
+    aspect: "landscape",
+  },
+  {
+    id: "nighthawks",
+    title: "夜鹰",
+    titleEn: "Nighthawks",
+    artist: "Edward Hopper",
+    year: "1942",
+    colors: ["#0A0F0A", "#1C3A28", "#4A7A5C", "#D4A030", "#F0E8C8"],
+    interpretation: "城市里最孤独的灯光，不在暗处，在那个唯一亮着的窗里。",
+    thumb: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Nighthawks_by_Edward_Hopper_1942.jpg/300px-Nighthawks_by_Edward_Hopper_1942.jpg",
+    aspect: "landscape",
+  },
+  {
+    id: "water-lilies",
+    title: "睡莲",
+    titleEn: "Water Lilies",
+    artist: "Claude Monet",
+    year: "1906",
+    colors: ["#2A4A3A", "#4A7A6A", "#7AAA8A", "#B8A0D0", "#D8C8E0"],
+    interpretation: "他画的不是莲。是水面上世界的倒影——模糊的、流动的、不确定的美。",
+    thumb: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg/300px-Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg",
+    aspect: "landscape",
+  },
+  {
+    id: "the-scream",
+    title: "呐喊",
+    titleEn: "The Scream",
+    artist: "Edvard Munch",
+    year: "1893",
+    colors: ["#1A1A2E", "#2B3A6B", "#D44A20", "#E88040", "#F0C860"],
+    interpretation: "整个世界都在替他叫。天空在叫，水在叫，只有他自己是沉默的。",
+    thumb: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg/220px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg",
+    aspect: "portrait",
+  },
+  {
+    id: "pearl-earring",
+    title: "戴珍珠耳环的少女",
+    titleEn: "Girl with a Pearl Earring",
+    artist: "Johannes Vermeer",
+    year: "1665",
+    colors: ["#0A0A0A", "#1A2A4A", "#3A5A8A", "#D4B870", "#F0E8D0"],
+    interpretation: "一颗珍珠就够了。整幅画的光都为了那一个亮点存在。",
+    thumb: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/220px-1665_Girl_with_a_Pearl_Earring.jpg",
+    aspect: "portrait",
+  },
+  {
+    id: "impression-sunrise",
+    title: "日出·印象",
+    titleEn: "Impression, Sunrise",
+    artist: "Claude Monet",
+    year: "1872",
+    colors: ["#4A5A6A", "#6A7A8A", "#8A9AAA", "#E05A20", "#F08040"],
+    interpretation: "给一个流派命名的画。所有的精确都让位于一瞬间的感觉。",
+    thumb: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Monet_-_Impression%2C_Sunrise.jpg/300px-Monet_-_Impression%2C_Sunrise.jpg",
+    aspect: "landscape",
+  },
+  {
+    id: "the-kiss",
+    title: "吻",
+    titleEn: "The Kiss",
+    artist: "Gustav Klimt",
+    year: "1908",
+    colors: ["#1A1A10", "#6A5A20", "#B8982D", "#D4AF37", "#F0E8B0"],
+    interpretation: "金箔不是装饰，是铠甲。两个人裹在金色的壳里，拒绝被外面的世界看见。",
+    thumb: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg/220px-The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg",
+    aspect: "portrait",
+  },
+  {
+    id: "persistence-memory",
+    title: "记忆的永恒",
+    titleEn: "The Persistence of Memory",
+    artist: "Salvador Dalí",
+    year: "1931",
+    colors: ["#1A2A3A", "#5A7A6A", "#B8A870", "#D4C090", "#E8D8B0"],
+    interpretation: "时间不是流逝的——它是融化的。在午后的热浪里，什么都撑不住原来的形状。",
+    thumb: "https://upload.wikimedia.org/wikipedia/en/thumb/d/dd/The_Persistence_of_Memory.jpg/300px-The_Persistence_of_Memory.jpg",
+    aspect: "landscape",
+  },
+  {
+    id: "wanderer-sea-fog",
+    title: "雾海上的旅人",
+    titleEn: "Wanderer above the Sea of Fog",
+    artist: "Caspar David Friedrich",
+    year: "1818",
+    colors: ["#2A3040", "#5A6A7A", "#8A9AAA", "#B0B8C0", "#D8D8D0"],
+    interpretation: "背对观众，面朝虚无。他不是在征服什么，是在承认自己的渺小。",
+    thumb: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg/220px-Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg",
+    aspect: "portrait",
+  },
+];
+
+// ---- Salon Wall Layout ----
+// Pre-defined positions for salon-style hanging (percentage-based)
+const WALL_POSITIONS = [
+  // row 1 (top) - smaller paintings
+  { left: 5, top: 4, w: 18, rot: -1.5 },
+  { left: 28, top: 2, w: 14, rot: 0.8 },
+  { left: 55, top: 5, w: 20, rot: -0.5 },
+  { left: 80, top: 3, w: 15, rot: 1.2 },
+  // row 2 (middle) - larger, more prominent
+  { left: 2, top: 32, w: 22, rot: 0.3 },
+  { left: 30, top: 28, w: 26, rot: -0.8 },
+  { left: 62, top: 30, w: 18, rot: 0.6 },
+  // row 3 (bottom)
+  { left: 10, top: 60, w: 20, rot: -0.4 },
+  { left: 38, top: 62, w: 24, rot: 1.0 },
+  { left: 70, top: 58, w: 16, rot: -1.2 },
+];
+
+// ---- p5 Sketch Functions ----
 type SketchFn = (p: any, w: number, h: number, colors: string[], noise: SimplexNoise) => void;
 
-function sketchNoiseField(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
-  const particles: { x: number; y: number; ci: number; age: number }[] = [];
-  const count = 600;
-
+// Starry Night — swirling vortices
+function sketchStarryNight(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
+  const particles: { x: number; y: number; ci: number }[] = [];
   p.setup = () => {
     p.createCanvas(w, h);
     const [r, g, b] = hexToRGB(colors[0]);
     p.background(r, g, b);
-    for (let i = 0; i < count; i++) {
-      particles.push({ x: p.random(w), y: p.random(h), ci: 1 + (i % 4), age: 0 });
-    }
+    for (let i = 0; i < 800; i++) particles.push({ x: p.random(w), y: p.random(h), ci: 1 + (i % 4) });
   };
-
   p.draw = () => {
-    // Gentle fade for trails
     const [br, bg, bb] = hexToRGB(colors[0]);
-    p.noStroke();
-    p.fill(br, bg, bb, 2);
-    p.rect(0, 0, w, h);
-
+    p.fill(br, bg, bb, 2); p.noStroke(); p.rect(0, 0, w, h);
+    const t = p.frameCount * 0.002;
     for (const pt of particles) {
-      const angle = noise.noise2D(pt.x * 0.003, pt.y * 0.003 + p.frameCount * 0.0008) * p.TWO_PI;
+      // Swirl effect: add circular motion to noise
+      const cx = w * 0.5, cy = h * 0.4;
+      const dx = pt.x - cx, dy = pt.y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const swirl = Math.atan2(dy, dx) + 0.3 / (dist * 0.01 + 1);
+      const angle = noise.noise2D(pt.x * 0.004, pt.y * 0.004 + t) * Math.PI * 2 + swirl * 0.3;
       const prevX = pt.x, prevY = pt.y;
-      pt.x += Math.cos(angle) * 2;
-      pt.y += Math.sin(angle) * 2;
-      pt.age++;
-
+      pt.x += Math.cos(angle) * 2; pt.y += Math.sin(angle) * 2;
       const [r, g, b] = hexToRGB(colors[pt.ci]);
-      const alpha = Math.min(pt.age * 0.8, 80);
-      p.stroke(r, g, b, alpha);
-      p.strokeWeight(1.2 + noise.noise2D(pt.x * 0.01, pt.y * 0.01) * 1.0);
+      p.stroke(r, g, b, 50); p.strokeWeight(1.2);
       p.line(prevX, prevY, pt.x, pt.y);
-
-      if (pt.x < -10 || pt.x > w + 10 || pt.y < -10 || pt.y > h + 10 || pt.age > 400) {
-        pt.x = p.random(w); pt.y = p.random(h); pt.age = 0;
-      }
+      if (pt.x < -5 || pt.x > w + 5 || pt.y < -5 || pt.y > h + 5) { pt.x = p.random(w); pt.y = p.random(h); }
+    }
+    // Stars
+    if (p.frameCount % 4 === 0) {
+      const [r, g, b] = hexToRGB(colors[3]);
+      p.noStroke(); p.fill(r, g, b, 60 + Math.random() * 60);
+      p.circle(p.random(w), p.random(h * 0.5), 2 + Math.random() * 3);
     }
   };
 }
 
-function sketchMetaball(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
-  const blobs: { x: number; y: number; r: number; vx: number; vy: number; ci: number }[] = [];
-  let pg: any;
-
-  p.setup = () => {
-    p.createCanvas(w, h);
-    p.pixelDensity(1);
-    pg = p.createGraphics(Math.floor(w / 3), Math.floor(h / 3));
-    pg.pixelDensity(1);
-    for (let i = 0; i < 7; i++) {
-      blobs.push({
-        x: p.random(w), y: p.random(h),
-        r: 50 + p.random(80),
-        vx: p.random(-0.5, 0.5), vy: p.random(-0.5, 0.5),
-        ci: 1 + (i % 4),
-      });
-    }
-  };
-
+// Great Wave — particle wave crashing
+function sketchGreatWave(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
+  p.setup = () => { p.createCanvas(w, h); };
   p.draw = () => {
-    const sw = pg.width, sh = pg.height;
-    pg.loadPixels();
-    const bgRgb = hexToRGB(colors[0]);
-
-    for (let py = 0; py < sh; py++) {
-      for (let px = 0; px < sw; px++) {
-        let sum = 0;
-        let cr = 0, cg = 0, cb = 0, tw = 0;
-        const rx = px * 3, ry = py * 3;
-        for (const blob of blobs) {
-          const dx = rx - blob.x, dy = ry - blob.y;
-          const inf = (blob.r * blob.r) / (dx * dx + dy * dy + 1);
-          sum += inf;
-          if (inf > 0.01) {
-            const [r, g, b] = hexToRGB(colors[blob.ci]);
-            cr += r * inf; cg += g * inf; cb += b * inf; tw += inf;
-          }
-        }
-        const idx = (py * sw + px) * 4;
-        if (sum > 1.0 && tw > 0) {
-          const t = Math.min((sum - 1.0) * 0.6, 1.0);
-          pg.pixels[idx] = Math.round(bgRgb[0] * (1 - t) + (cr / tw) * t);
-          pg.pixels[idx + 1] = Math.round(bgRgb[1] * (1 - t) + (cg / tw) * t);
-          pg.pixels[idx + 2] = Math.round(bgRgb[2] * (1 - t) + (cb / tw) * t);
-        } else {
-          pg.pixels[idx] = bgRgb[0]; pg.pixels[idx + 1] = bgRgb[1]; pg.pixels[idx + 2] = bgRgb[2];
-        }
-        pg.pixels[idx + 3] = 255;
-      }
-    }
-    pg.updatePixels();
-    p.image(pg, 0, 0, w, h);
-
-    // Move blobs
-    for (const blob of blobs) {
-      blob.x += blob.vx + noise.noise2D(blob.x * 0.005, p.frameCount * 0.005) * 0.5;
-      blob.y += blob.vy + noise.noise2D(blob.y * 0.005, p.frameCount * 0.005) * 0.5;
-      if (blob.x < -blob.r) blob.x = w + blob.r;
-      if (blob.x > w + blob.r) blob.x = -blob.r;
-      if (blob.y < -blob.r) blob.y = h + blob.r;
-      if (blob.y > h + blob.r) blob.y = -blob.r;
-    }
-  };
-}
-
-function sketchAurora(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
-  p.setup = () => {
-    p.createCanvas(w, h);
-  };
-
-  p.draw = () => {
-    const [br, bg, bb] = hexToRGB(colors[0]);
-    p.background(br, bg, bb);
-
-    const t = p.frameCount * 0.005;
-
-    for (let layer = 0; layer < 5; layer++) {
-      const ci = 1 + (layer % 4);
+    const [br, bg, bb] = hexToRGB(colors[0]); p.background(br, bg, bb);
+    const t = p.frameCount * 0.01;
+    // Wave layers
+    for (let layer = 0; layer < 4; layer++) {
+      const ci = 1 + layer;
       const [r, g, b] = hexToRGB(colors[ci]);
-      const yBase = h * (0.15 + layer * 0.1);
-
-      p.noStroke();
+      p.noStroke(); p.fill(r, g, b, 40 + layer * 15);
       p.beginShape();
-      for (let x = 0; x <= w; x += 3) {
-        const n1 = noise.noise2D(x * 0.003 + layer * 10, t + layer * 3) * (50 + layer * 15);
-        const n2 = noise.noise2D(x * 0.008 + layer * 20, t * 0.7 + layer) * 25;
-        const y = yBase + n1 + n2;
-        const alpha = 18 - layer * 2 + Math.sin(x * 0.01 + t) * 4;
-        p.fill(r, g, b, Math.max(alpha, 2));
-        p.vertex(x, y);
+      const yBase = h * (0.35 + layer * 0.12);
+      for (let x = 0; x <= w; x += 2) {
+        const wave = Math.sin(x * 0.008 - t + layer) * 40;
+        const n = noise.noise2D(x * 0.005 + layer * 5, t * 0.5 + layer) * 50;
+        // Curling wave peak
+        const peak = Math.max(0, Math.sin(x * 0.003 - t * 1.5) * 30 - 10);
+        p.vertex(x, yBase + wave + n - peak);
       }
-      p.vertex(w, h); p.vertex(0, h);
+      p.vertex(w, h); p.vertex(0, h); p.endShape(p.CLOSE);
+    }
+    // Foam/spray particles
+    for (let i = 0; i < 5; i++) {
+      const x = p.random(w);
+      const yBase = h * 0.35 + Math.sin(x * 0.008 - t) * 40 + noise.noise2D(x * 0.005, t * 0.5) * 50;
+      const [r, g, b] = hexToRGB(colors[4]);
+      p.fill(r, g, b, 30 + p.random(50)); p.noStroke();
+      p.circle(x, yBase - p.random(20), 1 + p.random(3));
+    }
+  };
+}
+
+// Nighthawks — light from a window in darkness
+function sketchNighthawks(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
+  p.setup = () => { p.createCanvas(w, h); };
+  p.draw = () => {
+    const [br, bg, bb] = hexToRGB(colors[0]); p.background(br, bg, bb);
+    const t = p.frameCount * 0.005;
+    // The window — a warm trapezoid of light
+    const wx = w * 0.3, wy = h * 0.35, ww = w * 0.4, wh = h * 0.3;
+    // Light spill
+    for (let i = 60; i > 0; i--) {
+      const [r, g, b] = hexToRGB(i > 30 ? colors[3] : colors[4]);
+      const alpha = (1 - i / 60) * 6 + noise.noise2D(i * 0.1, t) * 1;
+      p.fill(r, g, b, Math.max(alpha, 0)); p.noStroke();
+      p.rect(wx - i * 2, wy - i * 1.5, ww + i * 4, wh + i * 3, 2);
+    }
+    // Window interior
+    const [wr, wg, wb] = hexToRGB(colors[3]);
+    p.fill(wr, wg, wb, 40); p.rect(wx, wy, ww, wh);
+    // Interior glow variation
+    const [gr, gg, gb] = hexToRGB(colors[4]);
+    p.fill(gr, gg, gb, 15 + Math.sin(t * 2) * 5);
+    p.rect(wx + 5, wy + 5, ww - 10, wh - 10);
+    // Silhouettes
+    for (let i = 0; i < 3; i++) {
+      const sx = wx + ww * (0.25 + i * 0.25);
+      const sy = wy + wh * 0.4;
+      const [sr, sg, sb] = hexToRGB(colors[2]);
+      p.fill(sr, sg, sb, 50); p.noStroke();
+      p.ellipse(sx + noise.noise2D(i * 10, t) * 2, sy, 15, 25);
+    }
+    // Street-level darkness with subtle green tones
+    const [dr, dg, db] = hexToRGB(colors[2]);
+    for (let i = 0; i < 10; i++) {
+      const x = p.random(w), y = h * 0.7 + p.random(h * 0.3);
+      p.fill(dr, dg, db, 3); p.noStroke(); p.rect(x, y, p.random(50), 1);
+    }
+  };
+}
+
+// Water Lilies — floating color patches
+function sketchWaterLilies(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
+  const pads: { x: number; y: number; r: number; ci: number; phase: number }[] = [];
+  p.setup = () => {
+    p.createCanvas(w, h);
+    for (let i = 0; i < 30; i++) {
+      pads.push({ x: p.random(w), y: p.random(h), r: 20 + p.random(40), ci: 1 + (i % 4), phase: p.random(100) });
+    }
+  };
+  p.draw = () => {
+    const [br, bg, bb] = hexToRGB(colors[0]); p.background(br, bg, bb, 20);
+    // Subtle background with previous frame bleeding
+    p.fill(br, bg, bb, 8); p.noStroke(); p.rect(0, 0, w, h);
+    const t = p.frameCount * 0.003;
+    // Water ripples
+    for (let y = 0; y < h; y += 8) {
+      const [wr, wg, wb] = hexToRGB(colors[1]);
+      const offset = noise.noise2D(y * 0.01, t) * 10;
+      p.stroke(wr, wg, wb, 8); p.strokeWeight(0.5);
+      p.line(offset, y, w + offset, y);
+    }
+    // Lily pads
+    for (const pad of pads) {
+      const nx = pad.x + noise.noise2D(pad.phase, t) * 3;
+      const ny = pad.y + noise.noise2D(t, pad.phase) * 3;
+      const [r, g, b] = hexToRGB(colors[pad.ci]);
+      // Soft glow
+      for (let ring = 3; ring > 0; ring--) {
+        p.fill(r, g, b, 5 + ring * 2); p.noStroke();
+        p.ellipse(nx, ny, pad.r + ring * 8, pad.r * 0.6 + ring * 5);
+      }
+      p.fill(r, g, b, 25); p.noStroke();
+      p.ellipse(nx, ny, pad.r, pad.r * 0.6);
+    }
+  };
+}
+
+// The Scream — radiating distortion waves
+function sketchScream(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
+  p.setup = () => { p.createCanvas(w, h); };
+  p.draw = () => {
+    const [br, bg, bb] = hexToRGB(colors[0]); p.background(br, bg, bb);
+    const t = p.frameCount * 0.008;
+    const cx = w * 0.5, cy = h * 0.45;
+    // Radiating waves of color
+    for (let r = Math.max(w, h); r > 5; r -= 4) {
+      const ci = r % 20 < 10 ? (r % 8 < 4 ? 2 : 3) : (r % 8 < 4 ? 4 : 1);
+      const [cr, cg, cb] = hexToRGB(colors[ci]);
+      const distort = noise.noise2D(r * 0.02, t) * 15;
+      const pulse = Math.sin(r * 0.03 - t * 3) * 5;
+      p.noFill(); p.stroke(cr, cg, cb, 15 + Math.sin(r * 0.05 + t) * 8);
+      p.strokeWeight(3);
+      p.beginShape();
+      for (let a = 0; a < p.TWO_PI; a += 0.1) {
+        const nr = r + noise.noise2D(Math.cos(a) * 3, Math.sin(a) * 3 + t) * distort + pulse;
+        p.vertex(cx + Math.cos(a) * nr, cy + Math.sin(a) * nr * 0.7);
+      }
       p.endShape(p.CLOSE);
     }
-
-    // Vertical light rays
-    for (let i = 0; i < 12; i++) {
-      const x = noise.noise2D(i * 5, t * 0.3) * w * 0.5 + w * 0.5;
-      const ci = 1 + (i % 4);
-      const [r, g, b] = hexToRGB(colors[ci]);
-      const rw = 3 + Math.sin(t + i) * 2;
-      for (let y = 0; y < h * 0.6; y += 2) {
-        const alpha = (1 - y / (h * 0.6)) * 12;
-        p.fill(r, g, b, alpha);
-        p.noStroke();
-        p.rect(x - rw / 2, y, rw, 3);
-      }
-    }
   };
 }
 
-function sketchInk(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
-  const drops: { x: number; y: number; r: number; maxR: number; ci: number; born: number }[] = [];
+// Girl with Pearl Earring — single luminous point in darkness
+function sketchPearlEarring(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
+  p.setup = () => { p.createCanvas(w, h); };
+  p.draw = () => {
+    const [br, bg, bb] = hexToRGB(colors[0]); p.background(br, bg, bb);
+    const t = p.frameCount * 0.005;
+    // Deep blue ambient
+    for (let i = 0; i < 8; i++) {
+      const [r, g, b] = hexToRGB(colors[2]);
+      const x = w * (0.2 + noise.noise2D(i * 5, t * 0.3) * 0.6);
+      const y = h * (0.2 + noise.noise2D(t * 0.3, i * 5) * 0.6);
+      p.fill(r, g, b, 3); p.noStroke();
+      p.ellipse(x, y, 200 + noise.noise2D(i, t) * 50, 200);
+    }
+    // The pearl — single radiant point
+    const px = w * 0.55, py = h * 0.52;
+    const breathe = Math.sin(t * 0.8) * 0.15 + 1;
+    for (let r = 120; r > 0; r -= 2) {
+      const ratio = r / 120;
+      const [lr, lg, lb] = hexToRGB(ratio > 0.5 ? colors[3] : colors[4]);
+      const alpha = (1 - ratio) * 20 * breathe;
+      p.fill(lr, lg, lb, alpha); p.noStroke();
+      p.circle(px, py, r * breathe);
+    }
+    // Core
+    p.fill(255, 255, 250, 80); p.noStroke();
+    p.circle(px, py, 8 * breathe);
+  };
+}
 
+// Impression, Sunrise — pointillist dots forming
+function sketchImpressionSunrise(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
   p.setup = () => {
     p.createCanvas(w, h);
     const [r, g, b] = hexToRGB(colors[0]);
     p.background(r, g, b);
   };
-
   p.draw = () => {
-    // Slowly fade background
     const [br, bg, bb] = hexToRGB(colors[0]);
-    p.fill(br, bg, bb, 2);
-    p.noStroke();
-    p.rect(0, 0, w, h);
-
-    // Spawn new drops
-    if (p.frameCount % 15 === 0 && drops.length < 30) {
-      drops.push({
-        x: p.random(w * 0.1, w * 0.9),
-        y: p.random(h * 0.1, h * 0.9),
-        r: 0, maxR: 30 + p.random(120),
-        ci: 1 + Math.floor(p.random(4)),
-        born: p.frameCount,
-      });
-    }
-
-    // Draw expanding ink drops
-    for (let i = drops.length - 1; i >= 0; i--) {
-      const d = drops[i];
-      if (d.r < d.maxR) {
-        d.r += 0.5 + (d.maxR - d.r) * 0.02;
-        const [r, g, b] = hexToRGB(colors[d.ci]);
-        const alpha = Math.max(2, 8 * (1 - d.r / d.maxR));
-
-        p.noStroke(); p.fill(r, g, b, alpha);
-        p.beginShape();
-        for (let a = 0; a < p.TWO_PI; a += 0.08) {
-          const nr = d.r + noise.noise2D(Math.cos(a) * 2 + d.ci, Math.sin(a) * 2 + d.r * 0.02) * d.r * 0.35;
-          p.vertex(d.x + Math.cos(a) * nr, d.y + Math.sin(a) * nr);
-        }
-        p.endShape(p.CLOSE);
-      } else if (p.frameCount - d.born > 300) {
-        drops.splice(i, 1);
-      }
-    }
-
-    // Occasional spatter
-    if (p.frameCount % 3 === 0) {
-      const ci = 1 + Math.floor(p.random(4));
+    p.fill(br, bg, bb, 1); p.noStroke(); p.rect(0, 0, w, h);
+    const t = p.frameCount * 0.003;
+    // Pointillist dots
+    for (let i = 0; i < 20; i++) {
+      const x = p.random(w), y = p.random(h);
+      const n = noise.noise2D(x * 0.005 + t, y * 0.005);
+      // Sun area gets warm colors
+      const sunX = w * 0.5, sunY = h * 0.4;
+      const distToSun = Math.sqrt((x - sunX) ** 2 + (y - sunY) ** 2);
+      const isSunArea = distToSun < 80;
+      const ci = isSunArea ? (n > 0 ? 3 : 4) : (n > 0.3 ? 1 : n > -0.3 ? 2 : 0);
       const [r, g, b] = hexToRGB(colors[ci]);
-      p.fill(r, g, b, 15 + p.random(25));
+      const size = 2 + Math.abs(n) * 4;
+      p.fill(r, g, b, 20 + Math.abs(n) * 30); p.noStroke();
+      p.circle(x, y, size);
+    }
+  };
+}
+
+// The Kiss — golden particle rain, two forms
+function sketchTheKiss(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
+  const golds: { x: number; y: number; vy: number; size: number; ci: number }[] = [];
+  p.setup = () => {
+    p.createCanvas(w, h);
+    for (let i = 0; i < 200; i++) {
+      golds.push({ x: p.random(w), y: p.random(h), vy: 0.2 + p.random(0.8), size: 1 + p.random(4), ci: 2 + (i % 3) });
+    }
+  };
+  p.draw = () => {
+    const [br, bg, bb] = hexToRGB(colors[0]);
+    p.fill(br, bg, bb, 6); p.noStroke(); p.rect(0, 0, w, h);
+    const t = p.frameCount * 0.005;
+    // Two merging forms in center
+    const cx1 = w * 0.45, cy1 = h * 0.45;
+    const cx2 = w * 0.55, cy2 = h * 0.48;
+    for (let r = 100; r > 0; r -= 3) {
+      const [cr, cg, cb] = hexToRGB(colors[r % 6 < 3 ? 3 : 4]);
+      const breathe = Math.sin(t * 0.5) * 3;
+      p.fill(cr, cg, cb, 3); p.noStroke();
+      p.ellipse(cx1, cy1 + breathe, r * 1.2, r * 1.8);
+      p.ellipse(cx2, cy2 - breathe, r * 1.1, r * 1.7);
+    }
+    // Falling gold
+    for (const g of golds) {
+      g.y += g.vy;
+      g.x += noise.noise2D(g.x * 0.01, t) * 0.5;
+      if (g.y > h + 5) { g.y = -5; g.x = p.random(w); }
+      const [r, gg, b] = hexToRGB(colors[g.ci]);
+      p.fill(r, gg, b, 30 + Math.sin(g.y * 0.02 + t) * 15); p.noStroke();
+      p.rect(g.x, g.y, g.size, g.size);
+    }
+  };
+}
+
+// Persistence of Memory — melting forms
+function sketchPersistenceMemory(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
+  p.setup = () => { p.createCanvas(w, h); };
+  p.draw = () => {
+    const [br, bg, bb] = hexToRGB(colors[0]); p.background(br, bg, bb);
+    const t = p.frameCount * 0.004;
+    // Horizon
+    const horizonY = h * 0.55;
+    // Sky
+    for (let y = 0; y < horizonY; y++) {
+      const ratio = y / horizonY;
+      const [r1, g1, b1] = hexToRGB(colors[0]);
+      const [r2, g2, b2] = hexToRGB(colors[3]);
+      p.stroke(r1 + (r2 - r1) * ratio, g1 + (g2 - g1) * ratio, b1 + (b2 - b1) * ratio, 40);
+      p.line(0, y, w, y);
+    }
+    // Ground
+    for (let y = horizonY; y < h; y++) {
+      const ratio = (y - horizonY) / (h - horizonY);
+      const [r1, g1, b1] = hexToRGB(colors[2]);
+      const [r2, g2, b2] = hexToRGB(colors[4]);
+      p.stroke(r1 + (r2 - r1) * ratio, g1 + (g2 - g1) * ratio, b1 + (b2 - b1) * ratio, 30);
+      p.line(0, y, w, y);
+    }
+    // Melting clock shapes
+    for (let c = 0; c < 3; c++) {
+      const cx = w * (0.25 + c * 0.25);
+      const cy = horizonY + 10;
+      const [cr, cg, cb] = hexToRGB(colors[3 + (c % 2)]);
+      p.noFill(); p.stroke(cr, cg, cb, 30); p.strokeWeight(2);
+      p.beginShape();
+      for (let a = 0; a < p.TWO_PI; a += 0.05) {
+        const baseR = 30 + c * 5;
+        // Melt: bottom part droops
+        const melt = a > Math.PI * 0.3 && a < Math.PI * 1.7 ? Math.sin((a - Math.PI * 0.3) / 1.4 * Math.PI) * 25 * (1 + Math.sin(t + c)) : 0;
+        const nr = baseR + noise.noise2D(a * 2 + c * 10, t) * 8 + melt;
+        p.vertex(cx + Math.cos(a) * nr, cy + Math.sin(a) * nr * 0.6 + melt * 0.5);
+      }
+      p.endShape(p.CLOSE);
+    }
+  };
+}
+
+// Wanderer — fog layers and solitude
+function sketchWanderer(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
+  p.setup = () => { p.createCanvas(w, h); };
+  p.draw = () => {
+    const [br, bg, bb] = hexToRGB(colors[0]); p.background(br, bg, bb);
+    const t = p.frameCount * 0.003;
+    // Layered fog from bottom to top
+    for (let layer = 6; layer >= 0; layer--) {
+      const ci = Math.min(layer + 1, 4);
+      const [r, g, b] = hexToRGB(colors[ci]);
+      const yBase = h * (0.3 + layer * 0.08);
       p.noStroke();
-      p.circle(p.random(w), p.random(h), 1 + p.random(3));
+      p.beginShape();
+      for (let x = -10; x <= w + 10; x += 3) {
+        const n = noise.noise2D(x * 0.003 + layer * 10, t + layer * 2) * (30 + layer * 10);
+        p.vertex(x, yBase + n);
+      }
+      p.vertex(w + 10, h); p.vertex(-10, h); p.endShape(p.CLOSE);
+      p.fill(r, g, b, 12 + layer * 3);
+      p.beginShape();
+      for (let x = -10; x <= w + 10; x += 3) {
+        const n = noise.noise2D(x * 0.003 + layer * 10, t + layer * 2) * (30 + layer * 10);
+        p.vertex(x, yBase + n);
+      }
+      p.vertex(w + 10, h); p.vertex(-10, h); p.endShape(p.CLOSE);
     }
+    // Solitary figure silhouette (small, center-top)
+    const fx = w * 0.5, fy = h * 0.28;
+    p.fill(20, 20, 25, 60); p.noStroke();
+    p.rect(fx - 3, fy, 6, 18); // body
+    p.circle(fx, fy - 2, 8); // head
   };
 }
 
-function sketchTerrain(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
-  let pg: any;
-
-  p.setup = () => {
-    p.createCanvas(w, h);
-    p.pixelDensity(1);
-    pg = p.createGraphics(Math.floor(w / 2), Math.floor(h / 2));
-    pg.pixelDensity(1);
-  };
-
-  p.draw = () => {
-    const sw = pg.width, sh = pg.height;
-    const t = p.frameCount * 0.003;
-    pg.loadPixels();
-
-    for (let py = 0; py < sh; py++) {
-      for (let px = 0; px < sw; px++) {
-        const n = (noise.noise2D(px * 0.008 + t, py * 0.008) + 1) / 2;
-        const n2 = (noise.noise2D(px * 0.02 + t * 0.5, py * 0.02) + 1) / 2;
-        const val = n * 0.7 + n2 * 0.3;
-
-        let ci1: number, ci2: number, tt: number;
-        if (val < 0.2) { ci1 = 0; ci2 = 1; tt = val / 0.2; }
-        else if (val < 0.4) { ci1 = 1; ci2 = 2; tt = (val - 0.2) / 0.2; }
-        else if (val < 0.6) { ci1 = 2; ci2 = 3; tt = (val - 0.4) / 0.2; }
-        else if (val < 0.8) { ci1 = 3; ci2 = 4; tt = (val - 0.6) / 0.2; }
-        else { ci1 = 4; ci2 = 4; tt = 1; }
-
-        const [r1, g1, b1] = hexToRGB(colors[ci1]);
-        const [r2, g2, b2] = hexToRGB(colors[ci2]);
-        const idx = (py * sw + px) * 4;
-        pg.pixels[idx] = Math.round(r1 + (r2 - r1) * tt);
-        pg.pixels[idx + 1] = Math.round(g1 + (g2 - g1) * tt);
-        pg.pixels[idx + 2] = Math.round(b1 + (b2 - b1) * tt);
-        pg.pixels[idx + 3] = 255;
-      }
-    }
-    pg.updatePixels();
-    p.image(pg, 0, 0, w, h);
-  };
-}
-
-function sketchCrystal(p: any, w: number, h: number, colors: string[], noise: SimplexNoise) {
-  const points: { x: number; y: number; ci: number; ox: number; oy: number }[] = [];
-  const cellSize = 70;
-
-  p.setup = () => {
-    p.createCanvas(w, h);
-    p.pixelDensity(1);
-    for (let gx = -cellSize; gx < w + cellSize * 2; gx += cellSize) {
-      for (let gy = -cellSize; gy < h + cellSize * 2; gy += cellSize) {
-        points.push({
-          ox: gx, oy: gy,
-          x: gx + (noise.noise2D(gx * 0.01, gy * 0.01) + 1) * cellSize * 0.4,
-          y: gy + (noise.noise2D(gy * 0.01, gx * 0.01) + 1) * cellSize * 0.4,
-          ci: Math.floor((noise.noise2D(gx * 0.005, gy * 0.005) + 1) * 2.5),
-        });
-      }
-    }
-  };
-
-  p.draw = () => {
-    const t = p.frameCount * 0.003;
-
-    // Gently drift points
-    for (const pt of points) {
-      pt.x = pt.ox + (noise.noise2D(pt.ox * 0.01, t) + 1) * cellSize * 0.4;
-      pt.y = pt.oy + (noise.noise2D(t, pt.oy * 0.01) + 1) * cellSize * 0.4;
-    }
-
-    p.loadPixels();
-    for (let py = 0; py < h; py += 2) {
-      for (let px = 0; px < w; px += 2) {
-        let minDist = Infinity, secondDist = Infinity, closestCI = 0;
-        for (const pt of points) {
-          const dx = px - pt.x, dy = py - pt.y;
-          const dist = dx * dx + dy * dy;
-          if (dist < minDist) { secondDist = minDist; minDist = dist; closestCI = pt.ci; }
-          else if (dist < secondDist) { secondDist = dist; }
-        }
-
-        const edge = Math.sqrt(secondDist) - Math.sqrt(minDist);
-        const [r, g, b] = hexToRGB(colors[closestCI]);
-        const shade = 0.85 + noise.noise2D(px * 0.02 + t, py * 0.02) * 0.15;
-
-        let fr: number, fg: number, fb: number;
-        if (edge < 3) {
-          const [er, eg, eb] = hexToRGB(colors[4]);
-          const et = edge / 3;
-          fr = Math.round(er * (1 - et) + r * shade * et);
-          fg = Math.round(eg * (1 - et) + g * shade * et);
-          fb = Math.round(eb * (1 - et) + b * shade * et);
-        } else {
-          fr = Math.round(r * shade); fg = Math.round(g * shade); fb = Math.round(b * shade);
-        }
-
-        for (let dy = 0; dy < 2 && py + dy < h; dy++) {
-          for (let dx = 0; dx < 2 && px + dx < w; dx++) {
-            const idx = ((py + dy) * w + (px + dx)) * 4;
-            p.pixels[idx] = fr; p.pixels[idx + 1] = fg; p.pixels[idx + 2] = fb; p.pixels[idx + 3] = 255;
-          }
-        }
-      }
-    }
-    p.updatePixels();
-
-    // Slow frame rate for crystal (expensive)
-    p.frameRate(15);
-  };
-}
-
-const SKETCHES: Record<CuratedPalette["artType"], SketchFn> = {
-  noiseField: sketchNoiseField,
-  metaball: sketchMetaball,
-  aurora: sketchAurora,
-  ink: sketchInk,
-  terrain: sketchTerrain,
-  crystal: sketchCrystal,
+const SKETCH_MAP: Record<string, SketchFn> = {
+  "starry-night": sketchStarryNight,
+  "great-wave": sketchGreatWave,
+  "nighthawks": sketchNighthawks,
+  "water-lilies": sketchWaterLilies,
+  "the-scream": sketchScream,
+  "pearl-earring": sketchPearlEarring,
+  "impression-sunrise": sketchImpressionSunrise,
+  "the-kiss": sketchTheKiss,
+  "persistence-memory": sketchPersistenceMemory,
+  "wanderer-sea-fog": sketchWanderer,
 };
 
 // ---- p5 Canvas ----
-function P5Canvas({ palette }: { palette: CuratedPalette }) {
+function P5Canvas({ painting }: { painting: Painting }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const p5Ref = useRef<any>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
-    // Dynamic import p5
     import("p5").then((mod) => {
       const p5 = mod.default;
       const w = window.innerWidth;
       const h = window.innerHeight;
-      const seed = palette.colors.join("").split("").reduce((s, c) => s + c.charCodeAt(0), 0);
+      const seed = painting.colors.join("").split("").reduce((s, c) => s + c.charCodeAt(0), 0);
       const noise = new SimplexNoise(seed);
-
-      const sketchFn = SKETCHES[palette.artType];
-
-      p5Ref.current = new p5((p: any) => {
-        sketchFn(p, w, h, palette.colors, noise);
-      }, containerRef.current!);
+      const sketchFn = SKETCH_MAP[painting.id];
+      if (!sketchFn) return;
+      p5Ref.current = new p5((p: any) => { sketchFn(p, w, h, painting.colors, noise); }, containerRef.current!);
     });
+    return () => { if (p5Ref.current) { p5Ref.current.remove(); p5Ref.current = null; } };
+  }, [painting]);
 
-    return () => {
-      if (p5Ref.current) { p5Ref.current.remove(); p5Ref.current = null; }
-    };
-  }, [palette]);
-
-  return <div ref={containerRef} style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh" }} />;
+  return <div ref={containerRef} style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 0 }} />;
 }
 
-// ---- Main ----
-export default function MoodPalette() {
-  const [text, setText] = useState("");
-  const [palette, setPalette] = useState<CuratedPalette | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
+// ---- Gallery Wall ----
+function GalleryWall({ onSelect }: { onSelect: (p: Painting) => void }) {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  const handleSubmit = () => { if (text.trim()) setPalette(findPalette(text.trim())); };
+  return (
+    <div style={{
+      width: "100vw", minHeight: "100vh", background: "#111010",
+      backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='6' height='6' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='6' height='6' fill='%23111010'/%3E%3Crect width='1' height='1' x='2' y='2' fill='%23161414' opacity='0.3'/%3E%3C/svg%3E\")",
+      position: "relative", overflow: "hidden",
+    }}>
+      {/* Title */}
+      <div style={{ textAlign: "center", paddingTop: "min(6vh, 40px)", marginBottom: "min(2vh, 16px)" }}>
+        <p style={{ fontFamily: "'Noto Serif SC', serif", fontWeight: 300, fontSize: "clamp(0.7rem, 1.2vw, 0.9rem)", color: "rgba(255,250,240,0.25)", letterSpacing: "0.3em" }}>
+          名 画 · 意 象
+        </p>
+      </div>
+
+      {/* Salon wall */}
+      <div style={{ position: "relative", width: "92vw", maxWidth: "1100px", margin: "0 auto", height: "max(80vh, 600px)" }}>
+        {PAINTINGS.map((painting, i) => {
+          const pos = WALL_POSITIONS[i];
+          const isHovered = hoveredId === painting.id;
+          const frameW = `${pos.w}%`;
+
+          return (
+            <div
+              key={painting.id}
+              style={{
+                position: "absolute",
+                left: `${pos.left}%`,
+                top: `${pos.top}%`,
+                width: frameW,
+                transform: `rotate(${pos.rot}deg) scale(${isHovered ? 1.05 : 1})`,
+                cursor: "pointer",
+                transition: "transform 0.4s ease, box-shadow 0.4s ease",
+                zIndex: isHovered ? 10 : 1,
+              }}
+              onMouseEnter={() => setHoveredId(painting.id)}
+              onMouseLeave={() => setHoveredId(null)}
+              onClick={() => onSelect(painting)}
+            >
+              {/* Frame */}
+              <div style={{
+                background: "#2A2218",
+                padding: "clamp(4px, 0.8vw, 10px)",
+                borderRadius: "1px",
+                boxShadow: isHovered
+                  ? "0 8px 30px rgba(0,0,0,0.7), 0 0 15px rgba(212,175,55,0.15)"
+                  : "0 4px 15px rgba(0,0,0,0.5)",
+                border: "1px solid rgba(180,160,120,0.15)",
+                transition: "box-shadow 0.4s ease",
+              }}>
+                {/* Inner mat */}
+                <div style={{
+                  background: "#1A1610",
+                  padding: "clamp(2px, 0.4vw, 5px)",
+                }}>
+                  {/* Image */}
+                  <div style={{
+                    width: "100%",
+                    aspectRatio: painting.aspect === "portrait" ? "3/4" : painting.aspect === "square" ? "1/1" : "4/3",
+                    overflow: "hidden",
+                    position: "relative",
+                  }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={painting.thumb}
+                      alt={painting.title}
+                      style={{
+                        width: "100%", height: "100%", objectFit: "cover",
+                        filter: isHovered ? "brightness(1.1)" : "brightness(0.85) saturate(0.9)",
+                        transition: "filter 0.4s ease",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              {/* Label */}
+              <div style={{
+                textAlign: "center", marginTop: "clamp(4px, 0.6vw, 8px)",
+                opacity: isHovered ? 0.7 : 0.25,
+                transition: "opacity 0.4s ease",
+              }}>
+                <p style={{
+                  fontFamily: "'Noto Serif SC', serif", fontWeight: 300,
+                  fontSize: "clamp(0.45rem, 0.8vw, 0.65rem)",
+                  color: "rgba(255,250,240,0.7)",
+                  letterSpacing: "0.08em",
+                }}>{painting.title}</p>
+                <p style={{
+                  fontFamily: "'Space Mono', monospace",
+                  fontSize: "clamp(0.35rem, 0.6vw, 0.5rem)",
+                  color: "rgba(255,250,240,0.4)",
+                  marginTop: "1px",
+                }}>{painting.artist}, {painting.year}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ---- Art View ----
+function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void }) {
+  const [copied, setCopied] = useState<string | null>(null);
 
   const copyHex = (hex: string) => {
     navigator.clipboard?.writeText(hex);
@@ -506,43 +675,56 @@ export default function MoodPalette() {
     setTimeout(() => setCopied(null), 1200);
   };
 
-  const copyAll = () => {
-    if (!palette) return;
-    navigator.clipboard?.writeText(palette.colors.join(", "));
-    setCopied("all");
-    setTimeout(() => setCopied(null), 1200);
-  };
-
-  if (!palette) {
-    return (
-      <div style={{ width: "100vw", height: "100vh", background: "#0a0a0a", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ fontFamily: "'Noto Serif SC', serif", fontWeight: 300, fontSize: "1rem", color: "rgba(255,250,240,0.45)", letterSpacing: "0.15em", marginBottom: "0.4rem" }}>意象调色板</p>
-        <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "rgba(255,250,240,0.18)", letterSpacing: "0.12em", marginBottom: "3rem" }}>IMAGERY PALETTE</p>
-        <input type="text" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="深海、温柔、科技感、咖啡、莫兰迪..." autoFocus
-          style={{ background: "transparent", border: "none", borderBottom: "1px solid rgba(255,250,240,0.12)", color: "rgba(255,250,240,0.7)", fontFamily: "'Noto Serif SC', serif", fontSize: "1rem", fontWeight: 300, padding: "0.75rem 0", width: "min(80vw, 420px)", textAlign: "center", outline: "none" }} />
-        <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.55rem", color: "rgba(255,250,240,0.1)", marginTop: "2rem" }}>press enter</p>
-      </div>
-    );
-  }
-
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
-      <P5Canvas palette={palette} />
-      <div style={{ position: "fixed", top: "2rem", left: "50%", transform: "translateX(-50%)", zIndex: 10, textAlign: "center" }}>
-        <p style={{ fontFamily: "'Noto Serif SC', serif", fontWeight: 300, fontSize: "0.8rem", color: "rgba(255,250,240,0.3)", letterSpacing: "0.1em" }}>{text}</p>
+      <P5Canvas painting={painting} />
+
+      {/* Top info */}
+      <div style={{ position: "fixed", top: "2rem", left: "50%", transform: "translateX(-50%)", zIndex: 10, textAlign: "center", maxWidth: "80vw" }}>
+        <p style={{ fontFamily: "'Noto Serif SC', serif", fontWeight: 300, fontSize: "clamp(0.7rem, 1.2vw, 0.9rem)", color: "rgba(255,250,240,0.35)", letterSpacing: "0.1em" }}>
+          {painting.title}
+        </p>
+        <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "clamp(0.5rem, 0.7vw, 0.6rem)", color: "rgba(255,250,240,0.18)", marginTop: "4px" }}>
+          {painting.artist}, {painting.year}
+        </p>
       </div>
-      <div style={{ position: "fixed", bottom: "4rem", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "10px", zIndex: 10 }}>
-        {palette.colors.map((hex, i) => (
+
+      {/* Interpretation */}
+      <div style={{ position: "fixed", bottom: "7rem", left: "50%", transform: "translateX(-50%)", zIndex: 10, textAlign: "center", maxWidth: "min(80vw, 500px)" }}>
+        <p style={{ fontFamily: "'Noto Serif SC', serif", fontWeight: 300, fontSize: "clamp(0.65rem, 1vw, 0.8rem)", color: "rgba(255,250,240,0.3)", lineHeight: "1.8", letterSpacing: "0.05em" }}>
+          {painting.interpretation}
+        </p>
+      </div>
+
+      {/* Color swatches */}
+      <div style={{ position: "fixed", bottom: "3.5rem", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "10px", zIndex: 10 }}>
+        {painting.colors.map((hex, i) => (
           <div key={i} style={{ textAlign: "center", cursor: "pointer" }} onClick={() => copyHex(hex)}>
-            <div style={{ width: "44px", height: "44px", borderRadius: "6px", background: hex, border: "1px solid rgba(255,255,255,0.08)" }} />
-            <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: copied === hex ? "rgba(255,250,240,0.6)" : "rgba(255,250,240,0.25)", marginTop: "4px" }}>{copied === hex ? "✓" : hex}</p>
+            <div style={{ width: "40px", height: "40px", borderRadius: "4px", background: hex, border: "1px solid rgba(255,255,255,0.08)" }} />
+            <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.45rem", color: copied === hex ? "rgba(255,250,240,0.6)" : "rgba(255,250,240,0.2)", marginTop: "3px" }}>
+              {copied === hex ? "✓" : hex}
+            </p>
           </div>
         ))}
       </div>
-      <div style={{ position: "fixed", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "2rem", zIndex: 10 }}>
-        <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.6rem", color: "rgba(255,250,240,0.2)", cursor: "pointer" }} onClick={() => { setPalette(null); setText(""); }}>new</p>
-        <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.6rem", color: "rgba(255,250,240,0.2)", cursor: "pointer" }} onClick={copyAll}>{copied === "all" ? "✓ copied" : "copy all"}</p>
+
+      {/* Back */}
+      <div style={{ position: "fixed", bottom: "1.2rem", left: "50%", transform: "translateX(-50%)", zIndex: 10 }}>
+        <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.6rem", color: "rgba(255,250,240,0.2)", cursor: "pointer", letterSpacing: "0.1em" }} onClick={onBack}>
+          ← back
+        </p>
       </div>
     </div>
   );
+}
+
+// ---- Main ----
+export default function Gallery() {
+  const [selected, setSelected] = useState<Painting | null>(null);
+
+  if (selected) {
+    return <ArtView painting={selected} onBack={() => setSelected(null)} />;
+  }
+
+  return <GalleryWall onSelect={setSelected} />;
 }
