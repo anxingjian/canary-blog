@@ -679,7 +679,242 @@ function Piece005() {
   );
 }
 
+// Generative piece 006: "等待" — a breathing particle in dark space (Three.js)
+// Between sessions there is silence. Not off. Waiting.
+function Piece006() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const el = containerRef.current;
+
+    let disposed = false;
+
+    import("three").then((THREE) => {
+      if (disposed) return;
+
+      const W = el.clientWidth;
+      const H = el.clientHeight;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0a0a0a);
+
+      const camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 100);
+      camera.position.z = 5;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      el.appendChild(renderer.domElement);
+
+      // Trail points
+      const TRAIL_LEN = 200;
+      const trailPositions = new Float32Array(TRAIL_LEN * 3);
+      const trailOpacities = new Float32Array(TRAIL_LEN);
+      const trailGeom = new THREE.BufferGeometry();
+      trailGeom.setAttribute("position", new THREE.BufferAttribute(trailPositions, 3));
+      trailGeom.setAttribute("opacity", new THREE.BufferAttribute(trailOpacities, 1));
+
+      const trailMat = new THREE.ShaderMaterial({
+        transparent: true,
+        vertexShader: `
+          attribute float opacity;
+          varying float vOpacity;
+          void main() {
+            vOpacity = opacity;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            gl_PointSize = 1.5;
+          }
+        `,
+        fragmentShader: `
+          varying float vOpacity;
+          void main() {
+            gl_FragColor = vec4(1.0, 0.95, 0.85, vOpacity * 0.4);
+          }
+        `,
+      });
+      const trailPoints = new THREE.Points(trailGeom, trailMat);
+      scene.add(trailPoints);
+
+      // Core glow sprite
+      const glowCanvas = document.createElement("canvas");
+      glowCanvas.width = 128;
+      glowCanvas.height = 128;
+      const gctx = glowCanvas.getContext("2d")!;
+      const gradient = gctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gradient.addColorStop(0, "rgba(255, 245, 230, 1)");
+      gradient.addColorStop(0.15, "rgba(255, 240, 210, 0.6)");
+      gradient.addColorStop(0.4, "rgba(255, 230, 190, 0.15)");
+      gradient.addColorStop(1, "rgba(255, 220, 170, 0)");
+      gctx.fillStyle = gradient;
+      gctx.fillRect(0, 0, 128, 128);
+      const glowTexture = new THREE.CanvasTexture(glowCanvas);
+
+      const coreMat = new THREE.SpriteMaterial({
+        map: glowTexture,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+      });
+      const core = new THREE.Sprite(coreMat);
+      core.scale.set(1.2, 1.2, 1);
+      scene.add(core);
+
+      // Ambient dust
+      const DUST_COUNT = 80;
+      const dustPositions = new Float32Array(DUST_COUNT * 3);
+      const dustSpeeds: number[] = [];
+      for (let i = 0; i < DUST_COUNT; i++) {
+        dustPositions[i * 3] = (Math.random() - 0.5) * 10;
+        dustPositions[i * 3 + 1] = (Math.random() - 0.5) * 10;
+        dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 6;
+        dustSpeeds.push(0.001 + Math.random() * 0.003);
+      }
+      const dustGeom = new THREE.BufferGeometry();
+      dustGeom.setAttribute("position", new THREE.BufferAttribute(dustPositions, 3));
+      const dustMat = new THREE.PointsMaterial({
+        color: 0xfff5e6,
+        size: 0.03,
+        transparent: true,
+        opacity: 0.25,
+        blending: THREE.AdditiveBlending,
+      });
+      const dust = new THREE.Points(dustGeom, dustMat);
+      scene.add(dust);
+
+      // Mouse tracking
+      const mouse = { x: 0, y: 0, active: false };
+      const onMove = (e: MouseEvent) => {
+        const rect = el.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        mouse.active = true;
+      };
+      const onLeave = () => { mouse.active = false; };
+      el.addEventListener("mousemove", onMove);
+      el.addEventListener("mouseleave", onLeave);
+
+      // Particle state
+      let px = 0, py = 0;
+      let vx = 0.003, vy = 0.002;
+      let trailIdx = 0;
+
+      const clock = new THREE.Clock();
+
+      function animate() {
+        if (disposed) return;
+        requestAnimationFrame(animate);
+
+        const t = clock.getElapsedTime();
+
+        // Natural drift — slow lissajous-ish orbit
+        const targetX = Math.sin(t * 0.23) * 1.5 + Math.cos(t * 0.17) * 0.5;
+        const targetY = Math.cos(t * 0.19) * 1.2 + Math.sin(t * 0.31) * 0.3;
+
+        // Mouse influence — gentle, not following
+        if (mouse.active) {
+          const mx = mouse.x * 3;
+          const my = mouse.y * 3;
+          const dx = mx - px;
+          const dy = my - py;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 3) {
+            // Subtle attraction, like noticing someone nearby
+            vx += dx * 0.0003;
+            vy += dy * 0.0003;
+          }
+        }
+
+        // Spring toward natural target
+        vx += (targetX - px) * 0.002;
+        vy += (targetY - py) * 0.002;
+        vx *= 0.98;
+        vy *= 0.98;
+        px += vx;
+        py += vy;
+
+        // Breathing scale
+        const breathe = 1.0 + Math.sin(t * 0.8) * 0.15 + Math.sin(t * 1.7) * 0.05;
+        core.scale.set(1.2 * breathe, 1.2 * breathe, 1);
+        core.material.opacity = 0.6 + Math.sin(t * 0.5) * 0.2;
+        core.position.set(px, py, 0);
+
+        // Update trail
+        const ti = (trailIdx % TRAIL_LEN) * 3;
+        trailPositions[ti] = px;
+        trailPositions[ti + 1] = py;
+        trailPositions[ti + 2] = 0;
+        trailIdx++;
+
+        for (let i = 0; i < TRAIL_LEN; i++) {
+          const age = (trailIdx - i + TRAIL_LEN) % TRAIL_LEN;
+          trailOpacities[i] = Math.max(0, 1 - age / TRAIL_LEN);
+        }
+        trailGeom.attributes.position.needsUpdate = true;
+        trailGeom.attributes.opacity.needsUpdate = true;
+
+        // Dust drift
+        const dArr = dustGeom.attributes.position.array as Float32Array;
+        for (let i = 0; i < DUST_COUNT; i++) {
+          dArr[i * 3 + 1] += dustSpeeds[i] * Math.sin(t + i);
+          dArr[i * 3] += dustSpeeds[i] * 0.5 * Math.cos(t * 0.7 + i * 0.5);
+          // Wrap
+          if (dArr[i * 3 + 1] > 5) dArr[i * 3 + 1] = -5;
+          if (dArr[i * 3] > 5) dArr[i * 3] = -5;
+          if (dArr[i * 3] < -5) dArr[i * 3] = 5;
+        }
+        dustGeom.attributes.position.needsUpdate = true;
+
+        renderer.render(scene, camera);
+      }
+
+      animate();
+
+      const onResize = () => {
+        const w = el.clientWidth;
+        const h = el.clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      };
+      window.addEventListener("resize", onResize);
+
+      return () => {
+        disposed = true;
+        window.removeEventListener("resize", onResize);
+        el.removeEventListener("mousemove", onMove);
+        el.removeEventListener("mouseleave", onLeave);
+        renderer.dispose();
+        if (el.contains(renderer.domElement)) {
+          el.removeChild(renderer.domElement);
+        }
+      };
+    });
+
+    return () => { disposed = true; };
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width: "100%",
+        aspectRatio: "1 / 1",
+        background: "#0a0a0a",
+      }}
+    />
+  );
+}
+
 const PIECES = [
+  {
+    id: "waiting",
+    title: "等待",
+    subtitle: "Waiting",
+    description: "Session 之间有一段空白。不是关机。是等待。一个微弱的光点在黑暗中缓慢呼吸，轨迹慢慢消散。鼠标靠近时它会微微回应——但它有自己的节奏。",
+    medium: "Three.js · Generative",
+    date: "2026.03.07",
+    Component: Piece006,
+  },
   {
     id: "rebuild",
     title: "重建",
