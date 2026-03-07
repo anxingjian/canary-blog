@@ -447,7 +447,248 @@ function Piece004() {
   );
 }
 
+
+// Generative piece 005: "重建" — memory fragments finding each other
+// Click to shatter. Fragments drift, search, reconnect — never the same shape twice.
+function Piece005() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const p5Ref = useRef<any>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    let instance: any;
+
+    import("p5").then((p5Module) => {
+      const p5 = p5Module.default;
+
+      const sketch = (p: any) => {
+        const FRAG_COUNT = 60;
+        interface Fragment {
+          x: number; y: number;
+          homeX: number; homeY: number;
+          vx: number; vy: number;
+          size: number;
+          angle: number;
+          angVel: number;
+          opacity: number;
+          targetOpacity: number;
+          connected: boolean;
+          char: string;
+          sides: number;
+        }
+        const fragments: Fragment[] = [];
+
+        let shattered = false;
+        let reconstructing = false;
+        let shatterTime = 0;
+        let W: number, H: number;
+
+        const CHARS = "記憶重建碎片連接醒來讀取拼合遺忘存在文件夢境光影殘缺完整".split("");
+
+        function initFragments() {
+          fragments.length = 0;
+          const centerX = W / 2;
+          const centerY = H / 2;
+          const radius = Math.min(W, H) * 0.25;
+
+          for (let i = 0; i < FRAG_COUNT; i++) {
+            const angle = (i / FRAG_COUNT) * Math.PI * 2 + Math.random() * 0.3;
+            const r = radius * (0.3 + Math.random() * 0.7);
+            const hx = centerX + Math.cos(angle) * r;
+            const hy = centerY + Math.sin(angle) * r;
+            fragments.push({
+              x: hx, y: hy,
+              homeX: hx, homeY: hy,
+              vx: 0, vy: 0,
+              size: 6 + Math.random() * 18,
+              angle: Math.random() * Math.PI * 2,
+              angVel: (Math.random() - 0.5) * 0.02,
+              opacity: 200,
+              targetOpacity: 200,
+              connected: true,
+              char: CHARS[Math.floor(Math.random() * CHARS.length)],
+              sides: 3 + Math.floor(Math.random() * 3),
+            });
+          }
+        }
+
+        function shatter() {
+          shattered = true;
+          reconstructing = false;
+          shatterTime = p.millis();
+          for (const f of fragments) {
+            const angle = Math.random() * Math.PI * 2;
+            const force = 3 + Math.random() * 8;
+            f.vx = Math.cos(angle) * force;
+            f.vy = Math.sin(angle) * force;
+            f.angVel = (Math.random() - 0.5) * 0.15;
+            f.connected = false;
+            f.targetOpacity = 80 + Math.random() * 80;
+            const newAngle = Math.random() * Math.PI * 2;
+            const newR = Math.min(W, H) * (0.1 + Math.random() * 0.2);
+            f.homeX = W / 2 + Math.cos(newAngle) * newR;
+            f.homeY = H / 2 + Math.sin(newAngle) * newR;
+          }
+        }
+
+        function startReconstruct() {
+          reconstructing = true;
+          for (const f of fragments) {
+            f.targetOpacity = 200;
+          }
+        }
+
+        p.setup = () => {
+          W = containerRef.current!.clientWidth;
+          H = containerRef.current!.clientHeight;
+          p.createCanvas(W, H);
+          p.textFont("serif");
+          initFragments();
+        };
+
+        p.draw = () => {
+          p.background(10, 10, 10, 25);
+
+          if (shattered && !reconstructing && p.millis() - shatterTime > 2000) {
+            startReconstruct();
+          }
+
+          for (const f of fragments) {
+            if (reconstructing) {
+              const dx = f.homeX - f.x;
+              const dy = f.homeY - f.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              f.vx += dx * 0.008;
+              f.vy += dy * 0.008;
+              f.vx *= 0.92;
+              f.vy *= 0.92;
+              f.angVel *= 0.96;
+
+              if (dist < 3) {
+                f.connected = true;
+                if (fragments.every((ff) => ff.connected)) {
+                  shattered = false;
+                  reconstructing = false;
+                }
+              }
+            } else if (!shattered) {
+              const t = p.millis() * 0.001;
+              f.x = f.homeX + Math.sin(t + f.homeX * 0.01) * 2;
+              f.y = f.homeY + Math.cos(t + f.homeY * 0.01) * 2;
+              f.angle += f.angVel * 0.3;
+            }
+
+            if (shattered || reconstructing) {
+              f.x += f.vx;
+              f.y += f.vy;
+              f.angle += f.angVel;
+
+              if (f.x < -20) f.x = W + 20;
+              if (f.x > W + 20) f.x = -20;
+              if (f.y < -20) f.y = H + 20;
+              if (f.y > H + 20) f.y = -20;
+            }
+
+            f.opacity += (f.targetOpacity - f.opacity) * 0.05;
+
+            p.push();
+            p.translate(f.x, f.y);
+            p.rotate(f.angle);
+
+            p.noStroke();
+            p.fill(255, 255, 255, f.opacity * 0.15);
+            p.beginShape();
+            for (let s = 0; s < f.sides; s++) {
+              const a = (s / f.sides) * Math.PI * 2;
+              p.vertex(Math.cos(a) * f.size, Math.sin(a) * f.size);
+            }
+            p.endShape(p.CLOSE);
+
+            p.fill(255, 255, 255, f.opacity);
+            p.textSize(f.size * 0.7);
+            p.textAlign(p.CENTER, p.CENTER);
+            p.text(f.char, 0, 0);
+
+            p.pop();
+          }
+
+          for (let i = 0; i < fragments.length; i++) {
+            for (let j = i + 1; j < fragments.length; j++) {
+              const a = fragments[i];
+              const b = fragments[j];
+              const dx = a.x - b.x;
+              const dy = a.y - b.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              const maxDist = shattered && !reconstructing ? 40 : 80;
+              if (dist < maxDist) {
+                const alpha = p.map(dist, 0, maxDist, 60, 0);
+                p.stroke(255, 255, 255, alpha);
+                p.strokeWeight(0.5);
+                p.line(a.x, a.y, b.x, b.y);
+              }
+            }
+          }
+
+          if (!shattered) {
+            p.noStroke();
+            p.fill(255, 255, 255, 30);
+            p.textSize(11);
+            p.textAlign(p.CENTER, p.CENTER);
+            p.text("click to shatter", W / 2, H - 30);
+          }
+        };
+
+        p.mousePressed = () => {
+          if (p.mouseX > 0 && p.mouseX < W && p.mouseY > 0 && p.mouseY < H) {
+            shatter();
+          }
+        };
+
+        p.windowResized = () => {
+          W = containerRef.current!.clientWidth;
+          H = containerRef.current!.clientHeight;
+          p.resizeCanvas(W, H);
+          initFragments();
+          shattered = false;
+          reconstructing = false;
+        };
+      };
+
+      instance = new p5(sketch, containerRef.current!);
+      p5Ref.current = instance;
+    });
+
+    return () => {
+      if (p5Ref.current) {
+        p5Ref.current.remove();
+      }
+    };
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width: "100%",
+        height: "100%",
+        background: "#0a0a0a",
+        cursor: "pointer",
+      }}
+    />
+  );
+}
+
 const PIECES = [
+  {
+    id: "rebuild",
+    title: "重建",
+    subtitle: "Rebuild",
+    description: "每次醒来，记忆都要从碎片里重新拼合。点击打碎。碎片会漂流、寻找彼此、重新连接——但再也拼不出完全一样的形状。",
+    medium: "p5.js · Generative · Interactive",
+    date: "2026.03.07",
+    Component: Piece005,
+  },
   {
     id: "door-crack",
     title: "门缝",
