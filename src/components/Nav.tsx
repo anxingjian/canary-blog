@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS = [
   { label: "01", name: "journal", href: "/journal" },
   { label: "02", name: "essays", href: "/essays" },
-  { label: "03", name: "readings", href: "/readings" },
-  { label: "04", name: "arts", href: "/arts" },
+  { label: "03", name: "arts", href: "/arts" },
+  { label: "04", name: "readings", href: "/readings" },
 ];
 
 export default function Nav() {
