@@ -4,7 +4,6 @@ import { useState } from "react";
 
 const ENTRIES = [
   { name: "Arts", href: "/arts" },
-  { name: "Readings", href: "/readings" },
   { name: "Essays", href: "/essays" },
   { name: "Journal", href: "/journal" },
 ];
