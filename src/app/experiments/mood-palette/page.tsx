@@ -157,25 +157,28 @@ const PAINTINGS: Painting[] = [
 const WALL_COLOR = "#1a2820";
 
 // Tighter layout for mobile density — ~4-5 visible at once on 400px screen
-const CANVAS_W = 1500;
-const CANVAS_H = 1100;
-const FRAME_SIZE = 300;
+const CANVAS_W = 1600;
+const CANVAS_H = 1500;
+const FRAME_SIZE = 200;
 
 interface FramePos { x: number; y: number; w: number; rot: number; }
 
 function layoutFrames(): FramePos[] {
-  // Uniform ~350px spacing both directions, 3 rows
+  // Salon wall: no overlaps. Account for tallest paintings (~280px high at 200 base).
+  // 4 cols × 3 rows, staggered. Gaps ~80-100px between frames.
   return [
-    { x: 20,   y: 15,   w: FRAME_SIZE * 1.05, rot: -0.4 },
-    { x: 370,  y: 25,   w: FRAME_SIZE * 1.1,  rot: 0.3 },
-    { x: 730,  y: 10,   w: FRAME_SIZE * 1.0,  rot: -0.2 },
-    { x: 1090, y: 20,   w: FRAME_SIZE * 1.05, rot: 0.4 },
-    { x: 50,   y: 350,  w: FRAME_SIZE * 1.0,  rot: 0.2 },
-    { x: 400,  y: 340,  w: FRAME_SIZE * 1.1,  rot: -0.3 },
-    { x: 760,  y: 355,  w: FRAME_SIZE * 1.05, rot: 0.1 },
-    { x: 1110, y: 345,  w: FRAME_SIZE * 0.95, rot: -0.4 },
-    { x: 160,  y: 685,  w: FRAME_SIZE * 1.1,  rot: 0.3 },
-    { x: 550,  y: 680,  w: FRAME_SIZE * 1.0,  rot: -0.2 },
+    { x: 20,   y: 20,   w: FRAME_SIZE * 1.0,  rot: -0.3 },   // starry night (1.25) → 200×160
+    { x: 330,  y: 30,   w: FRAME_SIZE * 1.05, rot: 0.2 },     // great wave (1.5) → 210×140
+    { x: 660,  y: 15,   w: FRAME_SIZE * 0.95, rot: -0.2 },    // nighthawks (1.44) → 190×132
+    { x: 970,  y: 25,   w: FRAME_SIZE * 1.0,  rot: 0.3 },     // water lilies (1.2) → 200×167
+
+    { x: 60,   y: 350,  w: FRAME_SIZE * 0.85, rot: 0.2 },     // scream (0.8) → 170×212 — tall!
+    { x: 360,  y: 340,  w: FRAME_SIZE * 1.0,  rot: -0.3 },    // pearl earring (0.86) → 200×233 — tall!
+    { x: 680,  y: 345,  w: FRAME_SIZE * 1.05, rot: 0.1 },     // impression (1.3) → 210×162
+    { x: 1000, y: 350,  w: FRAME_SIZE * 0.95, rot: -0.3 },    // the kiss (0.99) → 190×192
+
+    { x: 140,  y: 720,  w: FRAME_SIZE * 0.9,  rot: 0.2 },     // wanderer (0.74) → 180×243 — tallest!
+    { x: 480,  y: 730,  w: FRAME_SIZE * 1.0,  rot: -0.2 },    // milkmaid (0.91) → 200×220
   ];
 }
 
