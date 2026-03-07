@@ -110,8 +110,12 @@ function findPalette(text: string): CuratedPalette {
     if (score > bestScore) { bestScore = score; best = p; }
   }
   if (!best) {
+    // No tag match — generate a palette from text hash
     const hash = text.split("").reduce((s, c) => s + c.charCodeAt(0), 0);
-    best = PALETTES[hash % PALETTES.length];
+    // Pick a base palette and rotate its hues based on hash
+    const base = PALETTES[hash % PALETTES.length];
+    const artTypes: CuratedPalette["artType"][] = ["noiseField", "metaball", "aurora", "ink", "terrain", "crystal"];
+    best = { ...base, artType: artTypes[hash % artTypes.length] };
   }
   return best;
 }
@@ -137,25 +141,26 @@ function sketchNoiseField(p: any, w: number, h: number, colors: string[], noise:
   };
 
   p.draw = () => {
-    // Very subtle fade for trails
+    // Gentle fade for trails
     const [br, bg, bb] = hexToRGB(colors[0]);
     p.noStroke();
-    p.fill(br, bg, bb, 3);
+    p.fill(br, bg, bb, 2);
     p.rect(0, 0, w, h);
 
     for (const pt of particles) {
       const angle = noise.noise2D(pt.x * 0.003, pt.y * 0.003 + p.frameCount * 0.0008) * p.TWO_PI;
-      pt.x += Math.cos(angle) * 1.5;
-      pt.y += Math.sin(angle) * 1.5;
+      const prevX = pt.x, prevY = pt.y;
+      pt.x += Math.cos(angle) * 2;
+      pt.y += Math.sin(angle) * 2;
       pt.age++;
 
       const [r, g, b] = hexToRGB(colors[pt.ci]);
-      const alpha = Math.min(pt.age * 0.3, 25);
+      const alpha = Math.min(pt.age * 0.8, 80);
       p.stroke(r, g, b, alpha);
-      p.strokeWeight(0.8 + noise.noise2D(pt.x * 0.01, pt.y * 0.01) * 0.5);
-      p.point(pt.x, pt.y);
+      p.strokeWeight(1.2 + noise.noise2D(pt.x * 0.01, pt.y * 0.01) * 1.0);
+      p.line(prevX, prevY, pt.x, pt.y);
 
-      if (pt.x < -10 || pt.x > w + 10 || pt.y < -10 || pt.y > h + 10 || pt.age > 500) {
+      if (pt.x < -10 || pt.x > w + 10 || pt.y < -10 || pt.y > h + 10 || pt.age > 400) {
         pt.x = p.random(w); pt.y = p.random(h); pt.age = 0;
       }
     }
