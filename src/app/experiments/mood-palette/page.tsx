@@ -63,29 +63,29 @@ const PAINTINGS: Painting[] = [
   { id: "wanderer-sea-fog", title: "雾海上的旅人", titleEn: "Wanderer above the Sea of Fog", artist: "Caspar David Friedrich", year: "1818", colors: ["#2A3040", "#5A6A7A", "#8A9AAA", "#B0B8C0", "#D8D8D0"], interpretation: "背对观众，面朝虚无。他不是在征服什么，是在承认自己的渺小。", aspect: 0.74 },
 ];
 
-// Salon-style positions in a virtual canvas (px)
-// Canvas repeats every CANVAS_W x CANVAS_H
-const CANVAS_W = 2400;
-const CANVAS_H = 2000;
-const FRAME_SIZE = 320; // base frame size
+// Infinite canvas — spacious, asymmetric, salon-style
+// Generous spacing between works. Canvas repeats seamlessly.
+const CANVAS_W = 3600;
+const CANVAS_H = 2800;
+const FRAME_SIZE = 360;
 
 interface FramePos {
-  x: number; y: number; w: number; h: number; rot: number;
+  x: number; y: number; w: number; rot: number;
 }
 
 function layoutFrames(): FramePos[] {
-  // Hand-placed, salon-style, scattered
+  // Asymmetric salon hang — wide spacing, slight rotations, varied scale
   return [
-    { x: 80,   y: 100,  w: FRAME_SIZE * 1.1, h: FRAME_SIZE * 1.1 / PAINTINGS[0].aspect, rot: -1.5 },
-    { x: 520,  y: 60,   w: FRAME_SIZE * 1.3, h: FRAME_SIZE * 1.3 / PAINTINGS[1].aspect, rot: 0.8 },
-    { x: 1050, y: 130,  w: FRAME_SIZE * 1.2, h: FRAME_SIZE * 1.2 / PAINTINGS[2].aspect, rot: -0.5 },
-    { x: 1650, y: 50,   w: FRAME_SIZE * 1.0, h: FRAME_SIZE * 1.0 / PAINTINGS[3].aspect, rot: 1.2 },
-    { x: 150,  y: 550,  w: FRAME_SIZE * 0.9, h: FRAME_SIZE * 0.9 / PAINTINGS[4].aspect, rot: 0.3 },
-    { x: 600,  y: 500,  w: FRAME_SIZE * 1.4, h: FRAME_SIZE * 1.4 / PAINTINGS[5].aspect, rot: -0.8 },
-    { x: 1200, y: 580,  w: FRAME_SIZE * 1.1, h: FRAME_SIZE * 1.1 / PAINTINGS[6].aspect, rot: 0.6 },
-    { x: 1750, y: 520,  w: FRAME_SIZE * 1.0, h: FRAME_SIZE * 1.0 / PAINTINGS[7].aspect, rot: -1.0 },
-    { x: 300,  y: 1050, w: FRAME_SIZE * 1.3, h: FRAME_SIZE * 1.3 / PAINTINGS[8].aspect, rot: 0.4 },
-    { x: 900,  y: 1100, w: FRAME_SIZE * 0.95, h: FRAME_SIZE * 0.95 / PAINTINGS[9].aspect, rot: -0.7 },
+    { x: 120,  y: 180,  w: FRAME_SIZE * 1.0,  rot: -0.6 },
+    { x: 750,  y: 80,   w: FRAME_SIZE * 1.25, rot: 0.3 },
+    { x: 1500, y: 200,  w: FRAME_SIZE * 1.1,  rot: -0.2 },
+    { x: 2400, y: 100,  w: FRAME_SIZE * 0.95, rot: 0.5 },
+    { x: 200,  y: 900,  w: FRAME_SIZE * 0.85, rot: 0.2 },
+    { x: 900,  y: 820,  w: FRAME_SIZE * 1.3,  rot: -0.4 },
+    { x: 1800, y: 950,  w: FRAME_SIZE * 1.05, rot: 0.1 },
+    { x: 2600, y: 850,  w: FRAME_SIZE * 0.9,  rot: -0.3 },
+    { x: 450,  y: 1650, w: FRAME_SIZE * 1.15, rot: 0.3 },
+    { x: 1400, y: 1700, w: FRAME_SIZE * 1.0,  rot: -0.5 },
   ];
 }
 
@@ -368,8 +368,8 @@ function P5Canvas({ painting }: { painting: Painting }) {
 // ---- Infinite Canvas Gallery ----
 function InfiniteGallery({ onSelect }: { onSelect: (p: Painting) => void }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [hovered, setHovered] = useState<string | null>(null);
   const dragRef = useRef({ dragging: false, startX: 0, startY: 0, startOx: 0, startOy: 0, moved: false });
-  const containerRef = useRef<HTMLDivElement>(null);
   const frames = useRef(layoutFrames()).current;
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -387,20 +387,14 @@ function InfiniteGallery({ onSelect }: { onSelect: (p: Painting) => void }) {
 
   const handlePointerUp = useCallback(() => { dragRef.current.dragging = false; }, []);
 
-  // Modulo helper for wrapping
-  const mod = (n: number, m: number) => ((n % m) + m) % m;
-
-  // Render 3x3 grid of the canvas tile for seamless wrapping
   const tiles: { tx: number; ty: number }[] = [];
   for (let tx = -1; tx <= 1; tx++) for (let ty = -1; ty <= 1; ty++) tiles.push({ tx, ty });
 
   return (
     <div
-      ref={containerRef}
       style={{
         width: "100vw", height: "100vh", overflow: "hidden",
-        background: "#0e0d0b",
-        backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='8' height='8' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='8' height='8' fill='%230e0d0b'/%3E%3Crect width='1' height='1' x='3' y='3' fill='%23141210' opacity='0.4'/%3E%3C/svg%3E\")",
+        background: "#0a0a0a",
         cursor: dragRef.current.dragging ? "grabbing" : "grab",
         touchAction: "none",
         position: "relative",
@@ -420,6 +414,7 @@ function InfiniteGallery({ onSelect }: { onSelect: (p: Painting) => void }) {
         }}>
           {PAINTINGS.map((painting, i) => {
             const frame = frames[i];
+            const isHovered = hovered === `${tx},${ty},${painting.id}`;
             return (
               <div
                 key={painting.id}
@@ -430,26 +425,26 @@ function InfiniteGallery({ onSelect }: { onSelect: (p: Painting) => void }) {
                   width: frame.w,
                   transform: `rotate(${frame.rot}deg)`,
                   cursor: "pointer",
+                  transition: "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
+                onMouseEnter={() => setHovered(`${tx},${ty},${painting.id}`)}
+                onMouseLeave={() => setHovered(null)}
                 onClick={() => { if (!dragRef.current.moved) onSelect(painting); }}
               >
-                {/* Outer frame */}
+                {/* Minimal frame — thin border, no gradient, no wood texture */}
                 <div style={{
-                  background: "linear-gradient(135deg, #3A3025, #2A2218, #1E1810)",
-                  padding: "clamp(6px, 1.5vw, 14px)",
-                  borderRadius: "2px",
-                  boxShadow: "0 6px 25px rgba(0,0,0,0.6), inset 0 1px 0 rgba(200,180,140,0.1)",
-                  border: "1px solid rgba(160,140,100,0.12)",
+                  border: `1px solid rgba(255,255,255,${isHovered ? 0.08 : 0.03})`,
+                  padding: "3px",
+                  transition: "border-color 0.5s ease",
                 }}>
-                  {/* Inner mat */}
-                  <div style={{ background: "#151210", padding: "clamp(3px, 0.8vw, 8px)" }}>
-                    <div style={{
-                      width: "100%",
-                      aspectRatio: `${painting.aspect}`,
-                      overflow: "hidden",
-                    }}>
-                      <PaintingPreview painting={painting} width={Math.round(frame.w)} height={Math.round(frame.w / painting.aspect)} />
-                    </div>
+                  <div style={{
+                    width: "100%",
+                    aspectRatio: `${painting.aspect}`,
+                    overflow: "hidden",
+                    filter: isHovered ? "brightness(1.15)" : "brightness(0.9)",
+                    transition: "filter 0.5s ease",
+                  }}>
+                    <PaintingPreview painting={painting} width={Math.round(frame.w)} height={Math.round(frame.w / painting.aspect)} />
                   </div>
                 </div>
               </div>
@@ -457,6 +452,21 @@ function InfiniteGallery({ onSelect }: { onSelect: (p: Painting) => void }) {
           })}
         </div>
       ))}
+
+      {/* Subtle corner label — typography as element */}
+      <div style={{
+        position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 10,
+        pointerEvents: "none",
+      }}>
+        <p style={{
+          fontFamily: "'Space Mono', monospace",
+          fontSize: "0.5625rem",
+          fontWeight: 400,
+          color: "rgba(255,250,240,0.08)",
+          letterSpacing: "0.15em",
+          textTransform: "uppercase",
+        }}>drag to explore</p>
+      </div>
     </div>
   );
 }
@@ -469,23 +479,78 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
       <P5Canvas painting={painting} />
-      <div style={{ position: "fixed", top: "2rem", left: "50%", transform: "translateX(-50%)", zIndex: 10, textAlign: "center", maxWidth: "80vw" }}>
-        <p style={{ fontFamily: "'Noto Serif SC', serif", fontWeight: 300, fontSize: "clamp(0.7rem, 1.2vw, 0.9rem)", color: "rgba(255,250,240,0.35)", letterSpacing: "0.1em" }}>{painting.title}</p>
-        <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "clamp(0.5rem, 0.7vw, 0.6rem)", color: "rgba(255,250,240,0.18)", marginTop: "4px" }}>{painting.artist}, {painting.year}</p>
+
+      {/* Top — painting identity, typography-driven */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 10,
+        padding: "2rem 2.5rem",
+        display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+      }}>
+        <div>
+          <p style={{
+            fontFamily: "'Space Mono', monospace",
+            fontSize: "0.6875rem",
+            fontWeight: 400,
+            color: "rgba(255,250,240,0.15)",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+          }}>{painting.artist}</p>
+          <p style={{
+            fontFamily: "'Space Mono', monospace",
+            fontSize: "0.5625rem",
+            fontWeight: 400,
+            color: "rgba(255,250,240,0.08)",
+            letterSpacing: "0.08em",
+            marginTop: "2px",
+          }}>{painting.year}</p>
+        </div>
+        <p style={{
+          fontFamily: "'Space Mono', monospace",
+          fontSize: "0.6875rem",
+          fontWeight: 400,
+          color: "rgba(255,250,240,0.12)",
+          cursor: "pointer",
+          letterSpacing: "0.05em",
+        }} onClick={onBack}>←</p>
       </div>
-      <div style={{ position: "fixed", bottom: "7rem", left: "50%", transform: "translateX(-50%)", zIndex: 10, textAlign: "center", maxWidth: "min(80vw, 500px)" }}>
-        <p style={{ fontFamily: "'Noto Serif SC', serif", fontWeight: 300, fontSize: "clamp(0.65rem, 1vw, 0.8rem)", color: "rgba(255,250,240,0.3)", lineHeight: "1.8", letterSpacing: "0.05em" }}>{painting.interpretation}</p>
+
+      {/* Bottom left — interpretation */}
+      <div style={{
+        position: "fixed", bottom: "2rem", left: "2.5rem", zIndex: 10,
+        maxWidth: "min(60vw, 420px)",
+      }}>
+        <p style={{
+          fontFamily: "'Noto Serif SC', serif",
+          fontWeight: 300,
+          fontSize: "0.9375rem",
+          color: "rgba(255,250,240,0.2)",
+          lineHeight: "2",
+          letterSpacing: "0.03em",
+        }}>{painting.interpretation}</p>
       </div>
-      <div style={{ position: "fixed", bottom: "3.5rem", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "10px", zIndex: 10 }}>
+
+      {/* Bottom right — color swatches */}
+      <div style={{
+        position: "fixed", bottom: "2rem", right: "2.5rem", zIndex: 10,
+        display: "flex", gap: "6px", alignItems: "flex-end",
+      }}>
         {painting.colors.map((hex, i) => (
-          <div key={i} style={{ textAlign: "center", cursor: "pointer" }} onClick={() => copyHex(hex)}>
-            <div style={{ width: "40px", height: "40px", borderRadius: "4px", background: hex, border: "1px solid rgba(255,255,255,0.08)" }} />
-            <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.45rem", color: copied === hex ? "rgba(255,250,240,0.6)" : "rgba(255,250,240,0.2)", marginTop: "3px" }}>{copied === hex ? "✓" : hex}</p>
+          <div key={i} style={{ cursor: "pointer" }} onClick={() => copyHex(hex)}>
+            <div style={{
+              width: "32px", height: "32px",
+              background: hex,
+              border: "1px solid rgba(255,255,255,0.04)",
+            }} />
+            <p style={{
+              fontFamily: "'Space Mono', monospace",
+              fontSize: "0.4375rem",
+              color: copied === hex ? "rgba(255,250,240,0.5)" : "rgba(255,250,240,0.1)",
+              marginTop: "3px",
+              textAlign: "center",
+              transition: "color 0.3s ease",
+            }}>{copied === hex ? "✓" : hex}</p>
           </div>
         ))}
-      </div>
-      <div style={{ position: "fixed", bottom: "1.2rem", left: "50%", transform: "translateX(-50%)", zIndex: 10 }}>
-        <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.6rem", color: "rgba(255,250,240,0.2)", cursor: "pointer", letterSpacing: "0.1em" }} onClick={onBack}>← back</p>
       </div>
     </div>
   );
