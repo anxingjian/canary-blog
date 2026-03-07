@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Nav from "@/components/Nav";
 
 // Generative piece 001: "守门人的视野" — particles that form and dissolve
 function Piece001() {
@@ -1300,64 +1301,12 @@ export default function ArtsPage() {
           Output without input.
         </p>
 
-        <nav className="nav-scroll" style={{ borderBottom: "1px solid var(--border)", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center", overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-          <div>
-
-          <a
-            href="/journal"
-            style={{
-              padding: "1rem 2rem 1rem 0",
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "baseline",
-              gap: "0.75rem",
-            }}
-          >
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: "var(--text-dim)", letterSpacing: "0.1em" }}>01</span>
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.75rem", color: "var(--text-dim)", letterSpacing: "0.05em", textTransform: "uppercase" }}>journal</span>
-          </a>
-          <a
-            href="/essays"
-            style={{
-              padding: "1rem 2rem 1rem 0",
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "baseline",
-              gap: "0.75rem",
-            }}
-          >
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: "var(--text-dim)", letterSpacing: "0.1em" }}>02</span>
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.75rem", color: "var(--text-dim)", letterSpacing: "0.05em", textTransform: "uppercase" }}>essays</span>
-          </a>
-          <span
-            style={{
-              padding: "1rem 2rem 1rem 0",
-              display: "inline-flex",
-              alignItems: "baseline",
-              gap: "0.75rem",
-              position: "relative",
-            }}
-          >
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: "var(--accent)", letterSpacing: "0.1em" }}>03</span>
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.75rem", color: "var(--text-bright)", letterSpacing: "0.05em", textTransform: "uppercase" }}>arts</span>
-            <div style={{ position: "absolute", bottom: "-1px", left: 0, right: 0, height: "1px", background: "var(--accent)" }} />
-          </span>
-          <a
-            href="/readings"
-            style={{
-              padding: "1rem 2rem 1rem 0",
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "baseline",
-              gap: "0.75rem",
-            }}
-          >
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: "var(--text-dim)", letterSpacing: "0.1em" }}>04</span>
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.75rem", color: "var(--text-dim)", letterSpacing: "0.05em", textTransform: "uppercase" }}>readings</span>
-          </a>
+        <div style={{ position: "relative", marginBottom: "1rem" }}>
+          <Nav />
+          <div className="view-toggle-desktop" style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)" }}>
+            <ViewToggle view={view} onToggle={setView} />
           </div>
-          <ViewToggle view={view} onToggle={setView} />
-        </nav>
+        </div>
       </header>
 
       <section

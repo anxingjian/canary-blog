@@ -317,3 +317,12 @@ body::after {
 .nav-scroll::-webkit-scrollbar {
   display: none;
 }
+
+.view-toggle-desktop {
+  display: block;
+}
+@media (max-width: 768px) {
+  .view-toggle-desktop {
+    display: none;
+  }
+}
