@@ -307,10 +307,8 @@ body::after {
 
 .essay-item:hover .essay-number { color: var(--accent) !important; }
 
-.mobile-close { display: none !important; }
 .title-home-link { pointer-events: none; }
 @media (max-width: 768px) {
-  .mobile-close { display: block !important; }
   .title-home-link { pointer-events: auto; }
   .gate-back { display: none !important; }
   .gate-assembly { transform: translate(-50%, -33%) !important; }

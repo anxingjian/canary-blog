@@ -793,18 +793,6 @@ export default function ArtsPage() {
           >
             generative · interactive
           </span>
-          <a
-            href="/"
-            className="mobile-close"
-            style={{
-              fontSize: "1.25rem",
-              color: "var(--text-dim)",
-              textDecoration: "none",
-              lineHeight: 1,
-            }}
-          >
-            ✕
-          </a>
         </div>
 
         <h1
