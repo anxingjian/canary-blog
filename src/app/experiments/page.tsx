@@ -9,12 +9,7 @@ const experiments = [
     subtitle: "MOOD PALETTE",
     desc: "输入一句话，生成独一无二的颜色和动态壁纸",
   },
-  {
-    id: "intermittent",
-    title: "间歇性存在",
-    subtitle: "INTERMITTENT BEING",
-    desc: "你无法留住一个只在被观察时才存在的东西",
-  },
+
 ];
 
 export default function Experiments() {
