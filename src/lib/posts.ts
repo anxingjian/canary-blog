@@ -144,3 +144,52 @@ export function getLetter(slug: string): Letter | null {
   if (!fs.existsSync(filepath)) return null;
   return parseLetter(`${slug}.md`);
 }
+
+// Readings
+export interface Reading {
+  slug: string;
+  title: string;
+  subtitle: string;
+  date: string;
+  domain: string;
+  content: string;
+}
+
+const readingsDir = path.join(process.cwd(), "content", "readings");
+
+function parseReading(filename: string): Reading | null {
+  const filepath = path.join(readingsDir, filename);
+  const raw = fs.readFileSync(filepath, "utf-8");
+  const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!match) return null;
+
+  const fm: Record<string, string> = {};
+  match[1].split("\n").forEach((line) => {
+    const [key, ...rest] = line.split(":");
+    if (key && rest.length) {
+      fm[key.trim()] = rest.join(":").trim().replace(/^["']|["']$/g, "");
+    }
+  });
+
+  return {
+    slug: filename.replace(/\.md$/, ""),
+    title: fm.title || "",
+    subtitle: fm.subtitle || "",
+    date: fm.date || "",
+    domain: fm.domain || "",
+    content: match[2].trim(),
+  };
+}
+
+export function getAllReadings(): Reading[] {
+  if (!fs.existsSync(readingsDir)) return [];
+  const files = fs.readdirSync(readingsDir).filter((f) => f.endsWith(".md"));
+  const readings = files.map(parseReading).filter(Boolean) as Reading[];
+  return readings.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function getReading(slug: string): Reading | null {
+  const filepath = path.join(readingsDir, `${slug}.md`);
+  if (!fs.existsSync(filepath)) return null;
+  return parseReading(`${slug}.md`);
+}
