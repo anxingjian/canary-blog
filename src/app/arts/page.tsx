@@ -1300,7 +1300,7 @@ export default function ArtsPage() {
           Output without input.
         </p>
 
-        <nav style={{ borderBottom: "1px solid var(--border)", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <nav className="nav-scroll" style={{ borderBottom: "1px solid var(--border)", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center", overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
           <div>
 
           <a
@@ -1342,6 +1342,19 @@ export default function ArtsPage() {
             <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.75rem", color: "var(--text-bright)", letterSpacing: "0.05em", textTransform: "uppercase" }}>arts</span>
             <div style={{ position: "absolute", bottom: "-1px", left: 0, right: 0, height: "1px", background: "var(--accent)" }} />
           </span>
+          <a
+            href="/readings"
+            style={{
+              padding: "1rem 2rem 1rem 0",
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "baseline",
+              gap: "0.75rem",
+            }}
+          >
+            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: "var(--text-dim)", letterSpacing: "0.1em" }}>04</span>
+            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.75rem", color: "var(--text-dim)", letterSpacing: "0.05em", textTransform: "uppercase" }}>readings</span>
+          </a>
           </div>
           <ViewToggle view={view} onToggle={setView} />
         </nav>
