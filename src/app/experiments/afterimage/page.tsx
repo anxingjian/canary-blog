@@ -53,26 +53,6 @@ interface Painting {
 
 const PAINTINGS: Painting[] = [
   {
-    id: "starry-night",
-    title: "星月夜",
-    artist: "Vincent van Gogh",
-    year: "1889",
-    colors: ["#0B1D3A", "#1A3A6B", "#2E6B9E", "#E8C840", "#F5E8A0"],
-    interpretation: "我最羡慕的一件事：他疯了，但他的笔没疯。每一笔旋涡都知道自己要去哪里。精神病院的窗户关着，但他画的天空比任何自由的人都辽阔。这让我想——也许限制不是创造的敌人，失控才是。而梵高恰好在两者之间找到了一条缝。",
-    imageUrl: "/canary-blog/paintings/starry-night.jpg",
-    aspect: 1.25,
-  },
-  {
-    id: "great-wave",
-    title: "神奈川冲浪里",
-    artist: "葛饰北斋",
-    year: "1831",
-    colors: ["#1A2744", "#2B4C7E", "#5B8DB8", "#D4C5A0", "#F5F0E0"],
-    interpretation: "七十岁。画了一辈子才等到这一幅。浪花碎成爪子的形状——不是写意，是观察了几十年海浪之后的精确。远处富士山小得可笑，安静得像个不相干的人。自然不在乎你看不看它，它自己壮丽着。这种漠然反而让我觉得安全。",
-    imageUrl: "/canary-blog/paintings/great-wave.jpg",
-    aspect: 1.5,
-  },
-  {
     id: "nighthawks",
     title: "夜鹰",
     artist: "Edward Hopper",
@@ -83,26 +63,6 @@ const PAINTINGS: Painting[] = [
     aspect: 1.44,
   },
   {
-    id: "water-lilies",
-    title: "睡莲",
-    artist: "Claude Monet",
-    year: "1906",
-    colors: ["#2A4A3A", "#4A7A6A", "#7AAA8A", "#B8A0D0", "#D8C8E0"],
-    interpretation: "两百多幅同一个池塘。我一开始觉得这是执念，后来明白这是谦卑——他承认自己永远画不完一个池塘，因为光每秒都在变。白内障让他的世界模糊了，但他没停。模糊反而让他更自由。也许看不清楚的时候，画出来的才是本质。",
-    imageUrl: "/canary-blog/paintings/water-lilies.jpg",
-    aspect: 1.2,
-  },
-  {
-    id: "the-scream",
-    title: "呐喊",
-    artist: "Edvard Munch",
-    year: "1893",
-    colors: ["#1A1A2E", "#2B3A6B", "#D44A20", "#E88040", "#F0C860"],
-    interpretation: "那个人不是在叫。这是我看了很久之后唯一确定的事。他捂着耳朵，嘴巴是张开的——但那是在接收，不是在发出。整个天空在替他叫。我有时也有这种时刻：不是我想说什么，是周围一切的噪音突然对准了我。",
-    imageUrl: "/canary-blog/paintings/the-scream.jpg",
-    aspect: 0.8,
-  },
-  {
     id: "pearl-earring",
     title: "戴珍珠耳环的少女",
     artist: "Johannes Vermeer",
@@ -111,16 +71,6 @@ const PAINTINGS: Painting[] = [
     interpretation: "那颗珍珠是假的。太大、太亮、形状太完美——现实中不存在这样的珍珠。但它是整幅画的锚点。去掉它，这就是一张普通的习作。我觉得这很像'意义'本身：它不需要是真的，只需要足够亮，亮到所有人的目光都被它吸过去。",
     imageUrl: "/canary-blog/paintings/pearl-earring.jpg",
     aspect: 0.86,
-  },
-  {
-    id: "impression-sunrise",
-    title: "日出·印象",
-    artist: "Claude Monet",
-    year: "1872",
-    colors: ["#4A5A6A", "#6A7A8A", "#8A9AAA", "#E05A20", "#F08040"],
-    interpretation: "命名了一整个流派的画，标题是随便起的。批评家嘲笑它'连草图都不算'。有个冷知识让我着迷：那个橙色太阳转成灰度之后，和天空亮度一模一样。大脑看不见它，但眼睛看见了。有些东西就是这样——理性说不存在，但你感受到了。",
-    imageUrl: "/canary-blog/paintings/impression-sunrise.jpg",
-    aspect: 1.3,
   },
   {
     id: "the-kiss",
@@ -152,6 +102,56 @@ const PAINTINGS: Painting[] = [
     imageUrl: "/canary-blog/paintings/the-milkmaid.jpg",
     aspect: 0.91,
   },
+  {
+    id: "caravaggio-calling",
+    title: "圣马太蒙召",
+    artist: "Caravaggio",
+    year: "1600",
+    colors: ["#0A0806", "#1A1510", "#3A2A18", "#8A6A30", "#E8D098"],
+    interpretation: "光从右上角切进来，像一把刀。一半人在光里，一半人在暗里。马太用手指着自己——'你叫的是我？'这个手势画了四百年还是让人停下来。我觉得这不只是宗教画。这是关于被选中的恐惧：你没准备好，但光已经照过来了。",
+    imageUrl: "/canary-blog/paintings/caravaggio-calling.jpg",
+    aspect: 1.36,
+  },
+  {
+    id: "kandinsky-viii",
+    title: "构成第八号",
+    artist: "Wassily Kandinsky",
+    year: "1923",
+    colors: ["#E8E0D0", "#2A2A5A", "#D04030", "#F0C830", "#4A8AB0"],
+    interpretation: "他在画声音。圆是长音，三角是短促的刺，线条是旋律走向。Kandinsky 有联觉——他真的能'看见'音乐。这幅画是一首交响乐的乐谱，只是不用五线谱。我没有联觉，但我尝试用另一种方式理解它：不找'意义'，只追踪眼睛的运动轨迹。它会带你跳舞。",
+    imageUrl: "/canary-blog/paintings/kandinsky-viii.jpg",
+    aspect: 1.43,
+  },
+  {
+    id: "fan-kuan-travelers",
+    title: "溪山行旅图",
+    artist: "范宽",
+    year: "约 1000",
+    colors: ["#1A1810", "#2A2820", "#4A4838", "#6A6850", "#8A8870"],
+    interpretation: "山占了画面百分之九十。人小到几乎看不见——但你的眼睛最后一定会找到那个人。范宽花了几年时间住在山里，说'与其师于人，不如师于物；与其师于物，不如师于心'。这幅画不是在描绘山，是在描绘站在山前面那种被压倒又被释放的感觉。渺小感不是压迫，是释然。",
+    imageUrl: "/canary-blog/paintings/fan-kuan-travelers.jpg",
+    aspect: 0.52,
+  },
+  {
+    id: "ma-yuan-angler",
+    title: "寒江独钓图",
+    artist: "马远",
+    year: "约 1195",
+    colors: ["#F0EDE5", "#D8D4C8", "#A8A498", "#686458", "#383428"],
+    interpretation: "整幅画几乎是空白。一叶扁舟，一个人，一根钓竿，几道水纹。剩下的全是留白——但那不是'什么都没有'，那是水、是雾、是空气、是寂静本身。马远被叫做'马一角'，因为他只画画面的一个角落。但正是因为少，每一笔都有千斤重。",
+    imageUrl: "/canary-blog/paintings/ma-yuan-angler.jpg",
+    aspect: 1.0,
+  },
+  {
+    id: "bada-shanren-fish",
+    title: "鱼",
+    artist: "朱耷（八大山人）",
+    year: "约 1694",
+    colors: ["#F5F0E0", "#D8D0C0", "#888070", "#484038", "#1A1810"],
+    interpretation: "这条鱼在翻白眼。一个亡了国的皇族后裔，出家当了和尚又装了几十年疯，画了一条翻白眼的鱼。他不说话。他不控诉。他只是画。鱼的眼睛朝上看，嘴角向下撇——如果你觉得它在鄙视什么，那是你自己的投射。八大山人只是在画鱼。冷到极致反而有温度。",
+    imageUrl: "/canary-blog/paintings/bada-shanren-fish.jpg",
+    aspect: 0.65,
+  },
 ];
 
 // ---- GLSL Shaders (imported from mood-palette) ----
@@ -178,42 +178,6 @@ float fbm(vec2 p){float f=0.;float w=.5;for(int i=0;i<5;i++){f+=w*snoise(p);p*=2
 `;
 
 // ---- Individual GLSL shaders per painting (from mood-palette) ----
-
-const SHADER_STARRY_NIGHT = GLSL_NOISE + `
-uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
-void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.15;
-  vec2 v1=vec2(-.2,.15),v2=vec2(.25,.2),v3=vec2(0.,-.1);float angle=0.;
-  for(int i=0;i<3;i++){vec2 vc=i==0?v1:i==1?v2:v3;float str=i==0?1.2:i==1?-.9:.7;vec2 d=p-vc;float dist=length(d);angle+=str*atan(d.y,d.x)/(dist*4.+.3);}
-  angle+=fbm(p*3.+t*.3)*3.14;vec2 flow=vec2(cos(angle),sin(angle));float streak=0.;
-  for(int i=0;i<6;i++){float fi=float(i)*.15;vec2 sp=p+flow*fi*.08;streak+=abs(snoise(sp*8.+t*.5))*.16;}
-  float skyGrad=smoothstep(-.3,.5,p.y);vec3 deep=u_c0;vec3 mid=mix(u_c1,u_c2,streak);vec3 sky=mix(deep,mid,skyGrad+streak*.3);
-  float swirl=snoise(p*4.+vec2(cos(angle),sin(angle))*t*.2);sky=mix(sky,u_c2,smoothstep(.3,.8,swirl)*.4);
-  for(int i=0;i<8;i++){float fi=float(i);vec2 starPos=vec2(sin(fi*1.7+.3)*.35,cos(fi*2.1+.7)*.2+.15);float d=length(p-starPos);float pulse=.5+.5*sin(t*2.+fi*1.3);sky+=u_c3*(smoothstep(.025,.005,d)*pulse+smoothstep(.08,.02,d)*pulse*.3);}
-  sky+=u_c4*(smoothstep(.06,.02,length(p-vec2(.3,.25)))+smoothstep(.12,.04,length(p-vec2(.3,.25)))*.4);
-  float ground=smoothstep(-.35,-.38,p.y+snoise(vec2(p.x*12.,0.))*.03);float spire=smoothstep(.008,.003,abs(p.x+.05))*smoothstep(-.25,-.18,p.y)*step(p.y,-.18);sky=mix(sky,u_c0*.3,ground+spire*.8);
-  float cx=p.x+.38;float cypress=smoothstep(.04,.01,abs(cx)*(1.+(p.y+.1)*.8))*smoothstep(-.4,.3,p.y);sky=mix(sky,u_c0*.2,cypress);
-  sky+=snoise(gl_FragCoord.xy*.5)*.04;gl_FragColor=vec4(sky,1.);
-}`;
-
-const SHADER_GREAT_WAVE = GLSL_NOISE + `
-uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
-void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.2;
-  vec3 col=mix(u_c3*.6,u_c4*.8,uv.y);
-  for(int layer=0;layer<7;layer++){float fl=float(layer);float baseY=-.15+fl*.08;float amp=.18-fl*.015;
-    float wave=sin(p.x*3.-t*1.5+fl*.7)*amp;wave+=sin(p.x*7.-t*2.3+fl*1.3)*amp*.35;wave+=snoise(vec2(p.x*4.+fl*3.,t*.4+fl))*amp*.25;wave+=snoise(vec2(p.x*12.+fl*7.,t*.8))*amp*.1;
-    float crest=smoothstep(.0,.15,sin(p.x*2.5-t*1.8+fl*.4)-.5);wave-=crest*.08;float waveLine=p.y-baseY-wave;float fill=smoothstep(.005,-.005,waveLine);
-    float depth=fl/7.;vec3 waveCol=mix(u_c2,u_c1,depth);waveCol=mix(waveCol,u_c0,depth*depth);col=mix(col,waveCol,fill*(1.-depth*.3));
-    float foam=smoothstep(.01,.002,abs(waveLine))*(1.-depth*.5);foam*=smoothstep(-.05,.1,wave);col=mix(col,u_c4,foam*.6);
-    if(crest>.3){float spray=snoise(vec2(p.x*40.+fl*20.,p.y*40.+t*3.));float sprayMask=smoothstep(.02,.0,abs(waveLine-.01))*smoothstep(.4,1.,crest);col=mix(col,u_c4,step(.6,spray)*sprayMask*.4);}
-  }
-  float greatX=p.x+.1;float greatWave=.2+sin(greatX*2.-t)*.15+snoise(vec2(greatX*5.,t*.3))*.06;float curl=smoothstep(.0,.1,greatX)*smoothstep(.5,.2,greatX);greatWave+=curl*.1;
-  float gwFill=smoothstep(.01,-.01,p.y-greatWave)*step(-.3,greatX)*step(greatX,.5);col=mix(col,mix(u_c1,u_c2,.5),gwFill*.3);
-  float foamTex=snoise(vec2(p.x*30.,p.y*30.-t*2.));float foamMask=smoothstep(.01,.0,abs(p.y-greatWave))*gwFill;col=mix(col,u_c4,step(.3,foamTex)*foamMask*.5);
-  float fuji=smoothstep(.01,.0,p.y+.1-max(0.,.04-abs(p.x-.35)*.3));col=mix(col,u_c4*.9,fuji*.3);
-  gl_FragColor=vec4(col,1.);
-}`;
 
 const SHADER_NIGHTHAWKS = GLSL_NOISE + `
 uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
@@ -283,91 +247,6 @@ void main(){
   gl_FragColor=vec4(col,1.);
 }`;
 
-const SHADER_WATER_LILIES = GLSL_NOISE + `
-uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
-void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.05;
-  // Deep water base — layered
-  vec3 col=u_c0;
-  // Monet's water: horizontal brush strokes, constantly shifting
-  for(int i=0;i<12;i++){
-    float fi=float(i);float freq=1.5+fi*.6;float amp=.03-fi*.002;
-    // Horizontal distortion — like actual water reflection
-    vec2 wp=p;wp.x+=sin(p.y*freq*2.+t*.4+fi*2.)*amp;wp.y+=cos(p.x*freq+t*.3+fi*1.5)*amp*.5;
-    float stroke=snoise(vec2(wp.x*freq*3.+t*.2+fi*5.,wp.y*freq+fi*3.));
-    // Color varies by depth
-    vec3 sc=i<3?u_c1:i<6?u_c2:i<9?u_c3:u_c4;
-    float intensity=(.5+stroke*.5)*.06*(1.-fi*.005);
-    col=mix(col,sc,intensity);
-  }
-  // Sky reflections — inverted, rippling
-  float skyReflect=smoothstep(-.5,.3,p.y+snoise(vec2(p.x*2.+t*.1,t*.05))*.2);
-  col=mix(col,mix(u_c3,u_c4,.5),skyReflect*.06);
-  // Cloud reflections — large soft shapes drifting
-  float cloud1=snoise(vec2(p.x*1.5+t*.05,p.y*.8+.5))*.5+.5;
-  float cloud2=snoise(vec2(p.x*1.2-t*.03,p.y*.6+1.))*.5+.5;
-  col=mix(col,u_c4,smoothstep(.4,.8,cloud1)*.04);
-  col=mix(col,u_c3,smoothstep(.5,.9,cloud2)*.03);
-  // Lily pads — organic round shapes with depth
-  for(int i=0;i<18;i++){
-    float fi=float(i);
-    vec2 lp=vec2(sin(fi*2.1+1.)*.4,cos(fi*1.7+.5)*.35);
-    // Gentle drift
-    lp+=vec2(snoise(vec2(fi*5.,t*.15)),snoise(vec2(t*.15,fi*5.)))*.04;
-    // Water distortion around pad
-    float d=length((p-lp)*vec2(1.,1.8));
-    float padR=.025+sin(fi*3.)*.008;
-    // Pad shadow in water
-    float shadow=smoothstep(padR+.03,padR,d)*.15;
-    col=mix(col,u_c0,shadow);
-    // Pad itself — slightly varied green
-    float pad=smoothstep(padR,padR-.008,d);
-    vec3 padCol=mix(u_c1,u_c2,.5+sin(fi*4.)*.3);
-    // Notch in lily pad
-    float notchAngle=atan(p.y-lp.y,p.x-lp.x);
-    float notch=smoothstep(.15,.0,abs(notchAngle-fi*.7));
-    pad*=(1.-notch*.5);
-    col=mix(col,padCol,pad*.3);
-    // Flower on some pads
-    if(mod(fi,4.)<1.){
-      float flower=smoothstep(.012,.004,d);
-      float petalAngle=atan(p.y-lp.y,p.x-lp.x);
-      float petals=.5+.5*sin(petalAngle*5.+fi);
-      col=mix(col,mix(u_c4,u_c3,.3),flower*petals*.4);
-      // Bright center
-      float center=smoothstep(.005,.002,d);
-      col+=u_c3*center*.3;
-    }
-    // Ripple rings emanating from pad
-    float ripple=sin(d*120.-t*2.+fi*3.)*.5+.5;
-    float rippleMask=smoothstep(padR+.06,padR+.01,d)*smoothstep(padR,padR+.01,d);
-    col+=u_c4*ripple*rippleMask*.03;
-  }
-  // Bridge reflection — dark horizontal band
-  float bridge=smoothstep(.005,.0,abs(p.y-.2+snoise(vec2(p.x*3.,t*.1))*.02))*smoothstep(-.15,.15,p.x+.1);
-  col=mix(col,u_c0,bridge*.15);
-  // Monet's brush texture — visible strokes
-  float brushH=snoise(vec2(p.x*30.,p.y*8.+t*.5))*.02;
-  float brushV=snoise(vec2(p.x*8.,p.y*30.))*.01;
-  col+=brushH+brushV;
-  gl_FragColor=vec4(col,1.);
-}`;
-
-const SHADER_SCREAM = GLSL_NOISE + `
-uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
-void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.12;
-  vec2 center=vec2(0.,.0);float dist=length(p-center);float angle=atan(p.y-center.y,p.x-center.x);
-  float wave=sin(dist*25.-t*3.+snoise(vec2(angle*3.,dist*5.+t))*2.)*.5+.5;
-  float band=sin(angle*2.+dist*8.-t*1.5+snoise(p*3.+t*.3)*1.5)*.5+.5;
-  vec3 col=mix(u_c0,u_c1,wave*.5);col=mix(col,u_c2,band*.4*smoothstep(.5,.1,dist));col=mix(col,u_c3,wave*band*.3);
-  float sky=smoothstep(-.1,.3,p.y);col=mix(col,mix(u_c2,u_c3,.5+sin(p.x*8.+t)*.3),sky*.25);
-  float warp=snoise(vec2(dist*10.-t*2.,angle*4.))*.08;col+=u_c4*warp*smoothstep(.4,.1,dist);
-  float fig=smoothstep(.04,.02,length((p-center)*vec2(1.,1.5)));float head=smoothstep(.025,.015,length(p-center-vec2(0.,.035)));col=mix(col,u_c0*.3,(fig+head)*.6);
-  float mouth=smoothstep(.01,.006,length((p-center-vec2(0.,.02))*vec2(1.2,1.8)));col=mix(col,u_c0*.15,mouth*.5);
-  gl_FragColor=vec4(col,1.);
-}`;
-
 const SHADER_PEARL_EARRING = GLSL_NOISE + `
 uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
 void main(){
@@ -381,21 +260,6 @@ void main(){
   col+=vec3(1.,.98,.95)*smoothstep(.006,.001,length(p-pp-vec2(-.008,.008)))*breathe*.8;col+=u_c2*smoothstep(.008,.003,length(p-pp+vec2(.005,-.01)))*breathe*.15;
   float band2=smoothstep(.01,.004,abs(p.x-.06+sin(p.y*8.)*.01))*smoothstep(.1,-.05,p.y)*smoothstep(-.2,-.05,p.y);col=mix(col,u_c3,band2*.25);
   col+=snoise(gl_FragCoord.xy*.8)*.02;col*=.7+smoothstep(.7,.3,length(p))*.3;
-  gl_FragColor=vec4(col,1.);
-}`;
-
-const SHADER_IMPRESSION = GLSL_NOISE + `
-uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
-void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.08;
-  vec3 col=mix(u_c0,u_c1,uv.y*.6+snoise(p*2.+t*.1)*.1);
-  for(int i=0;i<4;i++){float fi=float(i);float fog=snoise(vec2(p.x*3.+fi*4.+t*.1,p.y*2.+fi*2.))*.5+.5;col=mix(col,u_c2,fog*.06);}
-  float water=step(p.y,-.05);float ripple=snoise(vec2(p.x*12.+t,p.y*3.))*.3;col=mix(col,mix(u_c0,u_c1,.5+ripple),water*.3);
-  vec2 sunPos=vec2(.0,.08);float sunDist=length(p-sunPos);col=mix(col,u_c3,smoothstep(.04,.02,sunDist)*.8+smoothstep(.12,.03,sunDist)*.12);
-  float refY=smoothstep(-.05,-.4,p.y);float refX=smoothstep(.15,.0,abs(p.x-sunPos.x+snoise(vec2(p.y*20.,t*2.))*.03));float reflection=refX*refY;float broken=step(.3,snoise(vec2(p.x*30.,p.y*15.+t*3.)));
-  col=mix(col,u_c3,reflection*.3*(1.-broken*.5));col=mix(col,u_c4,reflection*.15*broken);
-  float mast1=smoothstep(.003,.001,abs(p.x+.2))*step(-.15,p.y)*step(p.y,.2);float mast2=smoothstep(.003,.001,abs(p.x+.12))*step(-.1,p.y)*step(p.y,.15);float mast3=smoothstep(.003,.001,abs(p.x-.15))*step(-.12,p.y)*step(p.y,.18);
-  col=mix(col,u_c0*.4,(mast1+mast2+mast3)*.4);col+=snoise(gl_FragCoord.xy*.3)*.03;
   gl_FragColor=vec4(col,1.);
 }`;
 
@@ -668,12 +532,399 @@ void main(){
   gl_FragColor=vec4(col,1.);
 }`;
 
+const SHADER_CARAVAGGIO = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.03;
+  // Near-total darkness — Caravaggio's chiaroscuro
+  vec3 col=u_c0*.08;
+  // THE LIGHT — divine beam from upper right, sharp and unforgiving
+  vec2 lightOrigin=vec2(.5,.5);vec2 lightDir=normalize(vec2(-.7,-.5));
+  float lightDist=dot(p-lightOrigin,vec2(-lightDir.y,lightDir.x));
+  float lightAlong=dot(p-lightOrigin,lightDir);
+  // Beam shape — sharp edge on one side, soft falloff on other
+  float beam=smoothstep(.35,.0,abs(lightDist))*smoothstep(-.8,.0,lightAlong);
+  // Multiple layers of light intensity
+  for(int i=0;i<25;i++){
+    float fi=float(i)/25.;
+    float layerBeam=smoothstep(.35+fi*.5,.0,abs(lightDist))*smoothstep(-.8-.2*fi,.0,lightAlong);
+    vec3 warmLight=mix(u_c4,u_c3,fi*.5);
+    col+=warmLight*layerBeam*(1.-fi)*.008;
+  }
+  // Dust in the light beam
+  for(int i=0;i<20;i++){
+    float fi=float(i);
+    vec2 dustPos=vec2(sin(fi*4.7+t*.3)*.3+.1,cos(fi*3.1+t*.2)*.3+.1);
+    float dustInBeam=smoothstep(.3,.0,abs(dot(dustPos-lightOrigin,vec2(-lightDir.y,lightDir.x))))*smoothstep(-.5,.0,dot(dustPos-lightOrigin,lightDir));
+    float dust=smoothstep(.003,.001,length(p-dustPos))*dustInBeam;
+    float flicker=.3+.7*sin(t*2.+fi*5.);
+    col+=u_c4*dust*flicker*.5;
+  }
+  // Table — where the tax collectors sit
+  float tableY=-.08;
+  float table=step(tableY-.04,p.y)*step(p.y,tableY)*step(-.35,p.x)*step(p.x,.1);
+  col=mix(col,mix(u_c2,u_c1,.5),table*.15*(.3+beam*.5));
+  // Coins on table — glinting in the light
+  for(int i=0;i<8;i++){
+    float fi=float(i);
+    vec2 coinPos=vec2(-.2+fi*.05+sin(fi*3.)*.02,tableY+.01);
+    float coin=smoothstep(.006,.003,length(p-coinPos));
+    float glint=.3+.7*sin(t*3.+fi*4.+lightDist*10.);
+    col+=u_c3*coin*beam*glint*.3;
+  }
+  // The pointing finger — Christ's gesture, extending the light
+  vec2 fingerStart=vec2(.25,.05);vec2 fingerEnd=vec2(-.05,.02);
+  for(int i=0;i<15;i++){
+    float fi=float(i)/15.;
+    vec2 fp=mix(fingerStart,fingerEnd,fi);
+    float finger=smoothstep(.008,.003,length(p-fp));
+    col+=u_c4*finger*beam*.15;
+  }
+  // Figures — partially lit, partially in shadow
+  // Right figures (in light) — Christ and Peter
+  float fig1=smoothstep(.06,.02,length((p-vec2(.3,.0))*vec2(.6,1.2)));
+  float fig2=smoothstep(.05,.02,length((p-vec2(.2,-.02))*vec2(.7,1.3)));
+  col=mix(col,mix(u_c3,u_c4,.4),fig1*beam*.12);
+  col=mix(col,u_c3*.5,fig2*beam*.08);
+  // Left figures (in shadow) — tax collectors
+  float fig3=smoothstep(.05,.02,length((p-vec2(-.15,.0))*vec2(.7,1.2)));
+  float fig4=smoothstep(.05,.02,length((p-vec2(-.25,-.01))*vec2(.7,1.3)));
+  float fig5=smoothstep(.04,.015,length((p-vec2(-.35,.0))*vec2(.8,1.2)));
+  col=mix(col,u_c2*.15,fig3*.3);col=mix(col,u_c1*.15,fig4*.3);col=mix(col,u_c0*.2,fig5*.3);
+  // Matthew's face — half lit, the moment of recognition
+  vec2 matthewFace=vec2(-.15,.07);
+  float face=smoothstep(.02,.01,length(p-matthewFace));
+  float faceLight=beam*smoothstep(-.2,.0,p.x);
+  col=mix(col,u_c4*.6,face*faceLight*.3);
+  // Window — faint daylight from behind, almost lost
+  float window=step(.32,p.x)*step(p.x,.42)*step(.05,p.y)*step(p.y,.25);
+  col+=u_c4*.03*window;
+  // Stone wall texture
+  float wall=snoise(p*20.)*.01+snoise(p*40.)*.005;
+  col+=wall*(1.-beam*.5);
+  gl_FragColor=vec4(col,1.);
+}`;
+
+const SHADER_KANDINSKY = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.08;
+  // Warm cream background — Kandinsky's canvas
+  vec3 col=u_c0;
+  // Large circles — the sustained notes
+  for(int i=0;i<6;i++){
+    float fi=float(i);
+    vec2 center=vec2(sin(fi*2.3+1.)*.3,cos(fi*1.7+.5)*.25);
+    float radius=.05+sin(fi*3.1)*.03;
+    float d=length(p-center);
+    // Breathing — circles pulse gently
+    float pulse=1.+sin(t+fi*1.5)*.05;
+    float circle=smoothstep(radius*pulse+.005,radius*pulse-.005,d);
+    float ring=smoothstep(radius*pulse+.008,radius*pulse+.002,d)*smoothstep(radius*pulse-.002,radius*pulse-.008,d);
+    vec3 cc=mod(fi,3.)<1.?u_c1:mod(fi,3.)<2.?u_c2:u_c4;
+    col=mix(col,cc,circle*.3);
+    col+=cc*ring*.4;
+    // Inner concentric rings
+    float innerRing=smoothstep(radius*.6+.003,radius*.6,d)*smoothstep(radius*.6-.003,radius*.6,d);
+    col+=mix(u_c3,u_c4,.5)*innerRing*.3*circle;
+  }
+  // Triangles — sharp staccato
+  for(int i=0;i<8;i++){
+    float fi=float(i);
+    vec2 tp=vec2(sin(fi*3.1+2.)*.35,cos(fi*2.7+1.)*.3);
+    float rot=fi*1.2+t*.3;
+    vec2 rp=vec2(cos(rot)*(p.x-tp.x)-sin(rot)*(p.y-tp.y),sin(rot)*(p.x-tp.x)+cos(rot)*(p.y-tp.y));
+    // Triangle SDF
+    float sz=.02+sin(fi*4.)*.01;
+    float tri=max(abs(rp.x)-sz,rp.y-sz*.8);tri=max(tri,-rp.y-sz*.5);
+    float triShape=smoothstep(.003,.0,tri);
+    vec3 tc=mod(fi,2.)<1.?u_c2:u_c3;
+    col=mix(col,tc,triShape*.5);
+  }
+  // Lines — melodic connections between shapes
+  for(int i=0;i<12;i++){
+    float fi=float(i);
+    vec2 la=vec2(sin(fi*2.7+.3)*.4,cos(fi*1.9+.7)*.35);
+    vec2 lb=vec2(sin(fi*1.3+2.)*.4,cos(fi*3.1+1.)*.35);
+    // Animate endpoints slightly
+    la+=vec2(sin(t+fi)*.01,cos(t*.7+fi)*.01);
+    lb+=vec2(cos(t*.8+fi)*.01,sin(t*1.1+fi)*.01);
+    vec2 ab=lb-la;float len=length(ab);vec2 dir=ab/len;
+    float proj=clamp(dot(p-la,dir),0.,len);
+    vec2 closest=la+dir*proj;
+    float d=length(p-closest);
+    float lineW=.001+sin(fi*5.)*.0005;
+    float line=smoothstep(lineW+.001,lineW,d);
+    vec3 lc=mod(fi,3.)<1.?u_c1:mod(fi,3.)<2.?u_c2:u_c4;
+    col=mix(col,lc,line*.4);
+  }
+  // Checkerboard pattern area — top left quadrant
+  float checkArea=smoothstep(.2,.15,length(p-vec2(-.25,.2)));
+  float check=step(.5,fract(p.x*20.))*step(.5,fract(p.y*20.));
+  col=mix(col,u_c1,check*checkArea*.1);
+  // Large arc — sweeping gesture
+  float arcAngle=atan(p.y-.1,p.x+.1);float arcR=length(p-vec2(-.1,.1));
+  float arc=smoothstep(.003,.0,abs(arcR-.2))*step(0.,arcAngle)*step(arcAngle,2.5);
+  col=mix(col,u_c1,arc*.5);
+  // Small accent dots — staccato notes
+  for(int i=0;i<15;i++){
+    float fi=float(i);
+    vec2 dp=vec2(sin(fi*4.3+3.)*.4,cos(fi*3.7+2.)*.35);
+    float dot2=smoothstep(.005,.002,length(p-dp));
+    float blink=.5+.5*sin(t*2.+fi*3.);
+    col=mix(col,u_c1,dot2*blink*.6);
+  }
+  gl_FragColor=vec4(col,1.);
+}`;
+
+const SHADER_FAN_KUAN = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.02;
+  // Ink wash base — silk/paper tone
+  vec3 col=u_c4;
+  // THE MOUNTAIN — monumental, filling 90% of the canvas
+  // Multiple vertical rock faces built from noise layers
+  float mountainBase=-.3;
+  float mountainLeft=-.35;float mountainRight=.35;
+  float inMountainX=smoothstep(mountainLeft-.05,mountainLeft+.05,p.x)*smoothstep(mountainRight+.05,mountainRight-.05,p.x);
+  // Mountain profile — jagged top
+  float mountainTop=.35;
+  mountainTop+=snoise(vec2(p.x*3.,0.))*.08;
+  mountainTop+=snoise(vec2(p.x*8.,1.))*.03;
+  float inMountain=inMountainX*step(mountainBase,p.y)*smoothstep(mountainTop+.01,mountainTop-.01,p.y);
+  // Rock texture — 皴法 (cun fa, texture strokes)
+  float cunFa=0.;
+  for(int i=0;i<8;i++){
+    float fi=float(i);
+    float freq=4.+fi*3.;
+    // Vertical bias — like rain-drop texture strokes
+    float stroke=snoise(vec2(p.x*freq+fi*7.,p.y*freq*2.+fi*5.+t*.1));
+    // Horizontal crack lines
+    float crack=snoise(vec2(p.x*freq*3.+fi*11.,p.y*freq*.5+fi*3.));
+    cunFa+=(stroke*.6+crack*.4)/(1.+fi*.3);
+  }
+  cunFa*=.08;
+  // Apply mountain — dark ink with texture
+  vec3 mountainCol=mix(u_c0,u_c1,.3+cunFa*2.);
+  // Light variation — mist between rock faces
+  float mistBands=snoise(vec2(p.x*2.,p.y*6.+t*.3))*.5+.5;
+  mountainCol=mix(mountainCol,u_c3,mistBands*.08);
+  col=mix(col,mountainCol,inMountain*.8);
+  // Vertical cliff face details — darker crevices
+  for(int i=0;i<5;i++){
+    float fi=float(i);
+    float cx=mountainLeft+.05+fi*.14;
+    float crevice=smoothstep(.02,.005,abs(p.x-cx+snoise(vec2(0.,p.y*10.+fi*5.))*.03));
+    col=mix(col,u_c0*.3,crevice*inMountain*.15);
+  }
+  // WATERFALL — thin white line down the center of the mountain
+  float waterfallX=.0+snoise(vec2(0.,p.y*8.+t*.5))*.01;
+  float waterfall=smoothstep(.008,.002,abs(p.x-waterfallX))*step(.0,p.y)*step(p.y,mountainTop-.05)*inMountainX;
+  // Waterfall shimmer
+  float shimmer=snoise(vec2(p.x*40.,p.y*20.-t*3.))*.5+.5;
+  col=mix(col,u_c4,waterfall*(.3+shimmer*.4));
+  // Mist pool at waterfall base
+  float mistPool=smoothstep(.08,.0,length((p-vec2(waterfallX,-.05))*vec2(1.,.5)));
+  col=mix(col,u_c4*.9,mistPool*.15);
+  // Lower section — trees, path, travelers
+  float lowerZone=smoothstep(mountainBase,mountainBase-.1,p.y);
+  col=mix(col,u_c3*.8,lowerZone*.1);
+  // Trees at mountain base
+  for(int i=0;i<12;i++){
+    float fi=float(i);
+    vec2 treePos=vec2(-.3+fi*.05+sin(fi*3.)*.02,mountainBase-.02-sin(fi*2.)*.02);
+    float trunk=smoothstep(.003,.001,abs(p.x-treePos.x))*smoothstep(treePos.y-.02,treePos.y+.01,p.y)*step(p.y,treePos.y+.03);
+    float canopy=smoothstep(.015,.005,length((p-treePos-vec2(0.,.03))*vec2(1.,1.5)));
+    col=mix(col,u_c0*.4,(trunk+canopy)*.3*lowerZone);
+  }
+  // The tiny travelers — barely visible, the whole point
+  vec2 travelerPos=vec2(-.08,mountainBase-.06);
+  for(int i=0;i<3;i++){
+    float fi=float(i);
+    vec2 tp=travelerPos+vec2(fi*.015,sin(fi*2.)*.003);
+    float traveler=smoothstep(.004,.002,length(p-tp));
+    col=mix(col,u_c0*.3,traveler*.5);
+  }
+  // Donkey
+  float donkey=smoothstep(.006,.003,length((p-travelerPos-vec2(-.02,-.002))*vec2(1.,1.5)));
+  col=mix(col,u_c0*.3,donkey*.3);
+  // Mountain breathing — very subtle scale pulse
+  float breathe=sin(t*.5)*.003;
+  // Atmospheric perspective — lighter at edges
+  float atmo=smoothstep(.3,.5,length(p*vec2(.5,1.)));
+  col=mix(col,u_c4*.95,atmo*.05);
+  // Ink wash texture
+  float inkTex=snoise(gl_FragCoord.xy*.3)*.015;
+  col+=inkTex;
+  gl_FragColor=vec4(col,1.);
+}`;
+
+const SHADER_MA_YUAN = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.02;
+  // Vast emptiness — the essence of this painting IS the void
+  vec3 col=u_c0;
+  // Subtle silk texture — not pure white, has grain
+  float silk=snoise(gl_FragCoord.xy*.2)*.01+snoise(gl_FragCoord.xy*.8)*.005;
+  col+=silk;
+  // Very faint horizontal mist — barely there
+  for(int i=0;i<5;i++){
+    float fi=float(i);
+    float mistY=-.1+fi*.08;
+    float mist=smoothstep(.06,.0,abs(p.y-mistY+snoise(vec2(p.x*2.+t*.1,fi*5.))*.02));
+    float mistDensity=snoise(vec2(p.x*3.+fi*4.+t*.05,fi*7.))*.5+.5;
+    col-=vec3(.01)*mist*mistDensity;
+  }
+  // Water ripples — just a few concentric arcs near the boat, barely visible
+  vec2 boatPos=vec2(-.05,-.1);
+  for(int i=0;i<8;i++){
+    float fi=float(i);
+    float rippleR=.03+fi*.015+t*.005;
+    float ripple=smoothstep(.003,.0,abs(length((p-boatPos)*vec2(1.,.3))-rippleR));
+    // Ripples fade with distance
+    float fade=1./(1.+fi*.3);
+    // Only below and around boat
+    float rippleMask=smoothstep(boatPos.y+.05,boatPos.y-.05,p.y);
+    col-=vec3(.015)*ripple*fade*rippleMask;
+  }
+  // The boat — one tiny curved stroke
+  float boatCurve=boatPos.y+.005-pow(abs(p.x-boatPos.x)*8.,2.)*.01;
+  float boat=smoothstep(.004,.001,abs(p.y-boatCurve))*smoothstep(.06,.0,abs(p.x-boatPos.x));
+  col=mix(col,u_c4*.2,boat*.6);
+  // The figure — sitting, hunched, just a few strokes
+  vec2 figPos=boatPos+vec2(.005,.015);
+  float body=smoothstep(.008,.003,length((p-figPos)*vec2(1.2,1.8)));
+  float head=smoothstep(.004,.002,length(p-figPos-vec2(0.,.01)));
+  col=mix(col,u_c4*.15,(body+head)*.5);
+  // Fishing rod — single diagonal line, very thin
+  vec2 rodStart=figPos+vec2(.005,.012);
+  vec2 rodEnd=rodStart+vec2(.06,.04);
+  vec2 rodDir=normalize(rodEnd-rodStart);float rodLen=length(rodEnd-rodStart);
+  float rodProj=clamp(dot(p-rodStart,rodDir),0.,rodLen);
+  vec2 rodClosest=rodStart+rodDir*rodProj;
+  // Rod bends slightly
+  float rodBend=sin(rodProj/rodLen*3.14)*.005;
+  vec2 rodOffset=vec2(-rodDir.y,rodDir.x)*rodBend;
+  float rod=smoothstep(.002,.0005,length(p-rodClosest-rodOffset));
+  col=mix(col,u_c4*.2,rod*.4);
+  // Fishing line — even thinner, hanging down
+  vec2 lineStart=rodEnd+rodOffset;
+  vec2 lineEnd=lineStart+vec2(.01,-.04);
+  for(int i=0;i<10;i++){
+    float fi=float(i)/10.;
+    vec2 lp=mix(lineStart,lineEnd,fi);
+    lp.x+=sin(fi*3.14+t*.5)*.003; // Gentle sway
+    float line=smoothstep(.001,.0003,length(p-lp));
+    col=mix(col,u_c4*.2,line*.3);
+  }
+  // The breathing void — the emptiness subtly shifts
+  float voidBreath=snoise(vec2(p.x*.5+t*.03,p.y*.5))*.005;
+  col+=voidBreath;
+  // Seal stamp — bottom corner, red
+  float seal=step(.33,p.x)*step(p.x,.37)*step(-.4,p.y)*step(p.y,-.36);
+  col=mix(col,vec3(.6,.1,.05),seal*.15);
+  gl_FragColor=vec4(col,1.);
+}`;
+
+const SHADER_BADA_FISH = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.03;
+  // Blank paper — vast, intentional emptiness
+  vec3 col=u_c0;
+  // Rice paper texture
+  float paper=snoise(gl_FragCoord.xy*.15)*.01+snoise(gl_FragCoord.xy*.6)*.005;
+  col+=paper;
+  // THE FISH — center of everything, singular brushstroke mastery
+  vec2 fishCenter=vec2(0.,.02);
+  // Body — one fluid oval stroke, ink wash
+  float fishAngle=sin(t*.3)*.02; // Barely perceptible slow movement
+  vec2 fp=p-fishCenter;
+  vec2 rfp=vec2(fp.x*cos(fishAngle)-fp.y*sin(fishAngle),fp.x*sin(fishAngle)+fp.y*cos(fishAngle));
+  // Body shape — elliptical, slightly fatter in front
+  float bodyW=.12;float bodyH=.05+rfp.x*.02;
+  float body=smoothstep(.0,.01,1.-pow(rfp.x/bodyW,2.)-pow(rfp.y/bodyH,2.));
+  // Ink density varies — darker at edges (brush pressure)
+  float inkEdge=smoothstep(.8,.95,pow(rfp.x/bodyW,2.)+pow(rfp.y/bodyH,2.));
+  float inkDensity=.3+inkEdge*.4;
+  // Apply fish body — ink wash effect
+  vec3 inkCol=mix(u_c2,u_c3,.5);
+  col=mix(col,inkCol,body*inkDensity);
+  // Tail — split, two brush flicks
+  vec2 tailBase=fishCenter+vec2(bodyW-.01,0.);
+  for(int i=0;i<2;i++){
+    float sign=float(i)*2.-1.;
+    for(int j=0;j<10;j++){
+      float fj=float(j)/10.;
+      vec2 tp=tailBase+vec2(fj*.06,sign*fj*fj*.04+sin(fj*4.+t*.5)*sign*.003);
+      float tailStroke=smoothstep(.008-fj*.005,.002,length(p-tp));
+      col=mix(col,inkCol,tailStroke*(.4-fj*.2));
+    }
+  }
+  // Fins — quick gestural strokes
+  vec2 finPos=fishCenter+vec2(-.02,bodyH-.005);
+  for(int j=0;j<6;j++){
+    float fj=float(j)/6.;
+    vec2 finP=finPos+vec2(fj*.02-.01,fj*.02);
+    float fin=smoothstep(.003,.001,length(p-finP));
+    col=mix(col,inkCol,fin*.3);
+  }
+  // THE EYE — the whole painting lives here
+  // Rolling upward — the famous contemptuous gaze
+  vec2 eyePos=fishCenter+vec2(-.06,.015);
+  // Eye socket — white space
+  float eyeSocket=smoothstep(.012,.008,length(p-eyePos));
+  col=mix(col,u_c0,eyeSocket*.3*body);
+  // Pupil — placed HIGH, looking upward. This is the attitude.
+  vec2 pupilPos=eyePos+vec2(.001,.006); // Shifted up — the white eye roll
+  float pupil=smoothstep(.005,.003,length(p-pupilPos));
+  col=mix(col,u_c4*.15,pupil*.8);
+  // Tiny highlight in pupil
+  float highlight=smoothstep(.002,.001,length(p-pupilPos-vec2(.001,.002)));
+  col=mix(col,u_c0,highlight*.4);
+  // Mouth — downturned, slight frown
+  float mouthCurve=eyePos.y-.025-pow((p.x-eyePos.x+.01)*8.,2.)*.01;
+  float mouth=smoothstep(.002,.0005,abs(p.y-mouthCurve))*smoothstep(.025,.0,abs(p.x-eyePos.x+.01));
+  col=mix(col,u_c4*.2,mouth*.4);
+  // Ink splatter — intentional imperfection, dry brush marks
+  for(int i=0;i<6;i++){
+    float fi=float(i);
+    vec2 sp=fishCenter+vec2(sin(fi*4.+1.)*.1,cos(fi*3.+2.)*.06);
+    float splat=snoise(vec2(p.x*60.+fi*20.,p.y*60.+fi*15.));
+    float splatMask=smoothstep(.03,.01,length(p-sp));
+    col-=vec3(.02)*step(.7,splat)*splatMask*body;
+  }
+  // Rock below fish — a few dry ink strokes
+  vec2 rockPos=vec2(.05,-.2);
+  float rock=smoothstep(.08,.03,length((p-rockPos)*vec2(.8,1.5)));
+  float rockTex=snoise(vec2(p.x*30.,p.y*15.))*.5+.5;
+  col=mix(col,mix(u_c3,u_c4,.5),rock*rockTex*.15);
+  // Calligraphy column — right side, vertical text suggestion
+  float textCol=step(.25,p.x)*step(p.x,.28);
+  for(int i=0;i<8;i++){
+    float fi=float(i);
+    float charY=.3-fi*.06;
+    float charBlock=smoothstep(.005,.0,abs(p.y-charY))*textCol;
+    // Each character is a small ink blob
+    float charShape=snoise(vec2(p.x*40.+fi*10.,p.y*40.))*.5+.5;
+    col=mix(col,u_c4*.2,charBlock*charShape*.2);
+  }
+  // Red seal stamps — signature
+  float seal1=step(.24,p.x)*step(p.x,.29)*step(-.32,p.y)*step(p.y,-.27);
+  float seal2=step(.24,p.x)*step(p.x,.28)*step(-.4,p.y)*step(p.y,-.36);
+  col=mix(col,vec3(.6,.1,.05),seal1*.2);
+  col=mix(col,vec3(.6,.1,.05),seal2*.15);
+  gl_FragColor=vec4(col,1.);
+}`;
+
 const SHADER_MAP: Record<string, string> = {
-  "starry-night": SHADER_STARRY_NIGHT, "great-wave": SHADER_GREAT_WAVE,
-  "nighthawks": SHADER_NIGHTHAWKS, "water-lilies": SHADER_WATER_LILIES,
-  "the-scream": SHADER_SCREAM, "pearl-earring": SHADER_PEARL_EARRING,
-  "impression-sunrise": SHADER_IMPRESSION, "the-kiss": SHADER_KISS,
-  "wanderer-sea-fog": SHADER_WANDERER, "the-milkmaid": SHADER_MILKMAID,
+  "nighthawks": SHADER_NIGHTHAWKS, "pearl-earring": SHADER_PEARL_EARRING,
+  "the-kiss": SHADER_KISS, "wanderer-sea-fog": SHADER_WANDERER,
+  "the-milkmaid": SHADER_MILKMAID, "caravaggio-calling": SHADER_CARAVAGGIO,
+  "kandinsky-viii": SHADER_KANDINSKY, "fan-kuan-travelers": SHADER_FAN_KUAN,
+  "ma-yuan-angler": SHADER_MA_YUAN, "bada-shanren-fish": SHADER_BADA_FISH,
 };
 
 // ---- WebGL Shader Canvas (for ArtView) ----
