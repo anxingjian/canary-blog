@@ -445,11 +445,9 @@ function GalleryStrip({ onSelect }: { onSelect: (p: Painting) => void }) {
       {/* Scroll hint */}
       <div style={{
         position: "absolute",
-        bottom: isMobile ? "auto" : "2rem",
-        top: isMobile ? "auto" : "auto",
+        bottom: "2rem",
         left: "50%",
         transform: "translateX(-50%)",
-        bottom: "2rem",
         zIndex: 10,
         opacity: loaded ? 0.2 : 0,
         transition: "opacity 2s ease 1.5s",
