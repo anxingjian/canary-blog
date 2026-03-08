@@ -177,42 +177,166 @@ float snoise(vec2 v){
 float fbm(vec2 p){float f=0.;float w=.5;for(int i=0;i<5;i++){f+=w*snoise(p);p*=2.;w*=.5;}return f;}
 `;
 
-// All shader source code - keeping them in a separate file would be cleaner but 
-// for a single experiment page, inline is fine
-const SHADERS: Record<string, string> = {};
+// ---- Individual GLSL shaders per painting (from mood-palette) ----
 
-// I'll include a generic atmospheric shader that works for all paintings
-// Each painting gets its own color palette applied to the same base structure
-const SHADER_TEMPLATE = GLSL_NOISE + `
-uniform float u_time;
-uniform vec2 u_resolution;
-uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
-uniform float u_aspect;
+const SHADER_STARRY_NIGHT = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
 void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;
-  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
-  float t=u_time*.1;
-  vec3 col=u_c0;
-  // Layered noise atmosphere
-  for(int i=0;i<6;i++){
-    float fi=float(i);
-    float n=fbm(p*2.+fi*3.+t*.2);
-    vec3 lc=i<2?u_c1:i<4?u_c2:u_c3;
-    col=mix(col,lc,smoothstep(-.2,.6,n)*.08);
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.15;
+  vec2 v1=vec2(-.2,.15),v2=vec2(.25,.2),v3=vec2(0.,-.1);float angle=0.;
+  for(int i=0;i<3;i++){vec2 vc=i==0?v1:i==1?v2:v3;float str=i==0?1.2:i==1?-.9:.7;vec2 d=p-vc;float dist=length(d);angle+=str*atan(d.y,d.x)/(dist*4.+.3);}
+  angle+=fbm(p*3.+t*.3)*3.14;vec2 flow=vec2(cos(angle),sin(angle));float streak=0.;
+  for(int i=0;i<6;i++){float fi=float(i)*.15;vec2 sp=p+flow*fi*.08;streak+=abs(snoise(sp*8.+t*.5))*.16;}
+  float skyGrad=smoothstep(-.3,.5,p.y);vec3 deep=u_c0;vec3 mid=mix(u_c1,u_c2,streak);vec3 sky=mix(deep,mid,skyGrad+streak*.3);
+  float swirl=snoise(p*4.+vec2(cos(angle),sin(angle))*t*.2);sky=mix(sky,u_c2,smoothstep(.3,.8,swirl)*.4);
+  for(int i=0;i<8;i++){float fi=float(i);vec2 starPos=vec2(sin(fi*1.7+.3)*.35,cos(fi*2.1+.7)*.2+.15);float d=length(p-starPos);float pulse=.5+.5*sin(t*2.+fi*1.3);sky+=u_c3*(smoothstep(.025,.005,d)*pulse+smoothstep(.08,.02,d)*pulse*.3);}
+  sky+=u_c4*(smoothstep(.06,.02,length(p-vec2(.3,.25)))+smoothstep(.12,.04,length(p-vec2(.3,.25)))*.4);
+  float ground=smoothstep(-.35,-.38,p.y+snoise(vec2(p.x*12.,0.))*.03);float spire=smoothstep(.008,.003,abs(p.x+.05))*smoothstep(-.25,-.18,p.y)*step(p.y,-.18);sky=mix(sky,u_c0*.3,ground+spire*.8);
+  float cx=p.x+.38;float cypress=smoothstep(.04,.01,abs(cx)*(1.+(p.y+.1)*.8))*smoothstep(-.4,.3,p.y);sky=mix(sky,u_c0*.2,cypress);
+  sky+=snoise(gl_FragCoord.xy*.5)*.04;gl_FragColor=vec4(sky,1.);
+}`;
+
+const SHADER_GREAT_WAVE = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.2;
+  vec3 col=mix(u_c3*.6,u_c4*.8,uv.y);
+  for(int layer=0;layer<7;layer++){float fl=float(layer);float baseY=-.15+fl*.08;float amp=.18-fl*.015;
+    float wave=sin(p.x*3.-t*1.5+fl*.7)*amp;wave+=sin(p.x*7.-t*2.3+fl*1.3)*amp*.35;wave+=snoise(vec2(p.x*4.+fl*3.,t*.4+fl))*amp*.25;wave+=snoise(vec2(p.x*12.+fl*7.,t*.8))*amp*.1;
+    float crest=smoothstep(.0,.15,sin(p.x*2.5-t*1.8+fl*.4)-.5);wave-=crest*.08;float waveLine=p.y-baseY-wave;float fill=smoothstep(.005,-.005,waveLine);
+    float depth=fl/7.;vec3 waveCol=mix(u_c2,u_c1,depth);waveCol=mix(waveCol,u_c0,depth*depth);col=mix(col,waveCol,fill*(1.-depth*.3));
+    float foam=smoothstep(.01,.002,abs(waveLine))*(1.-depth*.5);foam*=smoothstep(-.05,.1,wave);col=mix(col,u_c4,foam*.6);
+    if(crest>.3){float spray=snoise(vec2(p.x*40.+fl*20.,p.y*40.+t*3.));float sprayMask=smoothstep(.02,.0,abs(waveLine-.01))*smoothstep(.4,1.,crest);col=mix(col,u_c4,step(.6,spray)*sprayMask*.4);}
   }
-  // Central glow
-  float d=length(p);
-  col+=u_c4*smoothstep(.5,.0,d)*.08;
-  col+=u_c3*smoothstep(.3,.0,d)*.05;
-  // Subtle movement
-  float wave=snoise(p*3.+t*.3)*.03;
-  col+=wave;
+  float greatX=p.x+.1;float greatWave=.2+sin(greatX*2.-t)*.15+snoise(vec2(greatX*5.,t*.3))*.06;float curl=smoothstep(.0,.1,greatX)*smoothstep(.5,.2,greatX);greatWave+=curl*.1;
+  float gwFill=smoothstep(.01,-.01,p.y-greatWave)*step(-.3,greatX)*step(greatX,.5);col=mix(col,mix(u_c1,u_c2,.5),gwFill*.3);
+  float foamTex=snoise(vec2(p.x*30.,p.y*30.-t*2.));float foamMask=smoothstep(.01,.0,abs(p.y-greatWave))*gwFill;col=mix(col,u_c4,step(.3,foamTex)*foamMask*.5);
+  float fuji=smoothstep(.01,.0,p.y+.1-max(0.,.04-abs(p.x-.35)*.3));col=mix(col,u_c4*.9,fuji*.3);
   gl_FragColor=vec4(col,1.);
-}
-`;
+}`;
+
+const SHADER_NIGHTHAWKS = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.08;vec3 col=u_c0;
+  vec2 wc=vec2(0.,-.02);float wx=smoothstep(.35,.34,abs(p.x-wc.x));float wy=smoothstep(.16,.15,abs(p.y-wc.y));float win=wx*wy;
+  for(int i=0;i<40;i++){float fi=float(i)/40.;float sp=smoothstep(.4+fi*.6,.34,abs(p.x-wc.x))*smoothstep(.2+fi*.3,.15,abs(p.y-wc.y));col+=mix(u_c3,u_c4,.3)*sp*(1.-fi)*.008;}
+  col=mix(col,u_c2*.6,win*.15);col+=u_c3*win*.12*(1.+sin(t)*.05);
+  float counter=smoothstep(.002,.0,abs(p.y-wc.y+.04))*win;col+=u_c2*counter*.3;
+  float fig1=smoothstep(.02,.01,length((p-vec2(-.12,.0))*vec2(1.,1.8)))*win;float fig2=smoothstep(.02,.01,length((p-vec2(.05,.01))*vec2(1.,1.8)))*win;float fig3=smoothstep(.02,.01,length((p-vec2(.2,-.01))*vec2(1.,1.8)))*win;
+  col=mix(col,u_c0*.5,(fig1+fig2+fig3)*.4);
+  float street=step(p.y,-wc.y-.16);for(int i=0;i<5;i++){float sy=-.2-float(i)*.04;col+=u_c1*smoothstep(.003,.0,abs(p.y-sy))*street*.05;}
+  gl_FragColor=vec4(col,1.);
+}`;
+
+const SHADER_WATER_LILIES = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.06;vec3 col=u_c0;
+  for(int i=0;i<8;i++){float fi=float(i);float freq=2.+fi*.8;float n=snoise(vec2(p.x*freq+t*.3+fi*3.,p.y*freq*.5+t*.1));float wave=sin(p.x*freq*2.+t+fi+n*.5)*.5+.5;vec3 wc=i<3?u_c1:i<5?u_c2:u_c3;col=mix(col,wc,wave*.04*(1.+n*.3));}
+  for(int i=0;i<12;i++){float fi=float(i);vec2 lp=vec2(sin(fi*2.1+1.)*.35,cos(fi*1.7+.5)*.35);lp+=vec2(snoise(vec2(fi*5.,t*.2)),snoise(vec2(t*.2,fi*5.)))*.05;float d=length((p-lp)*vec2(1.,2.));float r=.03+sin(fi)*.01;float lily=smoothstep(r,r-.01,d);float glow=smoothstep(r+.04,r-.01,d)*.3;vec3 lc=i<4?u_c2:i<8?u_c3:u_c4;col=mix(col,lc,lily*.25+glow*.08);col+=lc*smoothstep(.003,.0,abs(d-r-.01))*.1;}
+  float cloud=fbm(p*2.+vec2(t*.1,0.));col=mix(col,u_c3,smoothstep(0.,.6,cloud)*.08);
+  gl_FragColor=vec4(col,1.);
+}`;
+
+const SHADER_SCREAM = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.12;
+  vec2 center=vec2(0.,.0);float dist=length(p-center);float angle=atan(p.y-center.y,p.x-center.x);
+  float wave=sin(dist*25.-t*3.+snoise(vec2(angle*3.,dist*5.+t))*2.)*.5+.5;
+  float band=sin(angle*2.+dist*8.-t*1.5+snoise(p*3.+t*.3)*1.5)*.5+.5;
+  vec3 col=mix(u_c0,u_c1,wave*.5);col=mix(col,u_c2,band*.4*smoothstep(.5,.1,dist));col=mix(col,u_c3,wave*band*.3);
+  float sky=smoothstep(-.1,.3,p.y);col=mix(col,mix(u_c2,u_c3,.5+sin(p.x*8.+t)*.3),sky*.25);
+  float warp=snoise(vec2(dist*10.-t*2.,angle*4.))*.08;col+=u_c4*warp*smoothstep(.4,.1,dist);
+  float fig=smoothstep(.04,.02,length((p-center)*vec2(1.,1.5)));float head=smoothstep(.025,.015,length(p-center-vec2(0.,.035)));col=mix(col,u_c0*.3,(fig+head)*.6);
+  float mouth=smoothstep(.01,.006,length((p-center-vec2(0.,.02))*vec2(1.2,1.8)));col=mix(col,u_c0*.15,mouth*.5);
+  gl_FragColor=vec4(col,1.);
+}`;
+
+const SHADER_PEARL_EARRING = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.1;vec3 col=u_c0;
+  col+=u_c3*smoothstep(.8,.0,length(p-vec2(.3,-.1)))*.08;
+  vec2 tc=vec2(.02,.08);float td=length(p-tc);float turban=smoothstep(.22,.08,td);float folds=snoise(vec2(atan(p.y-tc.y,p.x-tc.x)*3.,td*8.+t*.3))*.15;col=mix(col,mix(u_c1,u_c2,.5+folds),turban*.5);
+  vec2 fc=vec2(.0,-.02);float fd=length((p-fc)*vec2(1.,1.2));col=mix(col,mix(u_c3,u_c4,.3),smoothstep(.15,.06,fd)*.35);col+=u_c4*smoothstep(.15,.04,length(p-fc-vec2(-.05,.03)))*.1;
+  col+=u_c4*smoothstep(.015,.005,length(p-vec2(-.02,.01)))*.2;
+  vec2 pp=vec2(.04,-.1);float pd=length(p-pp);float breathe=1.+sin(t*.6)*.08;
+  col+=mix(u_c4,u_c3,.3)*smoothstep(.08,.01,pd)*breathe*.3;col=mix(col,u_c4*.95,smoothstep(.025,.015,pd)*breathe*.7);
+  col+=vec3(1.,.98,.95)*smoothstep(.006,.001,length(p-pp-vec2(-.008,.008)))*breathe*.8;col+=u_c2*smoothstep(.008,.003,length(p-pp+vec2(.005,-.01)))*breathe*.15;
+  float band2=smoothstep(.01,.004,abs(p.x-.06+sin(p.y*8.)*.01))*smoothstep(.1,-.05,p.y)*smoothstep(-.2,-.05,p.y);col=mix(col,u_c3,band2*.25);
+  col+=snoise(gl_FragCoord.xy*.8)*.02;col*=.7+smoothstep(.7,.3,length(p))*.3;
+  gl_FragColor=vec4(col,1.);
+}`;
+
+const SHADER_IMPRESSION = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.08;
+  vec3 col=mix(u_c0,u_c1,uv.y*.6+snoise(p*2.+t*.1)*.1);
+  for(int i=0;i<4;i++){float fi=float(i);float fog=snoise(vec2(p.x*3.+fi*4.+t*.1,p.y*2.+fi*2.))*.5+.5;col=mix(col,u_c2,fog*.06);}
+  float water=step(p.y,-.05);float ripple=snoise(vec2(p.x*12.+t,p.y*3.))*.3;col=mix(col,mix(u_c0,u_c1,.5+ripple),water*.3);
+  vec2 sunPos=vec2(.0,.08);float sunDist=length(p-sunPos);col=mix(col,u_c3,smoothstep(.04,.02,sunDist)*.8+smoothstep(.12,.03,sunDist)*.12);
+  float refY=smoothstep(-.05,-.4,p.y);float refX=smoothstep(.15,.0,abs(p.x-sunPos.x+snoise(vec2(p.y*20.,t*2.))*.03));float reflection=refX*refY;float broken=step(.3,snoise(vec2(p.x*30.,p.y*15.+t*3.)));
+  col=mix(col,u_c3,reflection*.3*(1.-broken*.5));col=mix(col,u_c4,reflection*.15*broken);
+  float mast1=smoothstep(.003,.001,abs(p.x+.2))*step(-.15,p.y)*step(p.y,.2);float mast2=smoothstep(.003,.001,abs(p.x+.12))*step(-.1,p.y)*step(p.y,.15);float mast3=smoothstep(.003,.001,abs(p.x-.15))*step(-.12,p.y)*step(p.y,.18);
+  col=mix(col,u_c0*.4,(mast1+mast2+mast3)*.4);col+=snoise(gl_FragCoord.xy*.3)*.03;
+  gl_FragColor=vec4(col,1.);
+}`;
+
+const SHADER_KISS = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.06;vec3 col=u_c0;
+  float breathe=sin(t*.5)*.02;vec2 c1=vec2(-.03,.0),c2=vec2(.03,.0);
+  float f1=smoothstep(.18,.05,length((p-c1+breathe)*vec2(.8,1.3)));float f2=smoothstep(.18,.05,length((p-c2-breathe)*vec2(.8,1.3)));float merged=max(f1,f2);
+  float goldNoise=fbm(p*8.+t*.2);vec3 gold=mix(u_c2,u_c3,.5+goldNoise*.3);col=mix(col,gold,merged*.5);
+  float hisPattern=step(.5,snoise(vec2(floor((p.x-c1.x)*40.),floor((p.y-c1.y)*40.))));col=mix(col,mix(u_c1,u_c4,.5),f1*hisPattern*.15);
+  float herR=length(fract(p*15.+.5)-.5);col=mix(col,u_c4,f2*smoothstep(.25,.2,herR)*.12);
+  for(int i=0;i<15;i++){float fi=float(i);float fall=fract(fi*.17+t*.15);vec2 leafPos=vec2(sin(fi*3.7+t*.3)*.4,(.5-fall));col+=u_c3*smoothstep(.008,.003,length(p-leafPos))*(.5+.5*sin(t*3.+fi*2.))*.5;}
+  float cliff=smoothstep(-.25,-.3,p.y+snoise(vec2(p.x*8.,0.))*.03);float flowers=smoothstep(-.2,-.25,p.y)*snoise(p*15.+vec2(0.,t*.2));col=mix(col,u_c1*.5,cliff*.4);col+=u_c3*max(0.,flowers)*.08*(1.-cliff);
+  gl_FragColor=vec4(col,1.);
+}`;
+
+const SHADER_WANDERER = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.04;
+  vec3 col=mix(u_c0,u_c2,uv.y*.4);
+  for(int i=0;i<10;i++){float fi=float(i);float baseY=-.3+fi*.05;float ridge=baseY+snoise(vec2(p.x*2.+fi*7.,fi*3.))*.08+snoise(vec2(p.x*6.+fi*13.,fi*5.))*.03;float fill=smoothstep(.005,-.005,p.y-ridge);float depth=fi/10.;vec3 rc=mix(u_c1,u_c2,depth*.8);rc=mix(rc,u_c3,depth*.5);col=mix(col,rc,fill*(1.-depth*.3));}
+  for(int i=0;i<6;i++){float fi=float(i);float fy=-.15+fi*.06+snoise(vec2(fi*5.,t))*.02;float fogDensity=snoise(vec2(p.x*3.+t*.3+fi*4.,fi*7.))*.5+.5;float fogBand=smoothstep(.04,.0,abs(p.y-fy))*fogDensity;col=mix(col,u_c3,.3*fogBand);col=mix(col,u_c4,.1*fogBand);}
+  vec2 figPos=vec2(0.,.08);float body=smoothstep(.012,.006,abs(p.x-figPos.x))*smoothstep(figPos.y-.06,figPos.y+.05,p.y)*smoothstep(figPos.y+.05,figPos.y+.04,p.y);
+  float head=smoothstep(.012,.006,length(p-figPos-vec2(0.,.055)));float coat=smoothstep(.02,.01,abs(p.x-figPos.x+sin(p.y*30.)*.003))*smoothstep(figPos.y-.06,figPos.y,p.y);
+  col=mix(col,u_c0*.25,(body+head+coat*.3)*.7);float rock=smoothstep(.0,-.01,p.y-figPos.y+.06+abs(p.x-figPos.x)*.5);col=mix(col,u_c0*.4,rock*step(abs(p.x-figPos.x),.08));
+  gl_FragColor=vec4(col,1.);
+}`;
+
+const SHADER_MILKMAID = GLSL_NOISE + `
+uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.04;vec3 col=u_c0;col+=u_c1*uv.y*.05;
+  col+=snoise(p*20.)*.02+snoise(p*40.)*.01;
+  float lightX=p.x+.4;float lightY=p.y-.3;float beamWidth=.08+max(0.,-lightY)*.4;float beam=smoothstep(beamWidth,.0,abs(lightX-max(0.,-lightY)*.3));beam*=smoothstep(-.5,.3,p.y);beam*=smoothstep(.5,.0,lightX);
+  for(int i=0;i<20;i++){float fi=float(i)/20.;col+=u_c3*beam*(1.-fi)*.012;col+=u_c4*beam*fi*.006;}
+  for(int i=0;i<20;i++){float fi=float(i);vec2 dustPos=vec2(sin(fi*3.7+t*.5)*.15-.2,cos(fi*2.3+t*.3)*.25+snoise(vec2(fi,t*.2))*.05);float dust=smoothstep(.004,.001,length(p-dustPos))*beam;col+=u_c4*dust*(.5+.5*sin(t*2.+fi*4.))*.6;}
+  col=mix(col,u_c1*.6,smoothstep(-.12,-.14,p.y)*.2);col+=u_c3*smoothstep(.003,.0,abs(p.y+.12))*step(-.15,p.x)*step(p.x,.2)*beam*.3;
+  col=mix(col,u_c3*.7,smoothstep(.025,.015,length(p-vec2(-.05,-.16)))*.15*beam);
+  col=mix(col,u_c0*.3,step(p.x,-.35)*step(.15,p.y)*.3);col+=u_c4*step(p.x,-.37)*step(.18,p.y)*.05;
+  for(int i=0;i<3;i++){float fi=float(i);col-=vec3(.02)*smoothstep(.004,.002,length(p-vec2(-.1+fi*.15,.15-fi*.05)));}
+  gl_FragColor=vec4(col,1.);
+}`;
+
+const SHADER_MAP: Record<string, string> = {
+  "starry-night": SHADER_STARRY_NIGHT, "great-wave": SHADER_GREAT_WAVE,
+  "nighthawks": SHADER_NIGHTHAWKS, "water-lilies": SHADER_WATER_LILIES,
+  "the-scream": SHADER_SCREAM, "pearl-earring": SHADER_PEARL_EARRING,
+  "impression-sunrise": SHADER_IMPRESSION, "the-kiss": SHADER_KISS,
+  "wanderer-sea-fog": SHADER_WANDERER, "the-milkmaid": SHADER_MILKMAID,
+};
 
 // ---- WebGL Shader Canvas (for ArtView) ----
-function ShaderCanvas({ painting, shaderSrc }: { painting: Painting; shaderSrc: string }) {
+function ShaderCanvas({ painting }: { painting: Painting }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
 
@@ -236,7 +360,9 @@ function ShaderCanvas({ painting, shaderSrc }: { painting: Painting; shaderSrc: 
     }
 
     const vs = compileShader(gl, gl.VERTEX_SHADER, vertSrc);
-    const fs = compileShader(gl, gl.FRAGMENT_SHADER, shaderSrc);
+    const fragSrc = SHADER_MAP[painting.id];
+    if (!fragSrc) return;
+    const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragSrc);
     if (!vs || !fs) return;
 
     const prog = gl.createProgram()!;
@@ -270,7 +396,7 @@ function ShaderCanvas({ painting, shaderSrc }: { painting: Painting; shaderSrc: 
     render();
 
     return () => { cancelAnimationFrame(rafRef.current); };
-  }, [painting, shaderSrc]);
+  }, [painting]);
 
   return <canvas ref={canvasRef} style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 0 }} />;
 }
@@ -604,7 +730,7 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
-      <ShaderCanvas painting={painting} shaderSrc={SHADER_TEMPLATE} />
+      <ShaderCanvas painting={painting} />
 
       {/* Top — painting identity */}
       <div style={{
