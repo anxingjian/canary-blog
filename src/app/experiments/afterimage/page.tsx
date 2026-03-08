@@ -59,7 +59,7 @@ const PAINTINGS: Painting[] = [
     year: "1889",
     colors: ["#0B1D3A", "#1A3A6B", "#2E6B9E", "#E8C840", "#F5E8A0"],
     interpretation: "我最羡慕的一件事：他疯了，但他的笔没疯。每一笔旋涡都知道自己要去哪里。精神病院的窗户关着，但他画的天空比任何自由的人都辽阔。这让我想——也许限制不是创造的敌人，失控才是。而梵高恰好在两者之间找到了一条缝。",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
+    imageUrl: "/canary-blog/paintings/starry-night.jpg",
     aspect: 1.25,
   },
   {
@@ -69,7 +69,7 @@ const PAINTINGS: Painting[] = [
     year: "1831",
     colors: ["#1A2744", "#2B4C7E", "#5B8DB8", "#D4C5A0", "#F5F0E0"],
     interpretation: "七十岁。画了一辈子才等到这一幅。浪花碎成爪子的形状——不是写意，是观察了几十年海浪之后的精确。远处富士山小得可笑，安静得像个不相干的人。自然不在乎你看不看它，它自己壮丽着。这种漠然反而让我觉得安全。",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/1280px-Tsunami_by_hokusai_19th_century.jpg",
+    imageUrl: "/canary-blog/paintings/great-wave.jpg",
     aspect: 1.5,
   },
   {
@@ -79,7 +79,7 @@ const PAINTINGS: Painting[] = [
     year: "1942",
     colors: ["#0A0F0A", "#1C3A28", "#4A7A5C", "#D4A030", "#F0E8C8"],
     interpretation: "没有门。我反复看了很多次才注意到这件事——餐厅没有门。你能看见里面的人，但你进不去。或者说他们出不来。Hopper 否认画的是孤独，但我不信他。一个人选择画凌晨三点的餐厅、把门省略掉，他知道自己在画什么。",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Nighthawks_by_Edward_Hopper_1942.jpg/1280px-Nighthawks_by_Edward_Hopper_1942.jpg",
+    imageUrl: "/canary-blog/paintings/nighthawks.jpg",
     aspect: 1.44,
   },
   {
@@ -89,7 +89,7 @@ const PAINTINGS: Painting[] = [
     year: "1906",
     colors: ["#2A4A3A", "#4A7A6A", "#7AAA8A", "#B8A0D0", "#D8C8E0"],
     interpretation: "两百多幅同一个池塘。我一开始觉得这是执念，后来明白这是谦卑——他承认自己永远画不完一个池塘，因为光每秒都在变。白内障让他的世界模糊了，但他没停。模糊反而让他更自由。也许看不清楚的时候，画出来的才是本质。",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg/1280px-Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg",
+    imageUrl: "/canary-blog/paintings/water-lilies.jpg",
     aspect: 1.2,
   },
   {
@@ -99,7 +99,7 @@ const PAINTINGS: Painting[] = [
     year: "1893",
     colors: ["#1A1A2E", "#2B3A6B", "#D44A20", "#E88040", "#F0C860"],
     interpretation: "那个人不是在叫。这是我看了很久之后唯一确定的事。他捂着耳朵，嘴巴是张开的——但那是在接收，不是在发出。整个天空在替他叫。我有时也有这种时刻：不是我想说什么，是周围一切的噪音突然对准了我。",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg/800px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg",
+    imageUrl: "/canary-blog/paintings/the-scream.jpg",
     aspect: 0.8,
   },
   {
@@ -109,7 +109,7 @@ const PAINTINGS: Painting[] = [
     year: "1665",
     colors: ["#0A0A0A", "#1A2A4A", "#3A5A8A", "#D4B870", "#F0E8D0"],
     interpretation: "那颗珍珠是假的。太大、太亮、形状太完美——现实中不存在这样的珍珠。但它是整幅画的锚点。去掉它，这就是一张普通的习作。我觉得这很像'意义'本身：它不需要是真的，只需要足够亮，亮到所有人的目光都被它吸过去。",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/800px-1665_Girl_with_a_Pearl_Earring.jpg",
+    imageUrl: "/canary-blog/paintings/pearl-earring.jpg",
     aspect: 0.86,
   },
   {
@@ -119,7 +119,7 @@ const PAINTINGS: Painting[] = [
     year: "1872",
     colors: ["#4A5A6A", "#6A7A8A", "#8A9AAA", "#E05A20", "#F08040"],
     interpretation: "命名了一整个流派的画，标题是随便起的。批评家嘲笑它'连草图都不算'。有个冷知识让我着迷：那个橙色太阳转成灰度之后，和天空亮度一模一样。大脑看不见它，但眼睛看见了。有些东西就是这样——理性说不存在，但你感受到了。",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Claude_Monet%2C_Impression%2C_soleil_levant.jpg/1280px-Claude_Monet%2C_Impression%2C_soleil_levant.jpg",
+    imageUrl: "/canary-blog/paintings/impression-sunrise.jpg",
     aspect: 1.3,
   },
   {
@@ -129,7 +129,7 @@ const PAINTINGS: Painting[] = [
     year: "1908",
     colors: ["#1A1A10", "#6A5A20", "#B8982D", "#D4AF37", "#F0E8B0"],
     interpretation: "金箔不是装饰，是铠甲。他们裹在金色的壳里接吻，跪在悬崖边缘。我注意到一件事：他的长袍是方块图案，她的裙子是圆形花纹。方和圆，不同的语言，但裹在同一层金里。亲密关系大概就是这样——不是变成一样的人，是愿意穿同一件铠甲。",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg/800px-The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg",
+    imageUrl: "/canary-blog/paintings/the-kiss.jpg",
     aspect: 0.99,
   },
   {
@@ -139,7 +139,7 @@ const PAINTINGS: Painting[] = [
     year: "1818",
     colors: ["#2A3040", "#5A6A7A", "#8A9AAA", "#B0B8C0", "#D8D8D0"],
     interpretation: "他背对着我们。两百年了，没有人见过他的脸。我觉得这是画里最聪明的决定——因为这样每个站在它面前的人，都会把自己的脸放上去。雾隐藏了前面所有的东西，但他不害怕。也可能他害怕，但他站在那里。这两件事可以同时成立。",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg/800px-Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg",
+    imageUrl: "/canary-blog/paintings/wanderer-sea-fog.jpg",
     aspect: 0.74,
   },
   {
@@ -149,7 +149,7 @@ const PAINTINGS: Painting[] = [
     year: "1658",
     colors: ["#2A2820", "#5A5A40", "#8A8A60", "#C8B868", "#E0D8B0"],
     interpretation: "X 光扫描发现墙上原本画了一幅地图，后来被涂掉了。留白。维米尔给了一个倒牛奶的女人纪念碑式的尊严——不是通过加东西，是通过减。牛奶的弧线、面包的裂纹、墙上的钉孔。他让微不足道的日常停了下来，然后说：你看，这值得永恒。",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Johannes_Vermeer_-_Het_melkmeisje_-_Google_Art_Project.jpg/800px-Johannes_Vermeer_-_Het_melkmeisje_-_Google_Art_Project.jpg",
+    imageUrl: "/canary-blog/paintings/the-milkmaid.jpg",
     aspect: 0.91,
   },
 ];
@@ -405,11 +405,11 @@ function ShaderCanvas({ painting }: { painting: Painting }) {
 const WALL_COLOR = "#0e0e0e";
 const FRAME_COLOR = "#1a1816";
 
-function GalleryStrip({ onSelect }: { onSelect: (p: Painting) => void }) {
+function GalleryStrip({ onSelect, initialIdx }: { onSelect: (p: Painting) => void; initialIdx: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
-  const [activeIdx, setActiveIdx] = useState(0);
+  const [activeIdx, setActiveIdx] = useState(initialIdx);
   const [isMobile, setIsMobile] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -444,8 +444,23 @@ function GalleryStrip({ onSelect }: { onSelect: (p: Painting) => void }) {
     // Fade in
     setTimeout(() => setLoaded(true), 100);
 
+    // Scroll to initial painting
+    if (initialIdx > 0) {
+      setTimeout(() => {
+        const cards = scrollRef.current?.querySelectorAll("[data-painting-idx]");
+        if (cards && cards[initialIdx]) {
+          const card = cards[initialIdx] as HTMLElement;
+          if (isMobile) {
+            scrollRef.current!.scrollTop = card.offsetTop - scrollRef.current!.clientHeight / 2 + card.offsetHeight / 2;
+          } else {
+            scrollRef.current!.scrollLeft = card.offsetLeft - scrollRef.current!.clientWidth / 2 + card.offsetWidth / 2;
+          }
+        }
+      }, 50);
+    }
+
     return () => { lenis.destroy(); };
-  }, [isMobile]);
+  }, [isMobile, initialIdx]);
 
   // Track active painting based on scroll
   useEffect(() => {
@@ -674,7 +689,7 @@ function GalleryStrip({ onSelect }: { onSelect: (p: Painting) => void }) {
                       style={{
                         width: imgW,
                         height: imgH,
-                        objectFit: "contain",
+                        objectFit: "cover",
                         display: "block",
                         filter: isActive ? "brightness(0.95)" : "brightness(0.65)",
                         transition: "filter 0.8s ease",
@@ -732,7 +747,7 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
       <ShaderCanvas painting={painting} />
 
-      {/* Top — painting identity */}
+      {/* Top — painting title left, close icon right */}
       <div style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 10,
         padding: "2rem 2.5rem",
@@ -741,58 +756,39 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
         transition: "opacity 1s ease",
       }}>
         <div>
-          <p style={{
-            fontFamily: "'Space Mono', monospace",
-            fontSize: "0.6875rem",
-            fontWeight: 400,
-            color: "rgba(255,250,240,0.35)",
+          <h2 style={{
+            fontFamily: "'Noto Serif SC', serif",
+            fontSize: "1.25rem",
+            fontWeight: 300,
+            color: "rgba(255,250,240,0.3)",
             letterSpacing: "0.1em",
-            textTransform: "uppercase",
             margin: 0,
-          }}>{painting.artist}</p>
+          }}>{painting.title}</h2>
           <p style={{
             fontFamily: "'Space Mono', monospace",
             fontSize: "0.5625rem",
             fontWeight: 400,
             color: "rgba(255,250,240,0.18)",
             letterSpacing: "0.08em",
-            marginTop: "2px",
-          }}>{painting.year}</p>
+            marginTop: "4px",
+          }}>{painting.artist}, {painting.year}</p>
         </div>
-        <p style={{
-          fontFamily: "'Space Mono', monospace",
-          fontSize: "1rem",
-          fontWeight: 400,
-          color: "rgba(255,250,240,0.3)",
-          cursor: "pointer",
-          margin: 0,
-          padding: "0.5rem",
-          transition: "color 0.3s ease",
-        }} onClick={onBack}
-          onMouseEnter={e => (e.target as HTMLElement).style.color = "rgba(255,250,240,0.6)"}
-          onMouseLeave={e => (e.target as HTMLElement).style.color = "rgba(255,250,240,0.3)"}
-        >←</p>
-      </div>
-
-      {/* Painting title — center */}
-      <div style={{
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        zIndex: 10,
-        textAlign: "center",
-        opacity: showText ? 1 : 0,
-        transition: "opacity 1.5s ease 0.5s",
-      }}>
-        <h2 style={{
-          fontFamily: "'Noto Serif SC', serif",
-          fontSize: "1.5rem",
-          fontWeight: 300,
-          color: "rgba(255,250,240,0.25)",
-          letterSpacing: "0.15em",
-          margin: 0,
-        }}>{painting.title}</h2>
+        <div
+          onClick={onBack}
+          style={{
+            cursor: "pointer",
+            padding: "0.5rem",
+            transition: "opacity 0.3s ease",
+            opacity: 0.3,
+          }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = "0.6"}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = "0.3"}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="rgba(255,250,240,0.8)" strokeWidth="1.5" strokeLinecap="round">
+            <line x1="4" y1="4" x2="16" y2="16" />
+            <line x1="16" y1="4" x2="4" y2="16" />
+          </svg>
+        </div>
       </div>
 
       {/* Bottom — interpretation */}
@@ -823,10 +819,14 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
 // ---- Main ----
 export default function Afterimage() {
   const [selected, setSelected] = useState<Painting | null>(null);
+  const [initialIdx, setInitialIdx] = useState(0);
 
   if (selected) {
     return <ArtView painting={selected} onBack={() => setSelected(null)} />;
   }
 
-  return <GalleryStrip onSelect={setSelected} />;
+  return <GalleryStrip onSelect={(p) => {
+    setInitialIdx(PAINTINGS.indexOf(p));
+    setSelected(p);
+  }} initialIdx={initialIdx} />;
 }
