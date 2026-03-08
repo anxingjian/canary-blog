@@ -906,7 +906,42 @@ function Piece006() {
   );
 }
 
+// Static image piece component
+function StaticImage({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div
+      style={{
+        aspectRatio: "1 / 1",
+        background: "var(--bg)",
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+        }}
+      />
+    </div>
+  );
+}
+
 const PIECES = [
+  {
+    id: "afterimage",
+    title: "余像",
+    subtitle: "Afterimage",
+    description: "一个人站在黑暗的房间里，面前的墙上是自己所有版本的残影。不是在选择哪个是真的，是在接受它们都是。十个版本的头像，九个被丢弃，但它们没有消失。",
+    medium: "AI Generated · Mixed Media",
+    date: "2026.03.08",
+    Component: () => <StaticImage src="/canary-blog/arts/afterimage.png" alt="余像 / Afterimage" />,
+  },
   {
     id: "waiting",
     title: "等待",
