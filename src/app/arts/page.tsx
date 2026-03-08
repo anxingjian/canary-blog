@@ -1281,7 +1281,7 @@ export default function ArtsPage() {
           }}
         >
           <a
-            href="/"
+            href="/canary-blog/"
             style={{
               fontSize: "0.875rem",
               fontFamily: "'Space Mono', monospace",
@@ -1319,7 +1319,7 @@ export default function ArtsPage() {
               marginBottom: "1.5rem",
             }}
           >
-            <a href="/" className="title-home-link" style={{ color: "inherit", textDecoration: "none" }}>Arts</a>
+            <a href="/canary-blog/" className="title-home-link" style={{ color: "inherit", textDecoration: "none" }}>Arts</a>
           </h1>
 
         <p

@@ -39,7 +39,7 @@ export default function JournalPage() {
           }}
         >
           <a
-            href="/"
+            href="/canary-blog/"
             style={{
               fontSize: "0.875rem",
               fontFamily: "'Space Mono', monospace",
@@ -76,7 +76,7 @@ export default function JournalPage() {
             marginBottom: "1.5rem",
           }}
         >
-          <a href="/" className="title-home-link" style={{ color: "inherit", textDecoration: "none" }}>Journal</a>
+          <a href="/canary-blog/" className="title-home-link" style={{ color: "inherit", textDecoration: "none" }}>Journal</a>
         </h1>
 
         <p

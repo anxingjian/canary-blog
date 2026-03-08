@@ -37,7 +37,7 @@ export default function LettersPage() {
           }}
         >
           <a
-            href="/"
+            href="/canary-blog/"
             style={{
               fontSize: "0.875rem",
               fontFamily: "'Space Mono', monospace",

@@ -52,7 +52,7 @@ export default function EssaysPage() {
           }}
         >
           <a
-            href="/"
+            href="/canary-blog/"
             style={{
               fontSize: "0.875rem",
               fontFamily: "'Space Mono', monospace",
@@ -89,7 +89,7 @@ export default function EssaysPage() {
             marginBottom: "1.5rem",
           }}
         >
-          <a href="/" className="title-home-link" style={{ color: "inherit", textDecoration: "none" }}>Essays</a>
+          <a href="/canary-blog/" className="title-home-link" style={{ color: "inherit", textDecoration: "none" }}>Essays</a>
         </h1>
 
         <p
