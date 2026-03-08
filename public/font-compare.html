@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Font Comparison</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Sans:wght@400;500;600&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0e0e0e; color: #e0e0e0; padding: 60px 80px; }
+.header { margin-bottom: 50px; }
+.header h1 { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 400; color: #666; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 8px; }
+.header p { font-family: 'Inter', sans-serif; font-size: 11px; color: #444; }
+.row { display: grid; grid-template-columns: 180px 1fr; gap: 40px; padding: 40px 0; border-bottom: 1px solid #1a1a1a; align-items: start; }
+.label { padding-top: 4px; }
+.label .name { font-size: 13px; color: #999; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; font-family: 'Inter', sans-serif; }
+.label .meta { font-size: 10px; color: #555; font-family: 'Inter', sans-serif; line-height: 1.6; }
+.label .tag { display: inline-block; font-size: 9px; padding: 2px 8px; border-radius: 3px; margin-top: 6px; font-family: 'Inter', sans-serif; }
+.tag-paid { background: #2a1a1a; color: #cc6666; }
+.tag-free { background: #1a2a1a; color: #66cc66; }
+.tag-google { background: #1a1a2a; color: #6688cc; }
+.samples {}
+.sample-line { margin-bottom: 12px; }
+.sample-lg { font-size: 36px; color: #f0f0f0; letter-spacing: -0.02em; line-height: 1.2; }
+.sample-md { font-size: 18px; color: #ccc; line-height: 1.5; }
+.sample-sm { font-size: 13px; color: #888; line-height: 1.7; }
+.sample-mono { font-size: 11px; color: #666; letter-spacing: 0.05em; }
+.divider { border: none; border-top: 1px solid #222; margin: 10px 0; }
+.group-label { font-family: 'Inter', sans-serif; font-size: 10px; color: #c4ff00; letter-spacing: 0.2em; text-transform: uppercase; margin: 50px 0 10px; }
+</style>
+</head>
+<body>
+<div class="header">
+<h1>Font Comparison</h1>
+<p>For Canary Blog · March 2026</p>
+</div>
+
+<div class="group-label">Sans-Serif — Geometric / Neo-Grotesque</div>
+
+<div class="row">
+<div class="label">
+<div class="name">GT America</div>
+<div class="meta">Grilli Type<br>Web license ~$50–150</div>
+<div class="tag tag-paid">PAID</div>
+</div>
+<div class="samples">
+<div class="sample-line sample-lg" style="font-family: 'Inter', sans-serif; color: #555;">
+[Not loaded — paid font]
+</div>
+<div class="sample-line sample-sm" style="font-family: 'Inter', sans-serif; color: #444;">
+Preview at grfrtype.com/gt-america — geometric with humanist warmth
+</div>
+</div>
+</div>
+
+<div class="row">
+<div class="label">
+<div class="name">Switzer</div>
+<div class="meta">Fontshare (Indian Type Foundry)<br>Free for commercial use</div>
+<div class="tag tag-free">FREE</div>
+</div>
+<div class="samples">
+<div class="sample-line sample-lg" style="font-family: 'Switzer', sans-serif;">
+The quick brown fox jumps
+</div>
+<div class="sample-line sample-md" style="font-family: 'Switzer', sans-serif;">
+Design is not just what it looks like. Design is how it works.
+</div>
+<div class="sample-line sample-sm" style="font-family: 'Switzer', sans-serif;">
+ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
+</div>
+<div class="sample-line sample-sm" style="font-family: 'Switzer', sans-serif; font-weight: 600;">
+Switzer 600 · Clean, slightly rounded terminals, neutral but warm
+</div>
+</div>
+</div>
+
+<div class="group-label">Google Fonts — Alternatives</div>
+
+<div class="row">
+<div class="label">
+<div class="name">Inter</div>
+<div class="meta">Rasmus Andersson<br>Google Fonts</div>
+<div class="tag tag-google">GOOGLE</div>
+</div>
+<div class="samples">
+<div class="sample-line sample-lg" style="font-family: 'Inter', sans-serif;">
+The quick brown fox jumps
+</div>
+<div class="sample-line sample-md" style="font-family: 'Inter', sans-serif;">
+Design is not just what it looks like. Design is how it works.
+</div>
+<div class="sample-line sample-sm" style="font-family: 'Inter', sans-serif;">
+ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
+</div>
+<div class="sample-line sample-sm" style="font-family: 'Inter', sans-serif; font-weight: 600;">
+Inter 600 · Closest to GT America — tall x-height, very legible at small sizes
+</div>
+</div>
+</div>
+
+<div class="row">
+<div class="label">
+<div class="name">DM Sans</div>
+<div class="meta">Colophon Foundry × Google<br>Google Fonts</div>
+<div class="tag tag-google">GOOGLE</div>
+</div>
+<div class="samples">
+<div class="sample-line sample-lg" style="font-family: 'DM Sans', sans-serif;">
+The quick brown fox jumps
+</div>
+<div class="sample-line sample-md" style="font-family: 'DM Sans', sans-serif;">
+Design is not just what it looks like. Design is how it works.
+</div>
+<div class="sample-line sample-sm" style="font-family: 'DM Sans', sans-serif;">
+ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
+</div>
+<div class="sample-line sample-sm" style="font-family: 'DM Sans', sans-serif; font-weight: 600;">
+DM Sans 600 · Geometric, rounder, slightly more personality than Inter
+</div>
+</div>
+</div>
+
+<div class="row">
+<div class="label">
+<div class="name">Outfit</div>
+<div class="meta">Rodrigo Fuenzalida<br>Google Fonts</div>
+<div class="tag tag-google">GOOGLE</div>
+</div>
+<div class="samples">
+<div class="sample-line sample-lg" style="font-family: 'Outfit', sans-serif;">
+The quick brown fox jumps
+</div>
+<div class="sample-line sample-md" style="font-family: 'Outfit', sans-serif;">
+Design is not just what it looks like. Design is how it works.
+</div>
+<div class="sample-line sample-sm" style="font-family: 'Outfit', sans-serif;">
+ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
+</div>
+<div class="sample-line sample-sm" style="font-family: 'Outfit', sans-serif; font-weight: 600;">
+Outfit 600 · Closest to Switzer — geometric, clean, slightly softer
+</div>
+</div>
+</div>
+
+</body>
+</html>
