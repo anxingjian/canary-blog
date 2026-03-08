@@ -156,28 +156,28 @@ const PAINTINGS: Painting[] = [
 // Museum wall color — deep hunter green
 const WALL_COLOR = "#1a2820";
 
-// Tighter layout for mobile density — ~4-5 visible at once on 400px screen
-const CANVAS_W = 1100;
-const CANVAS_H = 800;
-const FRAME_SIZE = 240;
+// Dense grid — paintings shown at original aspect ratio, no cropping
+const GRID_UNIT = 35; // small unit for precise aspect matching
+const GRID_COLS = 24; // 24 units wide = 840px + gaps
+const GRID_GAP = 6;
 
-interface FramePos { x: number; y: number; w: number; rot: number; }
-
-function layoutFrames(): FramePos[] {
-  // Tight salon wall: ~40-50px gaps, paintings fill tile edge-to-edge for seamless tiling
-  return [
-    { x: 10,  y: 10,  w: FRAME_SIZE * 1.0,  rot: -0.3 },
-    { x: 290, y: 20,  w: FRAME_SIZE * 1.05, rot: 0.2 },
-    { x: 570, y: 5,   w: FRAME_SIZE * 0.95, rot: -0.2 },
-    { x: 840, y: 15,  w: FRAME_SIZE * 1.0,  rot: 0.3 },
-    { x: 30,  y: 260, w: FRAME_SIZE * 0.9,  rot: 0.2 },
-    { x: 300, y: 250, w: FRAME_SIZE * 1.0,  rot: -0.3 },
-    { x: 580, y: 260, w: FRAME_SIZE * 1.0,  rot: 0.1 },
-    { x: 850, y: 255, w: FRAME_SIZE * 0.95, rot: -0.3 },
-    { x: 120, y: 520, w: FRAME_SIZE * 1.0,  rot: 0.2 },
-    { x: 440, y: 515, w: FRAME_SIZE * 1.0,  rot: -0.2 },
-  ];
+// Calculate col/row spans from aspect ratio to preserve proportions
+// Size class: 'L'=large, 'M'=medium, 'S'=small
+function calcSpan(aspect: number, size: 'L' | 'M' | 'S'): { col: number; row: number } {
+  const baseCol = size === 'L' ? 8 : size === 'M' ? 5 : 3;
+  const col = baseCol;
+  const row = Math.max(2, Math.round(baseCol / aspect));
+  return { col, row };
 }
+
+// Painting sizes: varied for visual interest
+const PAINT_SIZES: ('L' | 'M' | 'S')[] = ['L', 'S', 'M', 'S', 'L', 'S', 'M', 'S', 'M', 'M'];
+
+const TILE_SPANS = PAINTINGS.map((p, i) => calcSpan(p.aspect, PAINT_SIZES[i]));
+
+// Fill duplicates — small versions to fill remaining space
+const FILL_ORDER = [0, 2, 4, 8, 1, 3, 5, 6, 7, 9, 0, 2, 4, 8, 1, 3, 5, 6, 7, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const FILL_SPANS = FILL_ORDER.map(idx => calcSpan(PAINTINGS[idx].aspect, 'S'));
 
 // ---- p5 Sketch Functions ----
 type SketchFn = (p: any, w: number, h: number, colors: string[], noise: SimplexNoise) => void;
@@ -1274,28 +1274,149 @@ function P5Canvas({ painting }: { painting: Painting }) {
 
 // ---- Infinite Canvas Gallery ----
 function InfiniteGallery({ onSelect }: { onSelect: (p: Painting) => void }) {
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [hovered, setHovered] = useState<string | null>(null);
-  const dragRef = useRef({ dragging: false, startX: 0, startY: 0, startOx: 0, startOy: 0, moved: false });
-  const frames = useRef(layoutFrames()).current;
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef({ dragging: false, startX: 0, startY: 0, panStartX: 0, panStartY: 0, moved: false });
+  const panRef = useRef({ x: 0, y: 0 });
+  const velRef = useRef({ x: 0, y: 0 });
+  const lastMoveRef = useRef({ x: 0, y: 0, t: 0 });
+  const rafRef = useRef<number>(0);
+  const tileSize = useRef({ w: 0, h: 0 });
+
+  const applyPan = useCallback(() => {
+    if (!canvasRef.current || !tileSize.current.w) return;
+    const tw = tileSize.current.w;
+    const th = tileSize.current.h;
+    let px = ((panRef.current.x % tw) + tw) % tw - tw;
+    let py = ((panRef.current.y % th) + th) % th - th;
+    panRef.current.x = px;
+    panRef.current.y = py;
+    canvasRef.current.style.transform = `translate3d(${px}px, ${py}px, 0)`;
+  }, []);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const firstBlock = canvasRef.current.querySelector('.tile-block') as HTMLElement;
+    if (firstBlock) {
+      requestAnimationFrame(() => {
+        tileSize.current = { w: firstBlock.offsetWidth, h: firstBlock.offsetHeight };
+        panRef.current.x = 0;
+        panRef.current.y = 0;
+        applyPan();
+      });
+    }
+  }, [applyPan]);
+
+  const animateInertia = useCallback(() => {
+    velRef.current.x *= 0.94;
+    velRef.current.y *= 0.94;
+    if (Math.abs(velRef.current.x) < 0.3 && Math.abs(velRef.current.y) < 0.3) return;
+    panRef.current.x += velRef.current.x;
+    panRef.current.y += velRef.current.y;
+    applyPan();
+    rafRef.current = requestAnimationFrame(animateInertia);
+  }, [applyPan]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    dragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, startOx: offset.x, startOy: offset.y, moved: false };
+    if ((e.target as HTMLElement).closest('button, a')) return;
+    cancelAnimationFrame(rafRef.current);
+    velRef.current = { x: 0, y: 0 };
+    dragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, panStartX: panRef.current.x, panStartY: panRef.current.y, moved: false };
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-  }, [offset]);
+  }, []);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!dragRef.current.dragging) return;
     const dx = e.clientX - dragRef.current.startX;
     const dy = e.clientY - dragRef.current.startY;
     if (Math.abs(dx) + Math.abs(dy) > 5) dragRef.current.moved = true;
-    setOffset({ x: dragRef.current.startOx + dx, y: dragRef.current.startOy + dy });
-  }, []);
+    panRef.current.x = dragRef.current.panStartX + dx;
+    panRef.current.y = dragRef.current.panStartY + dy;
+    applyPan();
+    const now = Date.now();
+    if (now - lastMoveRef.current.t > 0) {
+      velRef.current.x = (e.clientX - lastMoveRef.current.x) * 0.5;
+      velRef.current.y = (e.clientY - lastMoveRef.current.y) * 0.5;
+    }
+    lastMoveRef.current = { x: e.clientX, y: e.clientY, t: now };
+  }, [applyPan]);
 
-  const handlePointerUp = useCallback(() => { dragRef.current.dragging = false; }, []);
+  const handlePointerUp = useCallback(() => {
+    dragRef.current.dragging = false;
+    if (Math.abs(velRef.current.x) > 1 || Math.abs(velRef.current.y) > 1) {
+      rafRef.current = requestAnimationFrame(animateInertia);
+    }
+  }, [animateInertia]);
 
-  const tiles: { tx: number; ty: number }[] = [];
-  for (let tx = -1; tx <= 1; tx++) for (let ty = -1; ty <= 1; ty++) tiles.push({ tx, ty });
+  // All items: original 10 paintings + fill duplicates
+  const allItems = [
+    ...PAINTINGS.map((p, i) => ({ painting: p, span: TILE_SPANS[i] })),
+    ...FILL_ORDER.map((idx, i) => ({ painting: PAINTINGS[idx], span: FILL_SPANS[i] })),
+  ];
+
+  const renderPaintingCell = (item: { painting: Painting; span: { col: number; row: number } }, idx: number, blockKey: string) => {
+    const isHovered = hovered === `${blockKey},${idx}`;
+    return (
+      <div
+        key={idx}
+        style={{
+          gridColumn: `span ${item.span.col}`,
+          gridRow: `span ${item.span.row}`,
+          cursor: "pointer",
+          overflow: "hidden",
+        }}
+        onMouseEnter={() => setHovered(`${blockKey},${idx}`)}
+        onMouseLeave={() => setHovered(null)}
+        onClick={() => { if (!dragRef.current.moved) onSelect(item.painting); }}
+      >
+        <div style={{
+          border: `2px solid rgba(180,160,100,${isHovered ? 0.25 : 0.1})`,
+          padding: "2px",
+          background: "rgba(30,28,22,0.8)",
+          transition: "border-color 0.5s ease",
+          boxShadow: isHovered ? "0 4px 20px rgba(0,0,0,0.4)" : "0 2px 10px rgba(0,0,0,0.3)",
+          width: "100%",
+          height: "100%",
+        }}>
+          <div style={{
+            width: "100%",
+            height: "100%",
+            overflow: "hidden",
+            filter: isHovered ? "brightness(1.1)" : "brightness(0.85)",
+            transition: "filter 0.5s ease",
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={item.painting.imageUrl}
+              alt={item.painting.title}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              loading="lazy"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const buildTileBlock = (blockKey: string) => (
+    <div
+      key={blockKey}
+      className="tile-block"
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${GRID_COLS}, ${GRID_UNIT}px)`,
+        gridAutoRows: `${GRID_UNIT}px`,
+        gridAutoFlow: "dense",
+        gap: `${GRID_GAP}px`,
+        flexShrink: 0,
+      }}
+    >
+      {allItems.map((item, idx) => renderPaintingCell(item, idx, blockKey))}
+    </div>
+  );
+
+  const blocks: string[] = [];
+  for (let ty = 0; ty < 3; ty++) for (let tx = 0; tx < 3; tx++) blocks.push(`${tx},${ty}`);
 
   return (
     <div
@@ -1311,62 +1432,17 @@ function InfiniteGallery({ onSelect }: { onSelect: (p: Painting) => void }) {
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
     >
-      {tiles.map(({ tx, ty }) => (
-        <div key={`${tx},${ty}`} style={{
-          position: "absolute",
-          left: offset.x + tx * CANVAS_W,
-          top: offset.y + ty * CANVAS_H,
-          width: CANVAS_W,
-          height: CANVAS_H,
-        }}>
-          {PAINTINGS.map((painting, i) => {
-            const frame = frames[i];
-            const isHovered = hovered === `${tx},${ty},${painting.id}`;
-            return (
-              <div
-                key={painting.id}
-                style={{
-                  position: "absolute",
-                  left: frame.x,
-                  top: frame.y,
-                  width: frame.w,
-                  transform: `rotate(${frame.rot}deg)`,
-                  cursor: "pointer",
-                  transition: "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
-                }}
-                onMouseEnter={() => setHovered(`${tx},${ty},${painting.id}`)}
-                onMouseLeave={() => setHovered(null)}
-                onClick={() => { if (!dragRef.current.moved) onSelect(painting); }}
-              >
-                {/* Minimal gilt frame — thin gold edge */}
-                <div style={{
-                  border: `2px solid rgba(180,160,100,${isHovered ? 0.25 : 0.1})`,
-                  padding: "2px",
-                  background: "rgba(30,28,22,0.8)",
-                  transition: "border-color 0.5s ease",
-                  boxShadow: isHovered ? "0 4px 20px rgba(0,0,0,0.4)" : "0 2px 10px rgba(0,0,0,0.3)",
-                }}>
-                  <div style={{
-                    width: "100%",
-                    aspectRatio: `${painting.aspect}`,
-                    overflow: "hidden",
-                    filter: isHovered ? "brightness(1.1)" : "brightness(0.85)",
-                    transition: "filter 0.5s ease",
-                  }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={painting.imageUrl}
-                      alt={painting.title}
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                      loading="lazy"
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ))}
+      <div
+        ref={canvasRef}
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          width: `${(GRID_UNIT * GRID_COLS + GRID_GAP * (GRID_COLS - 1)) * 3 + GRID_GAP * 2}px`,
+          willChange: "transform",
+        }}
+      >
+        {blocks.map(key => buildTileBlock(key))}
+      </div>
     </div>
   );
 }
