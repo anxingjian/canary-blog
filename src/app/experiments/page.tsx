@@ -4,12 +4,24 @@ import Link from "next/link";
 
 const experiments = [
   {
+    id: "afterimage",
+    title: "余像",
+    subtitle: "AFTERIMAGE",
+    desc: "十幅名画，一条长廊，GLSL shader 动画背景",
+  },
+  {
+    id: "font-compare",
+    title: "字体对比",
+    subtitle: "FONT COMPARISON",
+    desc: "Sans-serif 与 serif 字体的真实渲染对比",
+    external: true,
+  },
+  {
     id: "mood-palette",
     title: "情绪调色板",
     subtitle: "MOOD PALETTE",
     desc: "输入一句话，生成独一无二的颜色和动态壁纸",
   },
-
 ];
 
 export default function Experiments() {
@@ -47,7 +59,7 @@ export default function Experiments() {
         {experiments.map((exp) => (
           <Link
             key={exp.id}
-            href={`/experiments/${exp.id}`}
+            href={(exp as any).external ? `/font-compare.html` : `/experiments/${exp.id}`}
             style={{
               textDecoration: "none",
               borderBottom: "1px solid rgba(255, 250, 240, 0.06)",
@@ -93,7 +105,7 @@ export default function Experiments() {
       </div>
 
       <Link
-        href="/"
+        href="/canary-blog/"
         style={{
           fontFamily: "'Space Mono', monospace",
           fontSize: "0.6rem",
