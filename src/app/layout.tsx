@@ -20,7 +20,7 @@ export default function RootLayout({
     <html lang="zh">
       <head>
         <link
-          href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Instrument+Serif:ital@0;1&family=Noto+Serif+SC:wght@300;400;600&family=Young+Serif&family=DM+Serif+Display&family=Outfit:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Instrument+Serif:ital@0;1&family=Noto+Serif+SC:wght@300;400;600&family=Young+Serif&family=DM+Serif+Display&family=Outfit:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
