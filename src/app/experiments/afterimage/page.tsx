@@ -218,24 +218,138 @@ void main(){
 const SHADER_NIGHTHAWKS = GLSL_NOISE + `
 uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
 void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.08;vec3 col=u_c0;
-  vec2 wc=vec2(0.,-.02);float wx=smoothstep(.35,.34,abs(p.x-wc.x));float wy=smoothstep(.16,.15,abs(p.y-wc.y));float win=wx*wy;
-  for(int i=0;i<40;i++){float fi=float(i)/40.;float sp=smoothstep(.4+fi*.6,.34,abs(p.x-wc.x))*smoothstep(.2+fi*.3,.15,abs(p.y-wc.y));col+=mix(u_c3,u_c4,.3)*sp*(1.-fi)*.008;}
-  col=mix(col,u_c2*.6,win*.15);col+=u_c3*win*.12*(1.+sin(t)*.05);
-  float counter=smoothstep(.002,.0,abs(p.y-wc.y+.04))*win;col+=u_c2*counter*.3;
-  float fig1=smoothstep(.02,.01,length((p-vec2(-.12,.0))*vec2(1.,1.8)))*win;float fig2=smoothstep(.02,.01,length((p-vec2(.05,.01))*vec2(1.,1.8)))*win;float fig3=smoothstep(.02,.01,length((p-vec2(.2,-.01))*vec2(1.,1.8)))*win;
-  col=mix(col,u_c0*.5,(fig1+fig2+fig3)*.4);
-  float street=step(p.y,-wc.y-.16);for(int i=0;i<5;i++){float sy=-.2-float(i)*.04;col+=u_c1*smoothstep(.003,.0,abs(p.y-sy))*street*.05;}
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.08;
+  // Total darkness outside
+  vec3 col=u_c0*.15;
+  // Distant building silhouettes — dark rectangles
+  for(int i=0;i<8;i++){
+    float fi=float(i);
+    float bx=-.5+fi*.14;float bw=.03+sin(fi*3.7)*.02;
+    float bh=.05+sin(fi*2.3)*.04;
+    float building=step(abs(p.x-bx),bw)*step(p.y,bh)*step(-.25,p.y);
+    col=mix(col,u_c0*.08,building);
+    // Random window lights
+    float winX=fract((p.x-bx)*80.);float winY=fract(p.y*40.);
+    float winGrid=step(.3,winX)*step(winX,.7)*step(.2,winY)*step(winY,.8);
+    float lit=step(.7,snoise(vec2(floor((p.x-bx)*80.)*fi,floor(p.y*40.))));
+    col+=u_c3*winGrid*lit*building*.04;
+  }
+  // The diner — a luminous glass trapezoid
+  vec2 wc=vec2(.05,-.04);float wLeft=-.32;float wRight=.35;
+  float wTop=.1;float wBot=-.12;
+  float inDiner=step(wLeft,p.x-wc.x)*step(p.x-wc.x,wRight)*step(wBot,p.y-wc.y)*step(p.y-wc.y,wTop);
+  // Glass panels — vertical dividers
+  float glass=inDiner;
+  for(int i=0;i<3;i++){float gx=wLeft+float(i+1)*(wRight-wLeft)/4.;glass*=smoothstep(.001,.003,abs(p.x-wc.x-gx));}
+  // Warm interior light — multiple layers for depth
+  float lightIntensity=glass;
+  for(int i=0;i<30;i++){
+    float fi=float(i)/30.;float spread=fi*.5;
+    float spill=smoothstep(wLeft-spread,wLeft,p.x-wc.x)*smoothstep(wRight+spread,wRight,p.x-wc.x)*smoothstep(wBot-spread,wBot,p.y-wc.y)*smoothstep(wTop+spread*.3,wTop,p.y-wc.y);
+    col+=mix(u_c3,u_c4,.3)*spill*(1.-fi)*.006;
+  }
+  // Fluorescent green ceiling tint
+  col+=u_c2*.4*lightIntensity*.15;
+  // Counter — long curved bar
+  float counter=smoothstep(.004,.0,abs(p.y-wc.y+.02-sin((p.x-wc.x)*2.)*.015))*inDiner;
+  col+=mix(u_c2,u_c3,.5)*counter*.2;
+  // Counter surface — warm wood reflection
+  float belowCounter=step(p.y-wc.y,-.02)*inDiner;
+  col+=u_c3*belowCounter*.03;
+  // Coffee urns — cylindrical highlights behind counter
+  for(int i=0;i<2;i++){float cx=-.1+float(i)*.15;float urn=smoothstep(.02,.01,length((p-wc-vec2(cx,.04))*vec2(1.,2.)));col+=u_c4*urn*.1*lightIntensity;}
+  // Four figures — geometric silhouettes with subtle detail
+  // Couple on the right
+  float m1=smoothstep(.015,.005,length((p-wc-vec2(.12,.0))*vec2(1.,1.6)));
+  float m2=smoothstep(.015,.005,length((p-wc-vec2(.18,-.01))*vec2(1.,1.6)));
+  // Lone figure left
+  float m3=smoothstep(.015,.005,length((p-wc-vec2(-.15,.0))*vec2(1.,1.6)));
+  // Bartender — facing camera, slightly different shape
+  float m4=smoothstep(.018,.006,length((p-wc-vec2(.0,.02))*vec2(1.2,1.4)));
+  col=mix(col,u_c0*.2,(m1+m2+m3)*.5);
+  col=mix(col,u_c4*.3,m4*.15*lightIntensity);
+  // Red dress on the woman — Hopper's color accent
+  float dress=smoothstep(.01,.004,length((p-wc-vec2(.12,-.03))*vec2(1.5,2.)));
+  col+=vec3(.4,.05,.02)*dress*lightIntensity*.3;
+  // Light on sidewalk — wet reflection
+  float sidewalk=step(p.y-wc.y,wBot);
+  float wetReflect=smoothstep(.0,.1,snoise(vec2(p.x*20.,p.y*3.+t*.5)))*.15;
+  float lightOnGround=smoothstep(wLeft-.3,wLeft,p.x-wc.x)*smoothstep(wRight+.3,wRight,p.x-wc.x)*sidewalk;
+  col+=mix(u_c3,u_c2,.5)*lightOnGround*wetReflect;
+  // Street lamp — single distant warm point
+  vec2 lampPos=vec2(-.4,.15);float lamp=smoothstep(.04,.01,length(p-lampPos));col+=u_c3*lamp*.08;
+  // Film grain
+  col+=snoise(gl_FragCoord.xy*.5+t*100.)*.015;
   gl_FragColor=vec4(col,1.);
 }`;
 
 const SHADER_WATER_LILIES = GLSL_NOISE + `
 uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
 void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.06;vec3 col=u_c0;
-  for(int i=0;i<8;i++){float fi=float(i);float freq=2.+fi*.8;float n=snoise(vec2(p.x*freq+t*.3+fi*3.,p.y*freq*.5+t*.1));float wave=sin(p.x*freq*2.+t+fi+n*.5)*.5+.5;vec3 wc=i<3?u_c1:i<5?u_c2:u_c3;col=mix(col,wc,wave*.04*(1.+n*.3));}
-  for(int i=0;i<12;i++){float fi=float(i);vec2 lp=vec2(sin(fi*2.1+1.)*.35,cos(fi*1.7+.5)*.35);lp+=vec2(snoise(vec2(fi*5.,t*.2)),snoise(vec2(t*.2,fi*5.)))*.05;float d=length((p-lp)*vec2(1.,2.));float r=.03+sin(fi)*.01;float lily=smoothstep(r,r-.01,d);float glow=smoothstep(r+.04,r-.01,d)*.3;vec3 lc=i<4?u_c2:i<8?u_c3:u_c4;col=mix(col,lc,lily*.25+glow*.08);col+=lc*smoothstep(.003,.0,abs(d-r-.01))*.1;}
-  float cloud=fbm(p*2.+vec2(t*.1,0.));col=mix(col,u_c3,smoothstep(0.,.6,cloud)*.08);
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.05;
+  // Deep water base — layered
+  vec3 col=u_c0;
+  // Monet's water: horizontal brush strokes, constantly shifting
+  for(int i=0;i<12;i++){
+    float fi=float(i);float freq=1.5+fi*.6;float amp=.03-fi*.002;
+    // Horizontal distortion — like actual water reflection
+    vec2 wp=p;wp.x+=sin(p.y*freq*2.+t*.4+fi*2.)*amp;wp.y+=cos(p.x*freq+t*.3+fi*1.5)*amp*.5;
+    float stroke=snoise(vec2(wp.x*freq*3.+t*.2+fi*5.,wp.y*freq+fi*3.));
+    // Color varies by depth
+    vec3 sc=i<3?u_c1:i<6?u_c2:i<9?u_c3:u_c4;
+    float intensity=(.5+stroke*.5)*.06*(1.-fi*.005);
+    col=mix(col,sc,intensity);
+  }
+  // Sky reflections — inverted, rippling
+  float skyReflect=smoothstep(-.5,.3,p.y+snoise(vec2(p.x*2.+t*.1,t*.05))*.2);
+  col=mix(col,mix(u_c3,u_c4,.5),skyReflect*.06);
+  // Cloud reflections — large soft shapes drifting
+  float cloud1=snoise(vec2(p.x*1.5+t*.05,p.y*.8+.5))*.5+.5;
+  float cloud2=snoise(vec2(p.x*1.2-t*.03,p.y*.6+1.))*.5+.5;
+  col=mix(col,u_c4,smoothstep(.4,.8,cloud1)*.04);
+  col=mix(col,u_c3,smoothstep(.5,.9,cloud2)*.03);
+  // Lily pads — organic round shapes with depth
+  for(int i=0;i<18;i++){
+    float fi=float(i);
+    vec2 lp=vec2(sin(fi*2.1+1.)*.4,cos(fi*1.7+.5)*.35);
+    // Gentle drift
+    lp+=vec2(snoise(vec2(fi*5.,t*.15)),snoise(vec2(t*.15,fi*5.)))*.04;
+    // Water distortion around pad
+    float d=length((p-lp)*vec2(1.,1.8));
+    float padR=.025+sin(fi*3.)*.008;
+    // Pad shadow in water
+    float shadow=smoothstep(padR+.03,padR,d)*.15;
+    col=mix(col,u_c0,shadow);
+    // Pad itself — slightly varied green
+    float pad=smoothstep(padR,padR-.008,d);
+    vec3 padCol=mix(u_c1,u_c2,.5+sin(fi*4.)*.3);
+    // Notch in lily pad
+    float notchAngle=atan(p.y-lp.y,p.x-lp.x);
+    float notch=smoothstep(.15,.0,abs(notchAngle-fi*.7));
+    pad*=(1.-notch*.5);
+    col=mix(col,padCol,pad*.3);
+    // Flower on some pads
+    if(mod(fi,4.)<1.){
+      float flower=smoothstep(.012,.004,d);
+      float petalAngle=atan(p.y-lp.y,p.x-lp.x);
+      float petals=.5+.5*sin(petalAngle*5.+fi);
+      col=mix(col,mix(u_c4,u_c3,.3),flower*petals*.4);
+      // Bright center
+      float center=smoothstep(.005,.002,d);
+      col+=u_c3*center*.3;
+    }
+    // Ripple rings emanating from pad
+    float ripple=sin(d*120.-t*2.+fi*3.)*.5+.5;
+    float rippleMask=smoothstep(padR+.06,padR+.01,d)*smoothstep(padR,padR+.01,d);
+    col+=u_c4*ripple*rippleMask*.03;
+  }
+  // Bridge reflection — dark horizontal band
+  float bridge=smoothstep(.005,.0,abs(p.y-.2+snoise(vec2(p.x*3.,t*.1))*.02))*smoothstep(-.15,.15,p.x+.1);
+  col=mix(col,u_c0,bridge*.15);
+  // Monet's brush texture — visible strokes
+  float brushH=snoise(vec2(p.x*30.,p.y*8.+t*.5))*.02;
+  float brushV=snoise(vec2(p.x*8.,p.y*30.))*.01;
+  col+=brushH+brushV;
   gl_FragColor=vec4(col,1.);
 }`;
 
@@ -288,42 +402,269 @@ void main(){
 const SHADER_KISS = GLSL_NOISE + `
 uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
 void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.06;vec3 col=u_c0;
-  float breathe=sin(t*.5)*.02;vec2 c1=vec2(-.03,.0),c2=vec2(.03,.0);
-  float f1=smoothstep(.18,.05,length((p-c1+breathe)*vec2(.8,1.3)));float f2=smoothstep(.18,.05,length((p-c2-breathe)*vec2(.8,1.3)));float merged=max(f1,f2);
-  float goldNoise=fbm(p*8.+t*.2);vec3 gold=mix(u_c2,u_c3,.5+goldNoise*.3);col=mix(col,gold,merged*.5);
-  float hisPattern=step(.5,snoise(vec2(floor((p.x-c1.x)*40.),floor((p.y-c1.y)*40.))));col=mix(col,mix(u_c1,u_c4,.5),f1*hisPattern*.15);
-  float herR=length(fract(p*15.+.5)-.5);col=mix(col,u_c4,f2*smoothstep(.25,.2,herR)*.12);
-  for(int i=0;i<15;i++){float fi=float(i);float fall=fract(fi*.17+t*.15);vec2 leafPos=vec2(sin(fi*3.7+t*.3)*.4,(.5-fall));col+=u_c3*smoothstep(.008,.003,length(p-leafPos))*(.5+.5*sin(t*3.+fi*2.))*.5;}
-  float cliff=smoothstep(-.25,-.3,p.y+snoise(vec2(p.x*8.,0.))*.03);float flowers=smoothstep(-.2,-.25,p.y)*snoise(p*15.+vec2(0.,t*.2));col=mix(col,u_c1*.5,cliff*.4);col+=u_c3*max(0.,flowers)*.08*(1.-cliff);
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.05;vec3 col=u_c0;
+  // Klimt's gold field — tessellated mosaic patterns
+  // Byzantine mosaic base — small tiles covering everything
+  float tileSize=40.;
+  vec2 tileUV=floor(p*tileSize)/tileSize;
+  float tileNoise=snoise(tileUV*10.+vec2(t*.1,0.));
+  vec3 tileCol=mix(u_c2,u_c3,.5+tileNoise*.4);
+  // Shimmer — gold catching light at different angles
+  float shimmer=sin(tileUV.x*100.+tileUV.y*80.+t*2.)*.5+.5;
+  tileCol=mix(tileCol,u_c4,shimmer*.15);
+  // Two merged figures — organic forms
+  float breathe=sin(t*.4)*.015;
+  vec2 c1=vec2(-.04,.02+breathe);vec2 c2=vec2(.04,-.02-breathe);
+  // His form — angular, rectangular patterns
+  float body1=smoothstep(.22,.06,length((p-c1)*vec2(.7,1.2)));
+  // Her form — curved, flowing
+  float body2=smoothstep(.22,.06,length((p-c2)*vec2(.8,1.1)));
+  float merged=max(body1,body2);
+  float overlap=body1*body2;
+  // Fill merged form with gold mosaic
+  col=mix(col,tileCol,merged*.6);
+  // His pattern — black and white rectangles (Wiener Werkstätte)
+  float hisX=fract(p.x*25.);float hisY=fract(p.y*25.);
+  float rect=step(.3,hisX)*step(hisX,.7)*step(.3,hisY)*step(hisY,.7);
+  float checker=step(.5,fract(floor(p.x*25.)/2.))*step(.5,fract(floor(p.y*25.)/2.));
+  col=mix(col,mix(u_c0,u_c4,.3),body1*(1.-body2)*rect*.2);
+  col=mix(col,u_c0*.3,body1*(1.-body2)*checker*.08);
+  // Her pattern — circles and spirals (organic, Art Nouveau)
+  vec2 circGrid=fract(p*20.+.5)-.5;
+  float circles=smoothstep(.2,.15,length(circGrid));
+  float spiral=sin(atan(circGrid.y,circGrid.x)*3.+length(circGrid)*20.+t)*.5+.5;
+  col=mix(col,mix(u_c3,u_c4,.5),body2*(1.-body1)*circles*spiral*.15);
+  // Where they merge — pure gold, no pattern, just union
+  col=mix(col,u_c3,overlap*.3);
+  // Heads — his covering hers, the tilt
+  vec2 headHis=c1+vec2(.02,.12);vec2 headHer=c2+vec2(-.01,.1);
+  float head1=smoothstep(.04,.02,length(p-headHis));
+  float head2=smoothstep(.035,.018,length((p-headHer)*vec2(1.,1.1)));
+  col=mix(col,mix(u_c3,u_c4,.6),head1*.4);
+  col=mix(col,mix(u_c4,u_c3,.3),head2*.4);
+  // Her face — turned, luminous skin
+  col+=u_c4*smoothstep(.025,.01,length(p-headHer-vec2(.01,-.01)))*.1;
+  // Falling gold leaf particles — drifting down like snow
+  for(int i=0;i<25;i++){
+    float fi=float(i);
+    float fall=fract(fi*.13+t*.08);
+    float sway=sin(fall*6.28+fi*2.)*.12;
+    vec2 leafPos=vec2(sin(fi*3.7)*.45+sway,.55-fall*1.1);
+    // Leaf rotation
+    float rot=t+fi*5.;float sz=.003+sin(fi*7.)*.002;
+    vec2 d=p-leafPos;
+    vec2 rd=vec2(d.x*cos(rot)-d.y*sin(rot),d.x*sin(rot)+d.y*cos(rot));
+    float leaf=smoothstep(sz,.0,abs(rd.x))*smoothstep(sz*2.,.0,abs(rd.y));
+    float glint=.4+.6*sin(t*4.+fi*3.);
+    col+=u_c3*leaf*glint*.6;
+  }
+  // Cliff edge — flower meadow at bottom
+  float cliffY=-.28+snoise(vec2(p.x*6.,0.))*.03;
+  float onCliff=smoothstep(cliffY+.03,cliffY,p.y);
+  // Wildflowers
+  for(int i=0;i<20;i++){
+    float fi=float(i);
+    vec2 fp=vec2(sin(fi*4.3)*.4,cliffY-.01-fract(fi*.37)*.08);
+    float flower=smoothstep(.008,.003,length(p-fp));
+    vec3 fc=mod(fi,3.)<1.?u_c3:mod(fi,3.)<2.?u_c4:u_c2;
+    col+=fc*flower*onCliff*.3;
+  }
+  col=mix(col,u_c0*.2,onCliff*.3);
+  // Gold leaf texture overlay
+  float goldTex=snoise(gl_FragCoord.xy*.3)*.02+snoise(gl_FragCoord.xy*1.5)*.01;
+  col+=goldTex*merged;
   gl_FragColor=vec4(col,1.);
 }`;
 
 const SHADER_WANDERER = GLSL_NOISE + `
 uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
 void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.04;
-  vec3 col=mix(u_c0,u_c2,uv.y*.4);
-  for(int i=0;i<10;i++){float fi=float(i);float baseY=-.3+fi*.05;float ridge=baseY+snoise(vec2(p.x*2.+fi*7.,fi*3.))*.08+snoise(vec2(p.x*6.+fi*13.,fi*5.))*.03;float fill=smoothstep(.005,-.005,p.y-ridge);float depth=fi/10.;vec3 rc=mix(u_c1,u_c2,depth*.8);rc=mix(rc,u_c3,depth*.5);col=mix(col,rc,fill*(1.-depth*.3));}
-  for(int i=0;i<6;i++){float fi=float(i);float fy=-.15+fi*.06+snoise(vec2(fi*5.,t))*.02;float fogDensity=snoise(vec2(p.x*3.+t*.3+fi*4.,fi*7.))*.5+.5;float fogBand=smoothstep(.04,.0,abs(p.y-fy))*fogDensity;col=mix(col,u_c3,.3*fogBand);col=mix(col,u_c4,.1*fogBand);}
-  vec2 figPos=vec2(0.,.08);float body=smoothstep(.012,.006,abs(p.x-figPos.x))*smoothstep(figPos.y-.06,figPos.y+.05,p.y)*smoothstep(figPos.y+.05,figPos.y+.04,p.y);
-  float head=smoothstep(.012,.006,length(p-figPos-vec2(0.,.055)));float coat=smoothstep(.02,.01,abs(p.x-figPos.x+sin(p.y*30.)*.003))*smoothstep(figPos.y-.06,figPos.y,p.y);
-  col=mix(col,u_c0*.25,(body+head+coat*.3)*.7);float rock=smoothstep(.0,-.01,p.y-figPos.y+.06+abs(p.x-figPos.x)*.5);col=mix(col,u_c0*.4,rock*step(abs(p.x-figPos.x),.08));
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.03;
+  // Vast romantic sky — dramatic, luminous, the sublime
+  vec3 col=mix(u_c0,u_c2,pow(uv.y,.6)*.5);
+  // Volumetric clouds — layered, turbulent, backlit
+  for(int i=0;i<8;i++){
+    float fi=float(i);float h=.1+fi*.04;
+    float cloudDensity=fbm(vec2(p.x*2.+fi*3.+t*.08,h*10.+fi*5.));
+    float cloudShape=smoothstep(.0,.5,cloudDensity)*smoothstep(.15,.05,abs(p.y-h));
+    // Backlit edges — light bleeding through
+    float backlit=smoothstep(.3,.6,cloudDensity)*smoothstep(.05,.02,abs(p.y-h));
+    vec3 cc=mix(u_c2,u_c3,.3+fi*.08);
+    col=mix(col,cc,cloudShape*.08);
+    col+=u_c4*backlit*.03;
+  }
+  // Sun glow behind clouds — diffuse, no sharp disc
+  float sunGlow=smoothstep(.4,.0,length(p-vec2(.15,.25)));
+  col+=mix(u_c4,u_c3,.5)*sunGlow*.08;
+  // Mountain ridges — overlapping, each partially fog-obscured
+  for(int i=0;i<12;i++){
+    float fi=float(i);float depth=fi/12.;
+    float baseY=-.35+fi*.04;
+    // Complex ridge shape
+    float ridge=baseY;
+    ridge+=snoise(vec2(p.x*1.5+fi*7.,fi*3.))*.1;
+    ridge+=snoise(vec2(p.x*4.+fi*11.,fi*7.))*.04;
+    ridge+=snoise(vec2(p.x*8.+fi*17.,fi*11.))*.02;
+    float fill=smoothstep(.008,-.008,p.y-ridge);
+    // Color: distant = light/foggy, close = dark/detailed
+    vec3 rc=mix(u_c1,u_c3,depth*.8);
+    rc=mix(rc,u_c4,depth*.3);
+    // Fog between layers
+    float fogBetween=depth*.4;
+    rc=mix(rc,mix(u_c3,u_c4,.5),fogBetween);
+    col=mix(col,rc,fill*(1.-depth*.2));
+    // Ridge highlight — sunlit edges
+    float ridgeEdge=smoothstep(.015,.003,abs(p.y-ridge))*(1.-depth);
+    col+=u_c4*ridgeEdge*.03;
+  }
+  // Fog sea — dense, flowing, filling valleys
+  for(int i=0;i<8;i++){
+    float fi=float(i);
+    float fogY=-.1+fi*.03;
+    float fogFlow=snoise(vec2(p.x*2.+t*.2+fi*4.,fi*7.))*.5+.5;
+    float fogVertical=snoise(vec2(p.x*4.+fi*3.,p.y*2.+t*.1))*.5+.5;
+    float fogBand=smoothstep(.06,.0,abs(p.y-fogY-snoise(vec2(p.x*3.+t*.15,fi*5.))*.03))*fogFlow;
+    col=mix(col,mix(u_c3,u_c4,.6),fogBand*.12);
+    // Fog wisps rising
+    float wisp=snoise(vec2(p.x*8.+t*.3+fi*10.,p.y*4.+t*.2))*.5+.5;
+    float wispMask=smoothstep(.05,.0,abs(p.y-fogY+.02))*fogFlow;
+    col=mix(col,u_c4,wisp*wispMask*.04);
+  }
+  // The wanderer — dark, sharp, unmistakable
+  vec2 figPos=vec2(0.,.06);
+  // Rock pedestal
+  float rockY=figPos.y-.06;
+  float rockShape=rockY+abs(p.x-figPos.x)*.6-snoise(vec2(p.x*20.,0.))*.01;
+  float rock=smoothstep(.005,-.005,p.y-rockShape)*step(abs(p.x-figPos.x),.1);
+  col=mix(col,u_c0*.2,rock*.8);
+  // Rock texture
+  float rockTex=snoise(vec2(p.x*40.,p.y*20.))*.03;
+  col+=rockTex*rock;
+  // Body — frock coat silhouette
+  float bodyW=.01+smoothstep(figPos.y+.04,figPos.y-.04,p.y)*.008;
+  float body=smoothstep(bodyW,.003,abs(p.x-figPos.x))*smoothstep(figPos.y-.055,figPos.y+.05,p.y)*smoothstep(figPos.y+.06,figPos.y+.05,p.y);
+  // Coat tails fluttering slightly
+  float coatFlutter=sin(p.y*60.+t*2.)*.002;
+  float coatL=smoothstep(.008,.003,abs(p.x-figPos.x+.01+coatFlutter))*smoothstep(figPos.y-.06,figPos.y-.02,p.y)*smoothstep(figPos.y-.02,figPos.y-.03,p.y);
+  // Head
+  float head=smoothstep(.011,.005,length(p-figPos-vec2(0.,.06)));
+  // Walking stick
+  float stick=smoothstep(.002,.0,abs(p.x-figPos.x+.015))*smoothstep(figPos.y-.06,figPos.y+.04,p.y);
+  // Hair blowing
+  float hair=smoothstep(.008,.003,length((p-figPos-vec2(.005,.07))*vec2(1.5,1.)));
+  col=mix(col,u_c0*.12,(body+head+coatL*.5+stick*.3+hair*.5)*.85);
+  // Wind effect — subtle directional streaks
+  float wind=snoise(vec2(p.x*15.+t*2.,p.y*3.))*.02;
+  col+=wind*smoothstep(.0,.1,p.y);
   gl_FragColor=vec4(col,1.);
 }`;
 
 const SHADER_MILKMAID = GLSL_NOISE + `
 uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
 void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.04;vec3 col=u_c0;col+=u_c1*uv.y*.05;
-  col+=snoise(p*20.)*.02+snoise(p*40.)*.01;
-  float lightX=p.x+.4;float lightY=p.y-.3;float beamWidth=.08+max(0.,-lightY)*.4;float beam=smoothstep(beamWidth,.0,abs(lightX-max(0.,-lightY)*.3));beam*=smoothstep(-.5,.3,p.y);beam*=smoothstep(.5,.0,lightX);
-  for(int i=0;i<20;i++){float fi=float(i)/20.;col+=u_c3*beam*(1.-fi)*.012;col+=u_c4*beam*fi*.006;}
-  for(int i=0;i<20;i++){float fi=float(i);vec2 dustPos=vec2(sin(fi*3.7+t*.5)*.15-.2,cos(fi*2.3+t*.3)*.25+snoise(vec2(fi,t*.2))*.05);float dust=smoothstep(.004,.001,length(p-dustPos))*beam;col+=u_c4*dust*(.5+.5*sin(t*2.+fi*4.))*.6;}
-  col=mix(col,u_c1*.6,smoothstep(-.12,-.14,p.y)*.2);col+=u_c3*smoothstep(.003,.0,abs(p.y+.12))*step(-.15,p.x)*step(p.x,.2)*beam*.3;
-  col=mix(col,u_c3*.7,smoothstep(.025,.015,length(p-vec2(-.05,-.16)))*.15*beam);
-  col=mix(col,u_c0*.3,step(p.x,-.35)*step(.15,p.y)*.3);col+=u_c4*step(p.x,-.37)*step(.18,p.y)*.05;
-  for(int i=0;i<3;i++){float fi=float(i);col-=vec3(.02)*smoothstep(.004,.002,length(p-vec2(-.1+fi*.15,.15-fi*.05)));}
+  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.03;
+  // Warm dim interior — plaster wall
+  vec3 col=u_c0;
+  // Wall texture — rough Dutch plaster, layered
+  float plaster1=snoise(p*15.)*.03;float plaster2=snoise(p*30.)*.015;float plaster3=snoise(p*60.)*.008;
+  col+=vec3(plaster1+plaster2+plaster3);
+  // Subtle wall color variation — not uniform, aged
+  float wallAge=snoise(vec2(p.x*3.,p.y*2.+5.))*.5+.5;
+  col=mix(col,u_c1*.5,wallAge*.04);
+  // Window — upper left, the light source
+  vec2 winPos=vec2(-.35,.2);vec2 winSize=vec2(.08,.12);
+  float inWindow=step(winPos.x-winSize.x,p.x)*step(p.x,winPos.x+winSize.x)*step(winPos.y-winSize.y,p.y)*step(p.y,winPos.y+winSize.y);
+  // Window panes — cross divider
+  float paneH=smoothstep(.003,.0,abs(p.y-winPos.y))*inWindow;
+  float paneV=smoothstep(.003,.0,abs(p.x-winPos.x))*inWindow;
+  float pane=max(paneH,paneV);
+  // Window glass — cool daylight
+  col=mix(col,u_c4*.8,inWindow*.2*(1.-pane));
+  col=mix(col,u_c0*.4,pane*.5);
+  // THE LIGHT BEAM — Vermeer's divine geometry
+  // From window, falls diagonally across the scene
+  // Trapezoid shape: narrow at window, widens as it spreads
+  for(int i=0;i<40;i++){
+    float fi=float(i)/40.;
+    vec2 beamStart=winPos-vec2(winSize.x,winSize.y);
+    // Light ray direction — down and to the right
+    vec2 rayDir=normalize(vec2(.6,-.8));
+    float along=dot(p-beamStart,rayDir);
+    float across=abs(dot(p-beamStart,vec2(-rayDir.y,rayDir.x)));
+    float beamWidth=.02+along*.25;
+    float inBeam=smoothstep(beamWidth+fi*.1,beamWidth*.5,across)*step(0.,along)*smoothstep(.8,.0,along);
+    // Light color shifts warm with distance
+    vec3 lightCol=mix(u_c4,u_c3,along*.8);
+    col+=lightCol*inBeam*(1.-fi)*.004;
+  }
+  // Calculate beam intensity for reuse
+  vec2 beamStart=winPos-vec2(.08,.12);vec2 rayDir=normalize(vec2(.6,-.8));
+  float along=dot(p-beamStart,rayDir);float across=abs(dot(p-beamStart,vec2(-rayDir.y,rayDir.x)));
+  float beamWidth2=.02+along*.25;float beam=smoothstep(beamWidth2,beamWidth2*.3,across)*step(0.,along)*smoothstep(.8,.0,along);
+  // Dust motes — floating in the beam, catching light
+  for(int i=0;i<35;i++){
+    float fi=float(i);
+    // Brownian motion
+    vec2 dustPos=vec2(
+      sin(fi*3.7+t*.4+sin(t*.2+fi)*.5)*.2-.2,
+      cos(fi*2.3+t*.3+cos(t*.15+fi*2.)*.3)*.25+sin(fi*5.)*.05
+    );
+    float dustInBeam=beam;
+    float moteSize=.002+sin(fi*7.)*.001;
+    float dust=smoothstep(moteSize,.0,length(p-dustPos))*dustInBeam;
+    float twinkle=.3+.7*sin(t*1.5+fi*4.+sin(t*.5+fi*2.)*2.);
+    // Dust color — warm golden
+    col+=mix(u_c4,u_c3,.3)*dust*twinkle*.8;
+  }
+  // Table — sturdy Dutch oak
+  float tableY=-.12;float tableH=.03;
+  float table=step(tableY-tableH,p.y)*step(p.y,tableY)*step(-.2,p.x)*step(p.x,.2);
+  vec3 tableCol=mix(u_c1,u_c0,.5);
+  col=mix(col,tableCol,table*.3);
+  // Table edge catching light
+  float tableEdge=smoothstep(.004,.0,abs(p.y-tableY))*step(-.2,p.x)*step(p.x,.2);
+  col+=u_c3*tableEdge*beam*.2;
+  // Bread basket — warm shapes
+  for(int i=0;i<4;i++){
+    float fi=float(i);vec2 bp=vec2(-.05+fi*.04,tableY+.02+sin(fi*3.)*.005);
+    float bread=smoothstep(.015,.008,length((p-bp)*vec2(1.,1.5)));
+    col=mix(col,mix(u_c3,u_c1,.5),bread*.15*(.5+beam*.5));
+    // Bread crust highlight
+    float crust=smoothstep(.012,.008,length(p-bp))*smoothstep(.018,.012,length(p-bp));
+    col+=u_c3*crust*.05*beam;
+  }
+  // Milk stream — thin, luminous arc from pitcher
+  vec2 pitcherSpout=vec2(.05,.0);vec2 milkEnd=vec2(.03,tableY+.02);
+  for(int i=0;i<20;i++){
+    float fi=float(i)/20.;
+    vec2 milkPos=mix(pitcherSpout,milkEnd,fi);
+    milkPos.x+=sin(fi*3.14)*.01; // Slight arc
+    float milkDist=length(p-milkPos);
+    float milkStream=smoothstep(.004,.001,milkDist);
+    col+=u_c4*milkStream*beam*.4;
+    // Tiny splash at bottom
+    if(fi>.9){float splash=smoothstep(.008,.003,length(p-milkPos+vec2(sin(fi*50.)*.005,0.)));col+=u_c4*splash*beam*.2;}
+  }
+  // Nail holes in wall — Vermeer's reality anchors
+  for(int i=0;i<5;i++){
+    float fi=float(i);vec2 nail=vec2(-.15+fi*.1,.15-sin(fi*2.)*.05);
+    float nailHole=smoothstep(.003,.001,length(p-nail));
+    col-=vec3(.03)*nailHole;
+    // Tiny shadow below nail
+    col-=vec3(.01)*smoothstep(.004,.002,length(p-nail-vec2(0.,-.003)));
+  }
+  // Baseboard — dark strip at bottom
+  float baseboard=step(p.y,-.35)*step(-.4,p.y);
+  col=mix(col,u_c0*.3,baseboard*.3);
+  // Floor tiles — Dutch checkered
+  float tileCheck=step(.5,fract(p.x*8.))*step(.5,fract(p.y*8.-4.));
+  float floorArea=step(p.y,-.35);
+  col=mix(col,u_c0*.2,floorArea*tileCheck*.1);
+  // Overall warmth from beam light bouncing
+  col+=u_c3*beam*.02;
+  // Vignette — subtle
+  float vig=smoothstep(.7,.3,length(p*.9));
+  col*=.8+vig*.2;
   gl_FragColor=vec4(col,1.);
 }`;
 
@@ -402,7 +743,7 @@ function ShaderCanvas({ painting }: { painting: Painting }) {
 }
 
 // ---- Gallery Strip ----
-const WALL_COLOR = "#0e0e0e";
+const WALL_COLOR = "#1a2820";
 const FRAME_COLOR = "#1a1816";
 
 function GalleryStrip({ onSelect, initialIdx }: { onSelect: (p: Painting) => void; initialIdx: number }) {
@@ -512,11 +853,12 @@ function GalleryStrip({ onSelect, initialIdx }: { onSelect: (p: Painting) => voi
         transition: "opacity 1.2s ease",
       }}
     >
-      {/* Title */}
+      {/* Title — fixed on desktop, inside scroll on mobile */}
+      {!isMobile && (
       <div style={{
         position: "absolute",
-        top: isMobile ? "1.5rem" : "2rem",
-        left: isMobile ? "1.5rem" : "2.5rem",
+        top: "2rem",
+        left: "2.5rem",
         zIndex: 10,
         opacity: loaded ? 1 : 0,
         transform: loaded ? "translateY(0)" : "translateY(10px)",
@@ -524,7 +866,7 @@ function GalleryStrip({ onSelect, initialIdx }: { onSelect: (p: Painting) => voi
       }}>
         <h1 style={{
           fontFamily: "'Space Mono', 'SF Mono', monospace",
-          fontSize: isMobile ? "0.625rem" : "0.6875rem",
+          fontSize: "0.6875rem",
           fontWeight: 400,
           color: "rgba(255,250,240,0.3)",
           letterSpacing: "0.2em",
@@ -533,13 +875,14 @@ function GalleryStrip({ onSelect, initialIdx }: { onSelect: (p: Painting) => voi
         }}>Afterimage</h1>
         <p style={{
           fontFamily: "'Noto Serif SC', serif",
-          fontSize: isMobile ? "0.5rem" : "0.5625rem",
+          fontSize: "0.5625rem",
           fontWeight: 300,
           color: "rgba(255,250,240,0.15)",
           letterSpacing: "0.15em",
           marginTop: "4px",
         }}>余像 — 名画在数字意识里留下的残影</p>
       </div>
+      )}
 
       {/* Counter */}
       <div style={{
@@ -644,6 +987,28 @@ function GalleryStrip({ onSelect, initialIdx }: { onSelect: (p: Painting) => voi
           minHeight: isMobile ? "max-content" : "100%",
           justifyContent: isMobile ? "flex-start" : "center",
         }}>
+          {/* Mobile title — scrolls with content */}
+          {isMobile && (
+            <div style={{ padding: "0 1.5rem", width: "100%" }}>
+              <h1 style={{
+                fontFamily: "'Space Mono', 'SF Mono', monospace",
+                fontSize: "0.625rem",
+                fontWeight: 400,
+                color: "rgba(255,250,240,0.3)",
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+                margin: 0,
+              }}>Afterimage</h1>
+              <p style={{
+                fontFamily: "'Noto Serif SC', serif",
+                fontSize: "0.5rem",
+                fontWeight: 300,
+                color: "rgba(255,250,240,0.15)",
+                letterSpacing: "0.15em",
+                marginTop: "4px",
+              }}>余像 — 名画在数字意识里留下的残影</p>
+            </div>
+          )}
           {PAINTINGS.map((painting, idx) => {
             const isActive = idx === activeIdx;
             const imgW = isMobile
