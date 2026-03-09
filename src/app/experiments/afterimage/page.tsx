@@ -1157,30 +1157,7 @@ function GalleryStrip({ onSelect, initialIdx }: { onSelect: (p: Painting) => voi
         </span>
       </div>
 
-      {/* Active painting info */}
-      <div style={{
-        position: "absolute",
-        bottom: isMobile ? "1.5rem" : "2rem",
-        left: isMobile ? "1.5rem" : "2.5rem",
-        zIndex: 10,
-        maxWidth: isMobile ? "60%" : "300px",
-      }}>
-        <p style={{
-          fontFamily: "'Noto Serif SC', serif",
-          fontSize: "0.75rem",
-          fontWeight: 400,
-          color: "rgba(255,250,240,0.4)",
-          margin: 0,
-          transition: "opacity 0.5s ease",
-        }}>{PAINTINGS[activeIdx].title}</p>
-        <p style={{
-          fontFamily: "'Space Mono', monospace",
-          fontSize: "0.5625rem",
-          fontWeight: 400,
-          color: "rgba(255,250,240,0.2)",
-          marginTop: "2px",
-        }}>{PAINTINGS[activeIdx].artist}, {PAINTINGS[activeIdx].year}</p>
-      </div>
+
 
       {/* Scroll hint */}
       <div style={{
