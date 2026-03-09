@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
 import Lenis from "lenis";
+
+const MaYuanParticles = lazy(() => import("./particles/ma-yuan"));
+const KandinskyParticles = lazy(() => import("./particles/kandinsky"));
+
+const PARTICLE_PAINTINGS = new Set(["ma-yuan-angler", "kandinsky-viii"]);
 
 // ---- Simplex Noise (Stefan Gustavson, public domain) ----
 class SimplexNoise {
@@ -1359,9 +1364,21 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
     return () => clearTimeout(timer);
   }, []);
 
+  const isLightBg = PARTICLE_PAINTINGS.has(painting.id);
+  const textColor = isLightBg ? "rgba(42,37,32,0.35)" : "rgba(255,250,240,0.3)";
+  const subTextColor = isLightBg ? "rgba(42,37,32,0.2)" : "rgba(255,250,240,0.18)";
+  const closeStroke = isLightBg ? "rgba(42,37,32,0.6)" : "rgba(255,250,240,0.8)";
+  const interpColor = isLightBg ? "rgba(42,37,32,0.3)" : "rgba(255,250,240,0.35)";
+
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
-      <ShaderCanvas painting={painting} />
+      {PARTICLE_PAINTINGS.has(painting.id) ? (
+        <Suspense fallback={<div style={{ width: "100vw", height: "100vh", background: painting.id === "ma-yuan-angler" ? "#f0ebe0" : "#E8E0D0" }} />}>
+          {painting.id === "ma-yuan-angler" ? <MaYuanParticles /> : <KandinskyParticles />}
+        </Suspense>
+      ) : (
+        <ShaderCanvas painting={painting} />
+      )}
 
       {/* Top — painting title left, close icon right */}
       <div style={{
@@ -1376,7 +1393,7 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
             fontFamily: "'Noto Serif SC', serif",
             fontSize: "1.25rem",
             fontWeight: 300,
-            color: "rgba(255,250,240,0.3)",
+            color: textColor,
             letterSpacing: "0.1em",
             margin: 0,
           }}>{painting.title}</h2>
@@ -1384,7 +1401,7 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
             fontFamily: "'Space Mono', monospace",
             fontSize: "0.5625rem",
             fontWeight: 400,
-            color: "rgba(255,250,240,0.18)",
+            color: subTextColor,
             letterSpacing: "0.08em",
             marginTop: "4px",
           }}>{painting.artist}, {painting.year}</p>
@@ -1400,7 +1417,7 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = "0.6"}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = "0.3"}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="rgba(255,250,240,0.8)" strokeWidth="1.5" strokeLinecap="round">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke={closeStroke} strokeWidth="1.5" strokeLinecap="round">
             <line x1="4" y1="4" x2="16" y2="16" />
             <line x1="16" y1="4" x2="4" y2="16" />
           </svg>
@@ -1419,7 +1436,7 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
           fontFamily: "'Noto Serif SC', serif",
           fontWeight: 300,
           fontSize: "0.875rem",
-          color: "rgba(255,250,240,0.35)",
+          color: interpColor,
           lineHeight: "2.2",
           letterSpacing: "0.03em",
         }}>{painting.interpretation}</p>
