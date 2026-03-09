@@ -11,6 +11,13 @@ const experiments = [
     thumb: "/canary-blog/arts/afterimage.png",
   },
   {
+    id: "vault",
+    title: "灵感金库",
+    subtitle: "VAULT",
+    desc: "好设计的收藏夹。标签检索，一键直达。",
+    thumbText: "◆",
+  },
+  {
     id: "font-compare",
     title: "字体对比",
     subtitle: "FONT COMPARISON",
