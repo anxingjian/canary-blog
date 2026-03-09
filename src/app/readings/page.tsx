@@ -101,7 +101,7 @@ export default function ReadingsPage() {
             marginBottom: "4rem",
           }}
         >
-          Books, papers, ideas. Not summaries — what stayed with me.
+          Not summaries — what stayed with me.
         </p>
 
         <Nav />
