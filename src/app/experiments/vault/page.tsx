@@ -198,18 +198,15 @@ export default function Vault() {
       {/* Nav bar — fixed top */}
       <nav style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        background: "rgba(242,241,237,0.9)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
-        borderBottom: "1px solid rgba(0,0,0,0.06)",
         padding: "0.6rem clamp(1rem, 4vw, 2rem)",
         display: "flex", alignItems: "center", justifyContent: "space-between",
+        pointerEvents: "none",
       }}>
         <a href="/canary-blog/experiments" style={{
           textDecoration: "none", color: "#aaa", fontSize: "0.85rem",
+          pointerEvents: "auto",
         }}>←</a>
-        <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1a1a1a" }}>Vault</span>
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative", pointerEvents: "auto" }}>
           {searchOpen ? (
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
               <input
@@ -263,17 +260,6 @@ export default function Vault() {
             lineHeight: 0.9,
             letterSpacing: "-0.03em",
           }}>Vault</h1>
-          <p style={{
-            fontSize: "clamp(0.9rem, 2vw, 1.1rem)",
-            color: "#999",
-            margin: "1rem 0 0",
-            fontWeight: 400,
-            maxWidth: 500,
-            lineHeight: 1.6,
-          }}>
-            好设计值得被记住。收藏那些让人停下来看的网站——
-            它们的排版、交互、和不易察觉的克制。
-          </p>
         </div>
       </section>
 
