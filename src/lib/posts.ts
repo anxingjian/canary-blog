@@ -8,6 +8,7 @@ export interface Post {
   title: string;
   excerpt: string;
   content: string;
+  public?: boolean;
 }
 
 const contentDir = path.join(process.cwd(), "content");
@@ -35,6 +36,7 @@ function parsePost(filename: string): Post | null {
     title: frontmatter.title || "",
     excerpt: frontmatter.excerpt || "",
     content: match[2].trim(),
+    public: frontmatter.public === "true",
   };
 }
 

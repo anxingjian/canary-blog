@@ -1,6 +1,7 @@
 import { getPost, getAllPosts } from "@/lib/posts";
 import { notFound } from "next/navigation";
 import BackLink from "@/components/BackLink";
+import PostPasswordGate from "@/components/PostPasswordGate";
 
 export function generateStaticParams() {
   return getAllPosts().map((post) => ({ slug: post.slug }));
@@ -26,6 +27,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
     .replace(/\n{2,}/g, "\n");
 
   return (
+    <PostPasswordGate isPublic={!!post.public}>
     <main style={{ minHeight: "100vh" }}>
       {/* Vertical accent */}
       <div
@@ -158,5 +160,6 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         </div>
       </article>
     </main>
+    </PostPasswordGate>
   );
 }

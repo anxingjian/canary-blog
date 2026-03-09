@@ -10,17 +10,18 @@ async function sha256(text: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-export default function PasswordGate({ children }: { children: React.ReactNode }) {
+export default function PasswordGate({ children, bypass }: { children: React.ReactNode; bypass?: boolean }) {
   const [unlocked, setUnlocked] = useState(false);
   const [input, setInput] = useState("");
   const [error, setError] = useState(false);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    if (bypass) { setChecking(false); setUnlocked(true); return; }
     const saved = sessionStorage.getItem(STORAGE_KEY);
     if (saved === "1") setUnlocked(true);
     setChecking(false);
-  }, []);
+  }, [bypass]);
 
   const handleSubmit = useCallback(async () => {
     const hash = await sha256(input.trim());
