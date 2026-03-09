@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 
 /*
  * Vault — Design Inspiration Collection
- * Big hero typography + horizontal film-strip browse
+ * Desktop: typographic list + cursor-following preview image
+ * Mobile: vertical cards
  */
 
 interface Entry {
@@ -23,7 +24,7 @@ const ENTRIES: Entry[] = [
   { id: "shopify-editions", name: "Shopify Editions", url: "https://www.shopify.com/editions", desc: "产品发布页，每期独立设计语言", why: "移动端翻唱片交互——垂直堆叠卡片带 3D 透视倾斜。每期封面字体/配色/风格完全不同。把产品更新日志做成收藏体验。", tags: ["interaction", "editorial"], thumb: "/canary-blog/vault/www-shopify-com-editions.jpg", date: "2026-03-09" },
   { id: "toddham", name: "Todd Ham", url: "https://toddham.com", desc: "Digital Physicality", why: "Three.js 全场景 3D portfolio。复古 Macintosh 3D 模型，实物质感。3D 实物与 UI 的融合。", tags: ["3d", "portfolio"], thumb: "/canary-blog/vault/toddham-com.jpg", date: "2026-03-08" },
   { id: "laxspace", name: "LAX Space", url: "https://laxspace.co", desc: "DESIGN—CODE 的视觉平衡", why: "Next.js + Three.js，项目展示贴在 3D 胶带上旋转。首页 3D 物体作为项目载体。", tags: ["3d", "portfolio"], thumb: "/canary-blog/vault/laxspace-co.jpg", date: "2026-03-08" },
-  { id: "katalog", name: "Katalog Barbara Iweins", url: "https://katalog-barbaraiweins.com", desc: "个人物品数字孪生目录", why: "把一个人所有物品做成可浏览的数字目录。", tags: ["concept"], thumb: "/canary-blog/vault/katalog-barbaraiweins-com.jpg", date: "2026-03-08" },
+  { id: "katalog", name: "Katalog", url: "https://katalog-barbaraiweins.com", desc: "个人物品数字孪生目录", why: "把一个人所有物品做成可浏览的数字目录。", tags: ["concept"], thumb: "/canary-blog/vault/katalog-barbaraiweins-com.jpg", date: "2026-03-08" },
   { id: "elevenlabs-music", name: "ElevenLabs Music", url: "https://elevenlabs.io/music", desc: "AI 音乐生成", why: "Hero 区域环形旋转 gallery，沉浸感强。", tags: ["animation", "landing"], thumb: "/canary-blog/vault/elevenlabs-io-music.jpg", date: "2026-03-08" },
   { id: "abhijitrout", name: "Abhijit Rout", url: "https://abhijitrout.in", desc: "设计师 portfolio", why: "顶部一排 + 滚动时的视差/动画效果。", tags: ["portfolio", "animation"], thumb: "/canary-blog/vault/abhijitrout-in.jpg", date: "2026-03-08" },
   { id: "vemula", name: "Vemula", url: "https://vemula.me", desc: "卡片交互式 portfolio", why: "桌面/移动端不同的卡片交互方式。", tags: ["portfolio", "interaction"], thumb: "/canary-blog/vault/vemula-me.jpg", date: "2026-03-08" },
@@ -38,135 +39,13 @@ const ENTRIES: Entry[] = [
 
 const ALL_TAGS = [...new Set(ENTRIES.flatMap(e => e.tags))].sort();
 
-function NoiseCanvas() {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const c = ref.current;
-    if (!c) return;
-    c.width = 300; c.height = 300;
-    const ctx = c.getContext("2d");
-    if (!ctx) return;
-    const img = ctx.createImageData(300, 300);
-    for (let i = 0; i < img.data.length; i += 4) {
-      const v = Math.random() * 255;
-      img.data[i] = img.data[i+1] = img.data[i+2] = v;
-      img.data[i+3] = 12;
-    }
-    ctx.putImageData(img, 0, 0);
-  }, []);
-  return <canvas ref={ref} style={{
-    position: "absolute", inset: 0, width: "100%", height: "100%",
-    pointerEvents: "none", opacity: 0.4,
-  }} />;
-}
-
-function ExpandableCard({ entry, isActive, onClick }: {
-  entry: Entry; isActive: boolean; onClick: () => void;
-}) {
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  return (
-    <div
-      ref={cardRef}
-      onClick={onClick}
-      style={{
-        flex: isActive ? "0 0 520px" : "0 0 180px",
-        height: "100%",
-        borderRadius: 12,
-        overflow: "hidden",
-        position: "relative",
-        cursor: "pointer",
-        transition: "flex 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
-        background: "#e8e7e3",
-      }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={entry.thumb} alt={entry.name} loading="lazy"
-        style={{
-          position: "absolute", inset: 0,
-          width: "100%", height: "100%", objectFit: "cover",
-          transition: "transform 0.5s cubic-bezier(0.16,1,0.3,1)",
-          transform: isActive ? "scale(1)" : "scale(1.1)",
-          filter: isActive ? "none" : "brightness(0.7)",
-        }}
-        onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-      />
-
-      {/* Collapsed: vertical text */}
-      <div style={{
-        position: "absolute", inset: 0,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        opacity: isActive ? 0 : 1,
-        transition: "opacity 0.3s ease",
-        pointerEvents: isActive ? "none" : "auto",
-      }}>
-        <span style={{
-          writingMode: "vertical-rl",
-          textOrientation: "mixed",
-          fontSize: "0.9rem",
-          fontWeight: 600,
-          color: "#fff",
-          letterSpacing: "0.08em",
-          textShadow: "0 1px 8px rgba(0,0,0,0.4)",
-        }}>{entry.name}</span>
-      </div>
-
-      {/* Expanded: info panel */}
-      <div style={{
-        position: "absolute",
-        bottom: 0, left: 0, right: 0,
-        padding: "1.25rem",
-        background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)",
-        opacity: isActive ? 1 : 0,
-        transform: isActive ? "translateY(0)" : "translateY(10px)",
-        transition: "all 0.4s ease 0.1s",
-        pointerEvents: isActive ? "auto" : "none",
-      }}>
-        <h3 style={{
-          fontSize: "1.2rem", fontWeight: 600, color: "#fff",
-          margin: "0 0 0.25rem", letterSpacing: "-0.01em",
-        }}>{entry.name}</h3>
-        <p style={{
-          fontSize: "0.8rem", color: "rgba(255,255,255,0.65)",
-          margin: "0 0 0.4rem", lineHeight: 1.5,
-        }}>{entry.desc}</p>
-        <p style={{
-          fontSize: "0.8rem", color: "rgba(255,255,255,0.5)",
-          margin: "0 0 0.5rem", lineHeight: 1.6,
-        }}>{entry.why}</p>
-        <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
-          {entry.tags.map(tag => (
-            <span key={tag} style={{
-              fontSize: "0.7rem", fontWeight: 500,
-              color: "rgba(255,255,255,0.7)",
-              background: "rgba(255,255,255,0.12)",
-              padding: "0.12rem 0.4rem", borderRadius: 4,
-            }}>{tag}</span>
-          ))}
-        </div>
-        <a
-          href={entry.url} target="_blank" rel="noopener noreferrer"
-          onClick={e => e.stopPropagation()}
-          style={{
-            fontSize: "0.75rem", color: "rgba(255,255,255,0.6)",
-            textDecoration: "underline",
-            textDecorationColor: "rgba(255,255,255,0.2)",
-            textUnderlineOffset: "3px",
-          }}
-        >↗ {entry.url.replace(/^https?:\/\//, "").replace(/\/$/, "")}</a>
-      </div>
-    </div>
-  );
-}
-
 export default function Vault() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const stripRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
     return ENTRIES.filter(e => {
@@ -182,20 +61,54 @@ export default function Vault() {
     });
   }, [activeTag, search]);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (stripRef.current) {
-      stripRef.current.scrollLeft += e.deltaY;
-    }
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    setMousePos({ x: e.clientX, y: e.clientY });
   }, []);
 
+  const hoveredEntry = hoveredId ? ENTRIES.find(e => e.id === hoveredId) : null;
+
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#f2f1ed",
-      fontFamily: "'Inter', -apple-system, sans-serif",
-      overflow: "hidden",
-    }}>
-      {/* Nav bar — fixed top */}
+    <div
+      onMouseMove={handleMouseMove}
+      style={{
+        minHeight: "100vh",
+        background: "#f2f1ed",
+        fontFamily: "'Inter', -apple-system, sans-serif",
+        position: "relative",
+        cursor: "default",
+      }}
+    >
+      {/* Floating preview image — desktop only */}
+      <div
+        ref={previewRef}
+        className="vault-preview"
+        style={{
+          position: "fixed",
+          left: mousePos.x + 20,
+          top: mousePos.y - 120,
+          width: 360,
+          aspectRatio: "16/10",
+          borderRadius: 8,
+          overflow: "hidden",
+          pointerEvents: "none",
+          zIndex: 1000,
+          opacity: hoveredEntry ? 1 : 0,
+          transform: hoveredEntry ? "scale(1) rotate(2deg)" : "scale(0.8) rotate(0deg)",
+          transition: "opacity 0.25s ease, transform 0.3s cubic-bezier(0.16,1,0.3,1)",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.1)",
+        }}
+      >
+        {hoveredEntry && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={hoveredEntry.thumb}
+            alt=""
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        )}
+      </div>
+
+      {/* Nav — minimal */}
       <nav style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
         padding: "0.6rem clamp(1rem, 4vw, 2rem)",
@@ -206,26 +119,26 @@ export default function Vault() {
           textDecoration: "none", color: "#aaa", fontSize: "0.85rem",
           pointerEvents: "auto",
         }}>←</a>
-        <div style={{ position: "relative", pointerEvents: "auto" }}>
+        <div style={{ pointerEvents: "auto" }}>
           {searchOpen ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem",
+              background: "rgba(242,241,237,0.95)", backdropFilter: "blur(12px)",
+              padding: "0.2rem 0.5rem", borderRadius: 20,
+            }}>
               <input
-                ref={searchInputRef}
-                autoFocus
-                type="text" value={search}
+                autoFocus type="text" value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search..."
                 style={{
-                  width: 160, padding: "0.35rem 0.6rem",
-                  background: "rgba(0,0,0,0.05)",
-                  border: "none", borderRadius: 20,
+                  width: 160, padding: "0.35rem 0.5rem",
+                  background: "transparent", border: "none",
                   color: "#333", fontSize: "0.85rem", outline: "none",
                 }}
                 onBlur={() => { if (!search) setSearchOpen(false); }}
                 onKeyDown={e => { if (e.key === "Escape") { setSearch(""); setSearchOpen(false); } }}
               />
               <button onClick={() => { setSearch(""); setSearchOpen(false); }} style={{
-                background: "none", border: "none", color: "#aaa", fontSize: "0.85rem",
+                background: "none", border: "none", color: "#aaa", fontSize: "0.8rem",
                 cursor: "pointer", padding: "0.2rem",
               }}>✕</button>
             </div>
@@ -244,39 +157,31 @@ export default function Vault() {
 
       {/* Hero */}
       <section style={{
-        position: "relative",
-        paddingTop: "calc(3rem + 44px)",
-        padding: "calc(2.5rem + 44px) clamp(1rem, 4vw, 2rem) 0",
-        overflow: "hidden",
+        padding: "calc(2.5rem + 44px) clamp(1.5rem, 5vw, 4rem) 1.5rem",
       }}>
-        <NoiseCanvas />
-        <div style={{ position: "relative", zIndex: 2 }}>
-          <h1 style={{
-            fontFamily: "'Instrument Serif', Georgia, serif",
-            fontSize: "clamp(3rem, 10vw, 7rem)",
-            fontWeight: 400,
-            color: "#1a1a1a",
-            margin: 0,
-            lineHeight: 0.9,
-            letterSpacing: "-0.03em",
-          }}>Vault</h1>
-        </div>
+        <h1 style={{
+          fontFamily: "'Instrument Serif', Georgia, serif",
+          fontSize: "clamp(3rem, 10vw, 7rem)",
+          fontWeight: 400,
+          color: "#1a1a1a",
+          margin: 0,
+          lineHeight: 0.9,
+          letterSpacing: "-0.03em",
+        }}>Vault</h1>
       </section>
 
-      {/* Tags — single row horizontal scroll */}
+      {/* Tags — horizontal scroll */}
       <div style={{
-        position: "sticky", top: 44, zIndex: 90,
-        background: "rgba(242,241,237,0.9)",
+        position: "sticky", top: 0, zIndex: 90,
+        background: "rgba(242,241,237,0.92)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
-        borderBottom: "1px solid rgba(0,0,0,0.04)",
       }}>
         <div style={{
           display: "flex", gap: "0.35rem",
-          padding: "0.6rem clamp(1rem, 4vw, 2rem)",
+          padding: "0.6rem clamp(1.5rem, 5vw, 4rem)",
           overflowX: "auto",
           scrollbarWidth: "none",
-          whiteSpace: "nowrap",
           WebkitOverflowScrolling: "touch",
         }}>
           {ALL_TAGS.map(tag => {
@@ -284,15 +189,12 @@ export default function Vault() {
             return (
               <button key={tag} onClick={() => setActiveTag(isActive ? null : tag)} style={{
                 padding: "0.3rem 0.75rem",
-                borderRadius: 24,
-                border: "none",
+                borderRadius: 24, border: "none",
                 background: isActive ? "#1a1a1a" : "rgba(0,0,0,0.05)",
                 color: isActive ? "#f2f1ed" : "#888",
-                fontSize: "0.8rem",
-                fontWeight: 500,
-                cursor: "pointer",
-                transition: "all 0.25s ease",
-                flexShrink: 0,
+                fontSize: "0.8rem", fontWeight: 500,
+                cursor: "pointer", flexShrink: 0,
+                transition: "all 0.2s ease",
               }}>{tag}</button>
             );
           })}
@@ -304,41 +206,81 @@ export default function Vault() {
         </div>
       </div>
 
-      {/* Horizontal expandable strip — desktop */}
-      <section
-        className="vault-strip-desktop"
-        onWheel={handleWheel}
-        style={{
-          height: "55vh",
-          minHeight: 350,
-        }}
-      >
-        <div
-          ref={stripRef}
-          style={{
-            height: "100%",
-            display: "flex",
-            gap: "0.5rem",
-            padding: "1rem clamp(1.5rem, 5vw, 4rem)",
-            overflowX: "auto",
-            overflowY: "hidden",
-            scrollBehavior: "smooth",
-            scrollbarWidth: "none",
-          }}
-        >
-          {filtered.map(entry => (
-            <ExpandableCard
-              key={entry.id}
-              entry={entry}
-              isActive={activeId === entry.id}
-              onClick={() => setActiveId(activeId === entry.id ? null : entry.id)}
-            />
-          ))}
-        </div>
-      </section>
+      {/* Desktop: typographic list */}
+      <main className="vault-desktop" style={{
+        padding: "1rem clamp(1.5rem, 5vw, 4rem) 4rem",
+      }}>
+        {filtered.map((entry, i) => (
+          <a
+            key={entry.id}
+            href={entry.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onMouseEnter={() => setHoveredId(entry.id)}
+            onMouseLeave={() => setHoveredId(null)}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              gap: "1.5rem",
+              alignItems: "baseline",
+              textDecoration: "none",
+              padding: "1.25rem 0",
+              borderBottom: "1px solid rgba(0,0,0,0.06)",
+              transition: "padding-left 0.3s ease",
+              paddingLeft: hoveredId === entry.id ? "1rem" : "0",
+            }}
+          >
+            <div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1rem", flexWrap: "wrap" }}>
+                <h2 style={{
+                  fontFamily: "'Instrument Serif', Georgia, serif",
+                  fontSize: "clamp(1.5rem, 3vw, 2.5rem)",
+                  fontWeight: 400,
+                  color: hoveredId === entry.id ? "#1a1a1a" : "#444",
+                  margin: 0,
+                  letterSpacing: "-0.02em",
+                  transition: "color 0.3s ease",
+                  lineHeight: 1.2,
+                }}>{entry.name}</h2>
+                <span style={{
+                  fontSize: "0.85rem",
+                  color: hoveredId === entry.id ? "#888" : "#bbb",
+                  transition: "color 0.3s ease",
+                }}>{entry.desc}</span>
+              </div>
+              {/* Why — slides in on hover */}
+              <p style={{
+                fontSize: "0.85rem",
+                color: "#888",
+                margin: "0.4rem 0 0",
+                lineHeight: 1.6,
+                maxHeight: hoveredId === entry.id ? "6rem" : "0",
+                opacity: hoveredId === entry.id ? 1 : 0,
+                overflow: "hidden",
+                transition: "all 0.35s cubic-bezier(0.16,1,0.3,1)",
+              }}>{entry.why}</p>
+            </div>
+            <div style={{
+              display: "flex", gap: "0.3rem", flexShrink: 0, alignSelf: "center",
+            }}>
+              {entry.tags.map(tag => (
+                <span key={tag} style={{
+                  fontSize: "0.7rem", fontWeight: 500,
+                  color: "#bbb",
+                  background: "rgba(0,0,0,0.03)",
+                  padding: "0.15rem 0.45rem",
+                  borderRadius: 4,
+                  transition: "color 0.3s",
+                  ...(hoveredId === entry.id ? { color: "#999" } : {}),
+                }}>{tag}</span>
+              ))}
+            </div>
+          </a>
+        ))}
+      </main>
 
-      {/* Mobile: vertical stack */}
-      <section className="vault-strip-mobile" style={{ display: "none", padding: "1rem 1.5rem 3rem" }}>
+      {/* Mobile: vertical cards */}
+      <main className="vault-mobile" style={{ display: "none", padding: "1rem 1.5rem 3rem" }}>
         {filtered.map(entry => (
           <a
             key={entry.id}
@@ -346,9 +288,8 @@ export default function Vault() {
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              display: "block",
-              textDecoration: "none",
-              marginBottom: "1.25rem",
+              display: "block", textDecoration: "none",
+              marginBottom: "1.5rem",
             }}
           >
             <div style={{
@@ -362,7 +303,11 @@ export default function Vault() {
                 width: "100%", height: "100%", objectFit: "cover", display: "block",
               }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
             </div>
-            <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "#1a1a1a", margin: "0 0 0.2rem" }}>{entry.name}</h3>
+            <h3 style={{
+              fontFamily: "'Instrument Serif', Georgia, serif",
+              fontSize: "1.25rem", fontWeight: 400,
+              color: "#1a1a1a", margin: "0 0 0.2rem",
+            }}>{entry.name}</h3>
             <p style={{ fontSize: "0.85rem", color: "#888", margin: "0 0 0.25rem", lineHeight: 1.5 }}>{entry.desc}</p>
             <p style={{ fontSize: "0.85rem", color: "#555", margin: 0, lineHeight: 1.6 }}>{entry.why}</p>
             <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", marginTop: "0.4rem" }}>
@@ -378,17 +323,18 @@ export default function Vault() {
         {filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "4rem 0", color: "#bbb", fontSize: "0.9rem" }}>没有匹配的结果</div>
         )}
-      </section>
+      </main>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&display=swap');
         input::placeholder { color: #aaa; }
         * { box-sizing: border-box; margin: 0; }
         ::-webkit-scrollbar { display: none; }
 
         @media (max-width: 768px) {
-          .vault-strip-desktop { display: none !important; }
-          .vault-strip-mobile { display: block !important; }
+          .vault-desktop { display: none !important; }
+          .vault-mobile { display: block !important; }
+          .vault-preview { display: none !important; }
         }
       `}</style>
     </div>
