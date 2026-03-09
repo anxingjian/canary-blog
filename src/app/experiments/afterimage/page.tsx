@@ -1335,6 +1335,15 @@ function GalleryStrip({ onSelect, initialIdx }: { onSelect: (p: Painting) => voi
 // ---- Art View ----
 function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void }) {
   const [showText, setShowText] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowText(true), 800);
@@ -1346,6 +1355,8 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
   const subTextColor = isLightBg ? "rgba(42,37,32,0.2)" : "rgba(255,250,240,0.18)";
   const closeStroke = isLightBg ? "rgba(42,37,32,0.6)" : "rgba(255,250,240,0.8)";
   const interpColor = isLightBg ? "rgba(42,37,32,0.3)" : "rgba(255,250,240,0.35)";
+  const drawerBg = isLightBg ? "rgba(232,225,215,0.92)" : "rgba(10,10,10,0.92)";
+  const handleColor = isLightBg ? "rgba(42,37,32,0.15)" : "rgba(255,250,240,0.15)";
 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
@@ -1360,7 +1371,7 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
       {/* Top — painting title left, close icon right */}
       <div style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 10,
-        padding: "2rem 2.5rem",
+        padding: isMobile ? "1.5rem" : "2rem 2.5rem",
         display: "flex", justifyContent: "space-between", alignItems: "flex-start",
         opacity: showText ? 1 : 0,
         transition: "opacity 1s ease",
@@ -1368,7 +1379,7 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
         <div>
           <h2 style={{
             fontFamily: "'Noto Serif SC', serif",
-            fontSize: "1.25rem",
+            fontSize: isMobile ? "1rem" : "1.25rem",
             fontWeight: 300,
             color: textColor,
             letterSpacing: "0.1em",
@@ -1401,23 +1412,84 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
         </div>
       </div>
 
-      {/* Bottom — interpretation */}
-      <div style={{
-        position: "fixed", bottom: "2rem", left: "2.5rem", right: "2.5rem", zIndex: 10,
-        maxWidth: "min(80vw, 480px)",
-        opacity: showText ? 1 : 0,
-        transform: showText ? "translateY(0)" : "translateY(10px)",
-        transition: "all 1.5s ease 1s",
-      }}>
-        <p style={{
-          fontFamily: "'Noto Serif SC', serif",
-          fontWeight: 300,
-          fontSize: "0.875rem",
-          color: interpColor,
-          lineHeight: "2.2",
-          letterSpacing: "0.03em",
-        }}>{painting.interpretation}</p>
-      </div>
+      {/* Bottom — interpretation: drawer on mobile, fixed text on desktop */}
+      {isMobile ? (
+        <>
+          {/* Drawer handle — always visible */}
+          <div
+            onClick={() => setDrawerOpen(!drawerOpen)}
+            style={{
+              position: "fixed",
+              bottom: drawerOpen ? "auto" : 0,
+              top: drawerOpen ? 0 : "auto",
+              left: 0, right: 0,
+              zIndex: 20,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              cursor: "pointer",
+              ...(drawerOpen ? { height: "100vh" } : {}),
+            }}
+          >
+            {drawerOpen && (
+              <div
+                style={{ flex: 1, width: "100%" }}
+                onClick={(e) => { e.stopPropagation(); setDrawerOpen(false); }}
+              />
+            )}
+            <div style={{
+              width: "100%",
+              background: drawerBg,
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              borderRadius: drawerOpen ? 0 : "12px 12px 0 0",
+              padding: drawerOpen ? "1.5rem 1.5rem 2.5rem" : "0.6rem 1.5rem 0.8rem",
+              transition: "all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+              opacity: showText ? 1 : 0,
+            }}>
+              {/* Handle bar */}
+              <div style={{
+                width: 32, height: 3, borderRadius: 2,
+                background: handleColor,
+                margin: "0 auto 0.6rem",
+              }} />
+              {!drawerOpen && (
+                <p style={{
+                  fontFamily: "'Noto Serif SC', serif",
+                  fontWeight: 300, fontSize: "0.7rem",
+                  color: interpColor, margin: 0,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>↑ {painting.interpretation.slice(0, 20)}…</p>
+              )}
+              {drawerOpen && (
+                <p style={{
+                  fontFamily: "'Noto Serif SC', serif",
+                  fontWeight: 300, fontSize: "0.8rem",
+                  color: interpColor, margin: 0,
+                  lineHeight: "2.2", letterSpacing: "0.03em",
+                }}>{painting.interpretation}</p>
+              )}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div style={{
+          position: "fixed", bottom: "2rem", left: "2.5rem", right: "2.5rem", zIndex: 10,
+          maxWidth: "min(80vw, 480px)",
+          opacity: showText ? 1 : 0,
+          transform: showText ? "translateY(0)" : "translateY(10px)",
+          transition: "all 1.5s ease 1s",
+        }}>
+          <p style={{
+            fontFamily: "'Noto Serif SC', serif",
+            fontWeight: 300,
+            fontSize: "0.875rem",
+            color: interpColor,
+            lineHeight: "2.2",
+            letterSpacing: "0.03em",
+          }}>{painting.interpretation}</p>
+        </div>
+      )}
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Serif+SC:wght@300;400;500&display=swap');

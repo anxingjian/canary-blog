@@ -267,12 +267,12 @@ export default function MaYuanParticles() {
 
         const lifeFade = Math.min(1, p.life / 0.3);
         let alpha: number;
-        if (p.role < 0.04) alpha = 0.02 + p.role * 0.3;
-        else if (p.role < 0.15) alpha = 0.04 + (p.role - 0.04) * 0.8;
-        else if (p.role < 0.5) alpha = 0.12 + (p.role - 0.15) * 0.8;
-        else alpha = 0.4 + (p.role - 0.5) * 0.8;
+        if (p.role < 0.04) alpha = 0.06 + p.role * 0.8;
+        else if (p.role < 0.15) alpha = 0.1 + (p.role - 0.04) * 1.5;
+        else if (p.role < 0.5) alpha = 0.25 + (p.role - 0.15) * 1.2;
+        else alpha = 0.65 + (p.role - 0.5) * 0.6;
         alpha *= lifeFade;
-        if (alpha < 0.005) continue;
+        if (alpha < 0.01) continue;
 
         ctx.save();
         ctx.globalAlpha = alpha;
