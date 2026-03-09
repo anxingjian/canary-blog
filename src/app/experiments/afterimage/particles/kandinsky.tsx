@@ -1,220 +1,314 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
+import * as THREE from "three";
 
 /*
  * 构成第八号 — Composition VIII (Kandinsky, 1923)
  * 
- * He painted sound. Circles are sustained notes, triangles are staccato,
- * lines are melodic contour. This is a score, not a painting.
- * 
- * Particles ARE the geometric forms — circles, triangles, lines —
- * each with distinct motion character:
- *   - Circles: slow orbit, gentle pulse (long tones)
- *   - Triangles: sharp, jittery, angular motion (percussive)
- *   - Lines: sweep across in arcs (melodic phrases)
- *   - Grid particles: steady, rhythmic (the underlying structure)
- * 
- * Background: warm cream (Kandinsky's actual canvas tone).
- * Colors: the Bauhaus palette — deep blue, warm red, golden yellow, black.
+ * A symphony rendered in geometry.
+ * Each shape is an instrument, each motion a musical phrase.
+ * The whole scene breathes with polyrhythmic timing.
+ *
+ * Circles = sustained brass/strings (slow pulse, warm)
+ * Triangles = percussion (sharp attacks, angular jitter)
+ * Lines = woodwind melodies (sweeping arcs)
+ * Small spheres = pizzicato (quick flickers)
+ * Rings = resonance (expanding, fading)
  */
 
-interface GeoParticle {
-  x: number; y: number;
-  ox: number; oy: number;
-  vx: number; vy: number;
-  type: "circle" | "triangle" | "line" | "dot";
-  size: number;
-  color: string;
-  angle: number;
-  rotSpeed: number;
-  phase: number;
-  orbitR: number;
-  orbitSpeed: number;
-  life: number;
+// ---- Musical timing helpers ----
+function pulse(t: number, freq: number, phase: number = 0): number {
+  return Math.sin(t * freq * Math.PI * 2 + phase) * 0.5 + 0.5;
+}
+function attack(t: number, freq: number, phase: number = 0, sharpness: number = 4): number {
+  const s = Math.sin(t * freq * Math.PI * 2 + phase);
+  return Math.pow(Math.max(0, s), sharpness);
+}
+function breathe(t: number, period: number, phase: number = 0): number {
+  return (Math.sin(t / period * Math.PI * 2 + phase) + 1) * 0.5;
 }
 
-const PALETTE = {
-  bg: "#E8E0D0",
-  deepBlue: "#1a1a5a",
-  warmRed: "#c43030",
-  golden: "#e8b830",
-  teal: "#3a8a9a",
-  violet: "#6a3a8a",
-  black: "#1a1a1a",
-  orange: "#d87030",
-  cream: "#f0e8d0",
+// ---- Palette ----
+const C = {
+  deepBlue: new THREE.Color(0x1a1a6a),
+  warmRed: new THREE.Color(0xc43030),
+  golden: new THREE.Color(0xe8b830),
+  teal: new THREE.Color(0x2a8a9a),
+  violet: new THREE.Color(0x7a3a9a),
+  black: new THREE.Color(0x1a1a1a),
+  orange: new THREE.Color(0xd87030),
+  cream: new THREE.Color(0xf0e8d0),
+  bg: new THREE.Color(0xE8E0D0),
 };
 
-function createKandinskyParticles(): GeoParticle[] {
-  const P: GeoParticle[] = [];
-  const colors = [PALETTE.deepBlue, PALETTE.warmRed, PALETTE.golden, PALETTE.teal, PALETTE.violet, PALETTE.black, PALETTE.orange];
+const COLORS = [C.deepBlue, C.warmRed, C.golden, C.teal, C.violet, C.orange];
 
-  // ---- Large circles (sustained notes) — few, prominent ----
-  for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.3;
-    const rad = 0.1 + Math.random() * 0.25;
-    P.push({
-      x: Math.cos(angle) * rad, y: Math.sin(angle) * rad,
-      ox: Math.cos(angle) * rad, oy: Math.sin(angle) * rad,
-      vx: 0, vy: 0,
-      type: "circle", size: 15 + Math.random() * 35,
-      color: i < 2 ? PALETTE.deepBlue : i < 4 ? PALETTE.black : colors[Math.floor(Math.random() * colors.length)],
-      angle: 0, rotSpeed: 0,
-      phase: Math.random() * Math.PI * 2,
-      orbitR: 0.005 + Math.random() * 0.01,
-      orbitSpeed: 0.15 + Math.random() * 0.1,
-      life: 1,
-    });
-  }
-
-  // ---- Small circles (short notes) ----
-  for (let i = 0; i < 40; i++) {
-    const x = (Math.random() - 0.5) * 0.8;
-    const y = (Math.random() - 0.5) * 0.8;
-    P.push({
-      x, y, ox: x, oy: y, vx: 0, vy: 0,
-      type: "circle", size: 3 + Math.random() * 8,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      angle: 0, rotSpeed: 0,
-      phase: Math.random() * Math.PI * 2,
-      orbitR: 0.003 + Math.random() * 0.008,
-      orbitSpeed: 0.2 + Math.random() * 0.3,
-      life: 1,
-    });
-  }
-
-  // ---- Triangles (percussive, angular) ----
-  for (let i = 0; i < 25; i++) {
-    const x = (Math.random() - 0.5) * 0.7;
-    const y = (Math.random() - 0.5) * 0.7;
-    P.push({
-      x, y, ox: x, oy: y, vx: 0, vy: 0,
-      type: "triangle", size: 5 + Math.random() * 15,
-      color: i < 5 ? PALETTE.warmRed : i < 10 ? PALETTE.golden : colors[Math.floor(Math.random() * colors.length)],
-      angle: Math.random() * Math.PI * 2,
-      rotSpeed: (Math.random() - 0.5) * 0.3,
-      phase: Math.random() * Math.PI * 2,
-      orbitR: 0.002 + Math.random() * 0.005,
-      orbitSpeed: 0.4 + Math.random() * 0.6,
-      life: 1,
-    });
-  }
-
-  // ---- Lines (melodic sweeps) ----
-  for (let i = 0; i < 30; i++) {
-    const x = (Math.random() - 0.5) * 0.75;
-    const y = (Math.random() - 0.5) * 0.75;
-    P.push({
-      x, y, ox: x, oy: y, vx: 0, vy: 0,
-      type: "line", size: 20 + Math.random() * 60,
-      color: i < 10 ? PALETTE.black : colors[Math.floor(Math.random() * colors.length)],
-      angle: Math.random() * Math.PI,
-      rotSpeed: (Math.random() - 0.5) * 0.08,
-      phase: Math.random() * Math.PI * 2,
-      orbitR: 0.002 + Math.random() * 0.006,
-      orbitSpeed: 0.1 + Math.random() * 0.15,
-      life: 1,
-    });
-  }
-
-  // ---- Grid dots (rhythm section) ----
-  for (let i = 0; i < 120; i++) {
-    const gx = ((i % 12) / 11 - 0.5) * 0.7;
-    const gy = (Math.floor(i / 12) / 9 - 0.5) * 0.7;
-    const jitter = 0.015;
-    const x = gx + (Math.random() - 0.5) * jitter;
-    const y = gy + (Math.random() - 0.5) * jitter;
-    P.push({
-      x, y, ox: x, oy: y, vx: 0, vy: 0,
-      type: "dot", size: 1.5 + Math.random() * 2,
-      color: PALETTE.black,
-      angle: 0, rotSpeed: 0,
-      phase: Math.random() * Math.PI * 2,
-      orbitR: 0.001,
-      orbitSpeed: 0.3,
-      life: 1,
-    });
-  }
-
-  // ---- Concentric circle arcs (the big circles in the painting) ----
-  const arcCenters = [
-    { cx: -0.15, cy: 0.1, r: 0.12, color: PALETTE.deepBlue },
-    { cx: 0.2, cy: -0.05, r: 0.08, color: PALETTE.warmRed },
-    { cx: -0.05, cy: -0.2, r: 0.06, color: PALETTE.teal },
-  ];
-  for (const arc of arcCenters) {
-    for (let i = 0; i < 40; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const rJitter = arc.r + (Math.random() - 0.5) * 0.01;
-      const x = arc.cx + Math.cos(a) * rJitter;
-      const y = arc.cy + Math.sin(a) * rJitter;
-      P.push({
-        x, y, ox: x, oy: y, vx: 0, vy: 0,
-        type: "dot", size: 1.5 + Math.random() * 1.5,
-        color: arc.color,
-        angle: a, rotSpeed: 0,
-        phase: a,
-        orbitR: 0.002,
-        orbitSpeed: 0.2,
-        life: 1,
-      });
-    }
-  }
-
-  return P;
-}
-
-function drawTriangle(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, angle: number) {
-  ctx.beginPath();
-  for (let i = 0; i < 3; i++) {
-    const a = angle + (i / 3) * Math.PI * 2 - Math.PI / 2;
-    const px = x + Math.cos(a) * size;
-    const py = y + Math.sin(a) * size;
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
-  ctx.closePath();
+interface GeoElement {
+  mesh: THREE.Mesh | THREE.Line;
+  type: "sphere" | "tetra" | "line" | "ring" | "dot" | "cone" | "box";
+  basePos: THREE.Vector3;
+  baseScale: number;
+  phase: number;
+  freq: number;
+  rhythmGroup: number; // 0-3, elements in same group pulse together
+  orbitRadius: number;
+  orbitSpeed: number;
+  rotAxis: THREE.Vector3;
+  rotSpeed: number;
 }
 
 export default function KandinskyParticles() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mouseRef = useRef({ x: 9999, y: 9999 });
-  const targetMouseRef = useRef({ x: 9999, y: 9999 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mouseRef = useRef(new THREE.Vector2(0, 0));
+  const targetMouseRef = useRef(new THREE.Vector2(0, 0));
 
   const onMouseMove = useCallback((e: MouseEvent) => {
-    targetMouseRef.current = { x: e.clientX, y: e.clientY };
+    targetMouseRef.current.set(
+      (e.clientX / window.innerWidth) * 2 - 1,
+      -(e.clientY / window.innerHeight) * 2 + 1
+    );
   }, []);
   const onMouseLeave = useCallback(() => {
-    targetMouseRef.current = { x: 9999, y: 9999 };
+    targetMouseRef.current.set(0, 0);
   }, []);
   const onTouchMove = useCallback((e: TouchEvent) => {
-    if (e.touches.length) targetMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    if (e.touches.length) {
+      targetMouseRef.current.set(
+        (e.touches[0].clientX / window.innerWidth) * 2 - 1,
+        -(e.touches[0].clientY / window.innerHeight) * 2 + 1
+      );
+    }
   }, []);
   const onTouchEnd = useCallback(() => {
-    targetMouseRef.current = { x: 9999, y: 9999 };
+    targetMouseRef.current.set(0, 0);
   }, []);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d", { alpha: false })!;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const container = containerRef.current;
+    if (!container) return;
 
-    function resize() {
-      const w = window.innerWidth, h = window.innerHeight;
-      canvas!.width = w * dpr; canvas!.height = h * dpr;
-      canvas!.style.width = w + "px"; canvas!.style.height = h + "px";
+    // ---- Renderer ----
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(C.bg);
+    renderer.shadowMap.enabled = false;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    container.appendChild(renderer.domElement);
+
+    // ---- Scene ----
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(C.bg, 8, 25);
+
+    // ---- Camera — slight perspective for depth ----
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 12);
+    camera.lookAt(0, 0, 0);
+
+    // ---- Lights — warm, directional, like stage lighting ----
+    const ambientLight = new THREE.AmbientLight(0xf0e8d0, 0.6);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xfff5e0, 1.2);
+    keyLight.position.set(5, 8, 6);
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xd0e0f0, 0.4);
+    fillLight.position.set(-4, 2, 4);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffe0c0, 0.3);
+    rimLight.position.set(0, -3, 5);
+    scene.add(rimLight);
+
+    // ---- Materials ----
+    function makeMat(color: THREE.Color, opts: Partial<{
+      metalness: number; roughness: number; transparent: boolean;
+      opacity: number; emissive: THREE.Color; emissiveIntensity: number;
+    }> = {}): THREE.MeshStandardMaterial {
+      return new THREE.MeshStandardMaterial({
+        color,
+        metalness: opts.metalness ?? 0.3,
+        roughness: opts.roughness ?? 0.4,
+        transparent: opts.transparent ?? false,
+        opacity: opts.opacity ?? 1,
+        emissive: opts.emissive ?? color,
+        emissiveIntensity: opts.emissiveIntensity ?? 0.05,
+        side: THREE.DoubleSide,
+      });
     }
-    resize();
-    window.addEventListener("resize", resize);
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseleave", onMouseLeave);
-    window.addEventListener("touchmove", onTouchMove, { passive: true });
-    window.addEventListener("touchend", onTouchEnd);
 
-    const particles = createKandinskyParticles();
-    let time = 0, prevTime = performance.now(), raf = 0;
+    // ---- Geometries (shared, instanced via clone) ----
+    const sphereGeo = new THREE.SphereGeometry(1, 24, 24);
+    const icoGeo = new THREE.IcosahedronGeometry(1, 0); // sharp facets
+    const tetraGeo = new THREE.TetrahedronGeometry(1, 0);
+    const octaGeo = new THREE.OctahedronGeometry(1, 0);
+    const torusGeo = new THREE.TorusGeometry(1, 0.08, 16, 48);
+    const coneGeo = new THREE.ConeGeometry(1, 2, 3); // triangular cone
+    const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+    const cylGeo = new THREE.CylinderGeometry(0.03, 0.03, 1, 8);
+
+    const elements: GeoElement[] = [];
+
+    // Helper to add element
+    function addElement(
+      geo: THREE.BufferGeometry, color: THREE.Color,
+      pos: THREE.Vector3, scale: number, type: GeoElement["type"],
+      rhythmGroup: number, matOpts?: Parameters<typeof makeMat>[1]
+    ) {
+      const mat = makeMat(color, matOpts);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.copy(pos);
+      mesh.scale.setScalar(scale);
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      scene.add(mesh);
+
+      elements.push({
+        mesh, type,
+        basePos: pos.clone(),
+        baseScale: scale,
+        phase: Math.random() * Math.PI * 2,
+        freq: 0.2 + Math.random() * 0.5,
+        rhythmGroup,
+        orbitRadius: 0.05 + Math.random() * 0.15,
+        orbitSpeed: 0.3 + Math.random() * 0.4,
+        rotAxis: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(),
+        rotSpeed: (Math.random() - 0.5) * 0.5,
+      });
+    }
+
+    // ---- SECTION 1: Large spheres / circles — the brass section ----
+    // Big blue sphere — the anchor
+    addElement(sphereGeo, C.deepBlue, new THREE.Vector3(-1.5, 1.2, -1), 0.8, "sphere", 0,
+      { metalness: 0.5, roughness: 0.2, emissiveIntensity: 0.1 });
+    // Warm red sphere
+    addElement(sphereGeo, C.warmRed, new THREE.Vector3(2, -0.5, -0.5), 0.5, "sphere", 0,
+      { metalness: 0.4, roughness: 0.3 });
+    // Teal sphere — translucent
+    addElement(sphereGeo, C.teal, new THREE.Vector3(0.5, 2, -1.5), 0.6, "sphere", 0,
+      { metalness: 0.2, roughness: 0.1, transparent: true, opacity: 0.7 });
+    // Golden sphere
+    addElement(icoGeo, C.golden, new THREE.Vector3(-0.8, -1.8, -0.8), 0.45, "sphere", 0,
+      { metalness: 0.7, roughness: 0.15, emissiveIntensity: 0.15 });
+    // Small accent spheres
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const r = 2.5 + Math.random() * 1;
+      addElement(sphereGeo, COLORS[i % COLORS.length],
+        new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, -1 + Math.random() * 2),
+        0.12 + Math.random() * 0.15, "dot", 0,
+        { metalness: 0.6, roughness: 0.2 });
+    }
+
+    // ---- SECTION 2: Triangles / tetrahedra — percussion ----
+    for (let i = 0; i < 12; i++) {
+      const spread = 3.5;
+      const pos = new THREE.Vector3(
+        (Math.random() - 0.5) * spread,
+        (Math.random() - 0.5) * spread,
+        (Math.random() - 0.5) * 2 - 0.5
+      );
+      const geo = i < 4 ? tetraGeo : i < 8 ? octaGeo : coneGeo;
+      const color = i < 3 ? C.warmRed : i < 6 ? C.golden : i < 9 ? C.violet : C.orange;
+      addElement(geo, color, pos, 0.2 + Math.random() * 0.25, "tetra", 1,
+        { metalness: 0.3, roughness: 0.5 });
+    }
+
+    // ---- SECTION 3: Lines — melodic woodwinds ----
+    for (let i = 0; i < 15; i++) {
+      const length = 1 + Math.random() * 2.5;
+      const lineGeo = new THREE.CylinderGeometry(0.02 + Math.random() * 0.02, 0.01, length, 6);
+      const pos = new THREE.Vector3(
+        (Math.random() - 0.5) * 5,
+        (Math.random() - 0.5) * 4,
+        (Math.random() - 0.5) * 2
+      );
+      const color = i < 5 ? C.black : COLORS[i % COLORS.length];
+      addElement(lineGeo, color, pos, 1, "line", 2,
+        { metalness: 0.1, roughness: 0.7, emissiveIntensity: 0.02 });
+    }
+
+    // ---- SECTION 4: Rings / tori — resonance, overtones ----
+    for (let i = 0; i < 6; i++) {
+      const pos = new THREE.Vector3(
+        (Math.random() - 0.5) * 4,
+        (Math.random() - 0.5) * 3,
+        (Math.random() - 0.5) * 1.5
+      );
+      const color = i < 2 ? C.deepBlue : i < 4 ? C.teal : C.violet;
+      addElement(torusGeo, color, pos, 0.3 + Math.random() * 0.4, "ring", 3,
+        { metalness: 0.5, roughness: 0.2, transparent: true, opacity: 0.6 });
+    }
+
+    // ---- SECTION 5: Boxes — Bauhaus grid, structure ----
+    for (let i = 0; i < 8; i++) {
+      const pos = new THREE.Vector3(
+        (Math.random() - 0.5) * 4.5,
+        (Math.random() - 0.5) * 3.5,
+        -1 + Math.random() * 1.5
+      );
+      addElement(boxGeo, i < 3 ? C.black : COLORS[i % COLORS.length],
+        pos, 0.1 + Math.random() * 0.2, "box", 1,
+        { metalness: 0.2, roughness: 0.6 });
+    }
+
+    // ---- Concentric ring arcs — the iconic circles in the painting ----
+    const ringCenters = [
+      { x: -1.8, y: 0.8, z: -0.5, r: 1.2, color: C.deepBlue, width: 0.04 },
+      { x: -1.8, y: 0.8, z: -0.5, r: 0.8, color: C.warmRed, width: 0.03 },
+      { x: 1.5, y: -1, z: -0.3, r: 0.7, color: C.teal, width: 0.035 },
+    ];
+    for (const rc of ringCenters) {
+      const ringG = new THREE.TorusGeometry(rc.r, rc.width, 12, 64);
+      const mat = makeMat(rc.color, { metalness: 0.4, roughness: 0.3, transparent: true, opacity: 0.5 });
+      const mesh = new THREE.Mesh(ringG, mat);
+      mesh.position.set(rc.x, rc.y, rc.z);
+      mesh.rotation.x = Math.PI * 0.5 + (Math.random() - 0.5) * 0.3;
+      mesh.rotation.z = (Math.random() - 0.5) * 0.2;
+      scene.add(mesh);
+      elements.push({
+        mesh, type: "ring",
+        basePos: new THREE.Vector3(rc.x, rc.y, rc.z),
+        baseScale: 1,
+        phase: Math.random() * Math.PI * 2,
+        freq: 0.15,
+        rhythmGroup: 3,
+        orbitRadius: 0.02,
+        orbitSpeed: 0.1,
+        rotAxis: new THREE.Vector3(0, 0, 1),
+        rotSpeed: 0.05 + Math.random() * 0.05,
+      });
+    }
+
+    // ---- Diagonal cross-lines — Kandinsky's compositional scaffolding ----
+    const crossLineGeo = new THREE.CylinderGeometry(0.015, 0.015, 10, 4);
+    for (let i = 0; i < 3; i++) {
+      const mat = makeMat(C.black, { metalness: 0.1, roughness: 0.8, transparent: true, opacity: 0.25 });
+      const mesh = new THREE.Mesh(crossLineGeo, mat);
+      mesh.position.set(0, 0, -2);
+      mesh.rotation.z = Math.PI / 6 + i * Math.PI / 4 + (Math.random() - 0.5) * 0.2;
+      scene.add(mesh);
+      elements.push({
+        mesh, type: "line",
+        basePos: new THREE.Vector3(0, 0, -2),
+        baseScale: 1,
+        phase: i * 2, freq: 0.05, rhythmGroup: 2,
+        orbitRadius: 0, orbitSpeed: 0,
+        rotAxis: new THREE.Vector3(0, 0, 1),
+        rotSpeed: 0.01 * (i % 2 === 0 ? 1 : -1),
+      });
+    }
+
+    // ---- Animation ----
+    let time = 0;
+    let prevTime = performance.now();
+    let raf = 0;
+
+    // Musical tempo: ~72 BPM = 1.2 Hz
+    const BPM = 72;
+    const beatFreq = BPM / 60;
 
     function animate() {
       raf = requestAnimationFrame(animate);
@@ -223,149 +317,133 @@ export default function KandinskyParticles() {
       prevTime = now;
       time += dt;
 
-      const w = canvas!.width, h = canvas!.height;
-      const cxC = w / 2, cyC = h / 2;
-      const scale = Math.min(w, h);
+      // Smooth mouse
+      const m = mouseRef.current;
+      const tm = targetMouseRef.current;
+      m.lerp(tm, 0.03);
 
-      const m = mouseRef.current, tm = targetMouseRef.current;
-      m.x += (tm.x - m.x) * 0.05;
-      m.y += (tm.y - m.y) * 0.05;
-      const mx = (m.x * dpr - cxC) / scale;
-      const my = -(m.y * dpr - cyC) / scale;
+      // Camera subtle sway — like audience head movement
+      camera.position.x = Math.sin(time * 0.1) * 0.3 + m.x * 0.5;
+      camera.position.y = Math.cos(time * 0.07) * 0.2 + m.y * 0.3;
+      camera.lookAt(0, 0, 0);
 
-      // Assembly
-      const assembleT = Math.min(time / 6, 1);
-      const ease = assembleT * assembleT * (3 - 2 * assembleT);
+      // Beat pulse — global
+      const beat = pulse(time, beatFreq);
+      const halfBeat = pulse(time, beatFreq * 2);
+      const triplet = pulse(time, beatFreq * 3);
 
-      // Background — Kandinsky's warm cream
-      ctx.fillStyle = PALETTE.bg;
-      ctx.fillRect(0, 0, w, h);
+      // Section-specific rhythms
+      const rhythms = [
+        breathe(time, 3.5, 0),           // 0: brass — slow swell
+        attack(time, beatFreq, 0, 6),     // 1: percussion — sharp attacks on beat
+        breathe(time, 5, Math.PI * 0.5),  // 2: woodwinds — longer phrases
+        breathe(time, 7, Math.PI),        // 3: resonance — very slow
+      ];
 
-      for (const p of particles) {
-        // Orbit around origin position — each type has different character
-        let targetX = p.ox;
-        let targetY = p.oy;
+      for (const el of elements) {
+        const r = rhythms[el.rhythmGroup];
+        const mesh = el.mesh;
 
-        if (p.type === "circle") {
-          // Slow, gentle orbit — sustained notes
-          targetX += Math.cos(time * p.orbitSpeed + p.phase) * p.orbitR;
-          targetY += Math.sin(time * p.orbitSpeed + p.phase) * p.orbitR;
-        } else if (p.type === "triangle") {
-          // Jittery, angular — percussive hits
-          const jit = Math.sin(time * 2 + p.phase) > 0.7 ? 0.003 : 0;
-          targetX += Math.cos(time * p.orbitSpeed + p.phase) * p.orbitR + (Math.random() - 0.5) * jit;
-          targetY += Math.sin(time * p.orbitSpeed * 1.3 + p.phase) * p.orbitR + (Math.random() - 0.5) * jit;
-        } else if (p.type === "line") {
-          // Slow sweep
-          targetX += Math.cos(time * p.orbitSpeed + p.phase) * p.orbitR;
-          targetY += Math.sin(time * p.orbitSpeed * 0.7 + p.phase) * p.orbitR;
+        // Position: orbit + rhythm displacement
+        const orbitAngle = time * el.orbitSpeed + el.phase;
+        let px = el.basePos.x + Math.cos(orbitAngle) * el.orbitRadius;
+        let py = el.basePos.y + Math.sin(orbitAngle) * el.orbitRadius;
+        let pz = el.basePos.z;
+
+        // Rhythm-driven displacement
+        if (el.type === "tetra" || el.type === "box" || el.type === "cone") {
+          // Percussion: pop up on beat
+          const pop = attack(time, beatFreq, el.phase, 8);
+          py += pop * 0.08;
+          pz += pop * 0.15;
+        } else if (el.type === "sphere" || el.type === "dot") {
+          // Brass: gentle swell
+          const swell = breathe(time, 3 + el.phase * 0.5, el.phase);
+          px += Math.cos(el.phase) * swell * 0.04;
+          py += Math.sin(el.phase) * swell * 0.04;
         }
 
-        // Return force
-        const dx = targetX - p.x, dy = targetY - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > 0.0001) {
-          const ret = (0.5 + ease * 3) * Math.min(dist, 0.1) * dt;
-          p.vx += (dx / dist) * ret;
-          p.vy += (dy / dist) * ret;
+        mesh.position.set(px, py, pz);
+
+        // Scale: rhythmic breathing
+        let scaleMultiplier = 1;
+        if (el.type === "sphere") {
+          scaleMultiplier = 1 + breathe(time, 2.5, el.phase) * 0.08;
+        } else if (el.type === "tetra" || el.type === "box") {
+          scaleMultiplier = 1 + attack(time, beatFreq, el.phase, 6) * 0.2;
+        } else if (el.type === "ring") {
+          scaleMultiplier = 1 + breathe(time, 4, el.phase) * 0.06;
+        } else if (el.type === "dot") {
+          // Pizzicato: quick flicker
+          scaleMultiplier = 0.8 + attack(time, beatFreq * 2, el.phase, 3) * 0.5;
+        }
+        mesh.scale.setScalar(el.baseScale * scaleMultiplier);
+
+        // Rotation: continuous + rhythm modulation
+        const q = new THREE.Quaternion();
+        let rotAmount = el.rotSpeed * dt;
+        if (el.type === "tetra") {
+          // Percussion: jitter on beat
+          rotAmount += attack(time, beatFreq, el.phase, 8) * 2 * dt;
+        }
+        q.setFromAxisAngle(el.rotAxis, rotAmount);
+        mesh.quaternion.premultiply(q);
+
+        // Emissive pulse — glow on beat
+        const mat = mesh.material as THREE.MeshStandardMaterial;
+        if (mat.emissive) {
+          const glowIntensity = el.type === "tetra" || el.type === "box"
+            ? 0.02 + attack(time, beatFreq, el.phase, 4) * 0.2
+            : 0.03 + breathe(time, 3, el.phase) * 0.08;
+          mat.emissiveIntensity = glowIntensity;
         }
 
-        // Mouse interaction — attraction for Kandinsky (draw elements toward cursor)
-        const mdx = mx - p.x, mdy = my - p.y;
-        const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
-        if (mDist < 0.2 && mDist > 0.001) {
-          // Gentle attraction — like conducting an orchestra
-          const attract = 0.04 * Math.pow(1 - mDist / 0.2, 2) * dt;
-          p.vx += (mdx / mDist) * attract;
-          p.vy += (mdy / mDist) * attract;
-        }
-
-        p.vx *= 0.9; p.vy *= 0.9;
-        p.x += p.vx; p.y += p.vy;
-
-        // Rotation
-        p.angle += p.rotSpeed * dt;
-
-        // Screen coords
-        const sx = cxC + p.x * scale;
-        const sy = cyC - p.y * scale;
-        const drawSize = p.size * dpr;
-
-        // Opacity based on assembly
-        const assemblyAlpha = ease;
-        ctx.globalAlpha = assemblyAlpha * (p.type === "dot" ? 0.4 : 0.7);
-
-        ctx.fillStyle = p.color;
-        ctx.strokeStyle = p.color;
-
-        if (p.type === "circle") {
-          // Circles: filled or stroked, some with concentric rings
-          const pulse = 1 + Math.sin(time * 0.5 + p.phase) * 0.05;
-          const r = drawSize * pulse;
-          if (p.size > 20) {
-            // Large circles — stroked with fill
-            ctx.lineWidth = 2 * dpr;
-            ctx.beginPath();
-            ctx.arc(sx, sy, r, 0, Math.PI * 2);
-            ctx.globalAlpha = assemblyAlpha * 0.15;
-            ctx.fill();
-            ctx.globalAlpha = assemblyAlpha * 0.6;
-            ctx.stroke();
-            // Inner ring
-            ctx.globalAlpha = assemblyAlpha * 0.3;
-            ctx.beginPath();
-            ctx.arc(sx, sy, r * 0.6, 0, Math.PI * 2);
-            ctx.stroke();
-          } else {
-            // Small circles — solid
-            ctx.beginPath();
-            ctx.arc(sx, sy, r, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        } else if (p.type === "triangle") {
-          // Triangles: sharp, geometric
-          ctx.lineWidth = 1.5 * dpr;
-          drawTriangle(ctx, sx, sy, drawSize, p.angle);
-          if (p.size > 10) {
-            ctx.globalAlpha = assemblyAlpha * 0.3;
-            ctx.fill();
-            ctx.globalAlpha = assemblyAlpha * 0.7;
-            ctx.stroke();
-          } else {
-            ctx.fill();
-          }
-        } else if (p.type === "line") {
-          // Lines: straight strokes with varying weight
-          ctx.lineWidth = (1 + (p.size > 40 ? 2 : 0.5)) * dpr;
-          ctx.lineCap = "round";
-          const lx = Math.cos(p.angle) * drawSize * 0.5;
-          const ly = Math.sin(p.angle) * drawSize * 0.5;
-          ctx.beginPath();
-          ctx.moveTo(sx - lx, sy - ly);
-          ctx.lineTo(sx + lx, sy + ly);
-          ctx.stroke();
-        } else {
-          // Dots: tiny circles
-          ctx.beginPath();
-          ctx.arc(sx, sy, drawSize, 0, Math.PI * 2);
-          ctx.fill();
+        // Transparency pulse for rings
+        if (el.type === "ring" && mat.transparent) {
+          mat.opacity = 0.3 + breathe(time, 5, el.phase) * 0.4;
         }
       }
 
-      ctx.globalAlpha = 1;
+      // Light intensity follows the music
+      keyLight.intensity = 1.0 + beat * 0.3;
+      fillLight.intensity = 0.3 + halfBeat * 0.15;
+
+      renderer.render(scene, camera);
     }
 
     animate();
 
+    // ---- Resize ----
+    function onResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener("resize", onResize);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseleave", onMouseLeave);
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchend", onTouchEnd);
+
+    // ---- Cleanup ----
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", onResize);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseleave", onMouseLeave);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
+      renderer.dispose();
+      scene.traverse(obj => {
+        if (obj instanceof THREE.Mesh) {
+          obj.geometry.dispose();
+          if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+          else obj.material.dispose();
+        }
+      });
+      container.removeChild(renderer.domElement);
     };
   }, [onMouseMove, onMouseLeave, onTouchMove, onTouchEnd]);
 
-  return <canvas ref={canvasRef} style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 0 }} />;
+  return <div ref={containerRef} style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 0 }} />;
 }
