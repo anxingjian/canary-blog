@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo } from "react";
 
 /*
  * Vault — Design Inspiration Collection
@@ -48,8 +48,6 @@ export default function Vault() {
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const previewRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
     return ENTRIES.filter(e => {
@@ -65,15 +63,8 @@ export default function Vault() {
     });
   }, [activeTag, search]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    setMousePos({ x: e.clientX, y: e.clientY });
-  }, []);
-
-  const hoveredEntry = hoveredId ? ENTRIES.find(e => e.id === hoveredId) : null;
-
   return (
     <div
-      onMouseMove={handleMouseMove}
       style={{
         minHeight: "100vh",
         background: "#f2f1ed",
@@ -82,35 +73,6 @@ export default function Vault() {
         cursor: "default",
       }}
     >
-      {/* Floating preview image — desktop only */}
-      <div
-        ref={previewRef}
-        className="vault-preview"
-        style={{
-          position: "fixed",
-          left: mousePos.x + 20,
-          top: mousePos.y - 120,
-          width: 360,
-          aspectRatio: "16/10",
-          borderRadius: 8,
-          overflow: "hidden",
-          pointerEvents: "none",
-          zIndex: 1000,
-          opacity: hoveredEntry ? 1 : 0,
-          transform: hoveredEntry ? "scale(1) rotate(2deg)" : "scale(0.8) rotate(0deg)",
-          transition: "opacity 0.25s ease, transform 0.3s cubic-bezier(0.16,1,0.3,1)",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.1)",
-        }}
-      >
-        {hoveredEntry && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={hoveredEntry.thumb}
-            alt=""
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          />
-        )}
-      </div>
 
       {/* Nav — minimal */}
       <nav style={{
@@ -210,77 +172,112 @@ export default function Vault() {
         </div>
       </div>
 
-      {/* Desktop: typographic list */}
+      {/* Desktop: typographic list with inline expand */}
       <main className="vault-desktop" style={{
         padding: "1rem clamp(1.5rem, 5vw, 4rem) 4rem",
       }}>
-        {filtered.map((entry, i) => (
-          <a
-            key={entry.id}
-            href={entry.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onMouseEnter={() => setHoveredId(entry.id)}
-            onMouseLeave={() => setHoveredId(null)}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr auto",
-              gap: "1.5rem",
-              alignItems: "baseline",
-              textDecoration: "none",
-              padding: "1.25rem 0",
-              borderBottom: "1px solid rgba(0,0,0,0.06)",
-              transition: "padding-left 0.3s ease",
-              paddingLeft: hoveredId === entry.id ? "1rem" : "0",
-            }}
-          >
-            <div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "1rem", flexWrap: "wrap" }}>
-                <h2 style={{
-                  fontFamily: "'Instrument Serif', Georgia, serif",
-                  fontSize: "clamp(1.5rem, 3vw, 2.5rem)",
-                  fontWeight: 400,
-                  color: hoveredId === entry.id ? "#1a1a1a" : "#444",
-                  margin: 0,
-                  letterSpacing: "-0.02em",
-                  transition: "color 0.3s ease",
-                  lineHeight: 1.2,
-                }}>{entry.name}</h2>
-                <span style={{
-                  fontSize: "0.85rem",
-                  color: hoveredId === entry.id ? "#888" : "#bbb",
-                  transition: "color 0.3s ease",
-                }}>{entry.desc}</span>
-              </div>
-              {/* Why — slides in on hover */}
-              <p style={{
-                fontSize: "0.85rem",
-                color: "#888",
-                margin: "0.4rem 0 0",
-                lineHeight: 1.6,
-                maxHeight: hoveredId === entry.id ? "6rem" : "0",
-                opacity: hoveredId === entry.id ? 1 : 0,
+        {filtered.map((entry) => {
+          const isOpen = hoveredId === entry.id;
+          return (
+            <div
+              key={entry.id}
+              onMouseEnter={() => setHoveredId(entry.id)}
+              onMouseLeave={() => setHoveredId(null)}
+              style={{
+                borderBottom: "1px solid rgba(0,0,0,0.06)",
+                transition: "background 0.3s ease",
+                background: isOpen ? "rgba(0,0,0,0.015)" : "transparent",
+                borderRadius: isOpen ? 8 : 0,
+              }}
+            >
+              {/* Title row — always visible */}
+              <a
+                href={entry.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto",
+                  gap: "1.5rem",
+                  alignItems: "baseline",
+                  textDecoration: "none",
+                  padding: "1.25rem 0.75rem",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "baseline", gap: "1rem", flexWrap: "wrap" }}>
+                  <h2 style={{
+                    fontFamily: "'Instrument Serif', Georgia, serif",
+                    fontSize: "clamp(1.5rem, 3vw, 2.5rem)",
+                    fontWeight: 400,
+                    color: isOpen ? "#1a1a1a" : "#444",
+                    margin: 0,
+                    letterSpacing: "-0.02em",
+                    transition: "color 0.3s ease",
+                    lineHeight: 1.2,
+                  }}>{entry.name}</h2>
+                  <span style={{
+                    fontSize: "0.85rem",
+                    color: isOpen ? "#888" : "#bbb",
+                    transition: "color 0.3s ease",
+                  }}>{entry.desc}</span>
+                </div>
+                <div style={{
+                  display: "flex", gap: "0.3rem", flexShrink: 0, alignSelf: "center",
+                }}>
+                  {entry.tags.map(tag => (
+                    <span key={tag} style={{
+                      fontSize: "0.7rem", fontWeight: 500,
+                      color: isOpen ? "#999" : "#bbb",
+                      background: "rgba(0,0,0,0.03)",
+                      padding: "0.15rem 0.45rem",
+                      borderRadius: 4,
+                      transition: "color 0.3s",
+                    }}>{tag}</span>
+                  ))}
+                </div>
+              </a>
+
+              {/* Expanded content — image + why */}
+              <div style={{
+                maxHeight: isOpen ? "300px" : "0",
+                opacity: isOpen ? 1 : 0,
                 overflow: "hidden",
-                transition: "all 0.35s cubic-bezier(0.16,1,0.3,1)",
-              }}>{entry.why}</p>
+                transition: "all 0.4s cubic-bezier(0.16,1,0.3,1)",
+              }}>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "280px 1fr",
+                  gap: "1.5rem",
+                  padding: "0 0.75rem 1.25rem",
+                  alignItems: "start",
+                }}>
+                  <a href={entry.url} target="_blank" rel="noopener noreferrer" style={{
+                    display: "block", borderRadius: 6, overflow: "hidden",
+                    aspectRatio: "16/10",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                    transition: "transform 0.3s ease",
+                  }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={entry.thumb}
+                      alt={entry.name}
+                      loading="lazy"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                  </a>
+                  <p style={{
+                    fontSize: "0.9rem",
+                    color: "#666",
+                    margin: 0,
+                    lineHeight: 1.8,
+                    paddingTop: "0.25rem",
+                  }}>{entry.why}</p>
+                </div>
+              </div>
             </div>
-            <div style={{
-              display: "flex", gap: "0.3rem", flexShrink: 0, alignSelf: "center",
-            }}>
-              {entry.tags.map(tag => (
-                <span key={tag} style={{
-                  fontSize: "0.7rem", fontWeight: 500,
-                  color: "#bbb",
-                  background: "rgba(0,0,0,0.03)",
-                  padding: "0.15rem 0.45rem",
-                  borderRadius: 4,
-                  transition: "color 0.3s",
-                  ...(hoveredId === entry.id ? { color: "#999" } : {}),
-                }}>{tag}</span>
-              ))}
-            </div>
-          </a>
-        ))}
+          );
+        })}
       </main>
 
       {/* Mobile: vertical cards */}
