@@ -163,8 +163,10 @@ function ExpandableCard({ entry, isActive, onClick }: {
 export default function Vault() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const stripRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
     return ENTRIES.filter(e => {
@@ -193,39 +195,76 @@ export default function Vault() {
       fontFamily: "'Inter', -apple-system, sans-serif",
       overflow: "hidden",
     }}>
+      {/* Nav bar — fixed top */}
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        background: "rgba(242,241,237,0.9)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        borderBottom: "1px solid rgba(0,0,0,0.06)",
+        padding: "0.6rem clamp(1rem, 4vw, 2rem)",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <a href="/canary-blog/experiments" style={{
+          textDecoration: "none", color: "#aaa", fontSize: "0.85rem",
+        }}>←</a>
+        <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1a1a1a" }}>Vault</span>
+        <div style={{ position: "relative" }}>
+          {searchOpen ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <input
+                ref={searchInputRef}
+                autoFocus
+                type="text" value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search..."
+                style={{
+                  width: 160, padding: "0.35rem 0.6rem",
+                  background: "rgba(0,0,0,0.05)",
+                  border: "none", borderRadius: 20,
+                  color: "#333", fontSize: "0.85rem", outline: "none",
+                }}
+                onBlur={() => { if (!search) setSearchOpen(false); }}
+                onKeyDown={e => { if (e.key === "Escape") { setSearch(""); setSearchOpen(false); } }}
+              />
+              <button onClick={() => { setSearch(""); setSearchOpen(false); }} style={{
+                background: "none", border: "none", color: "#aaa", fontSize: "0.85rem",
+                cursor: "pointer", padding: "0.2rem",
+              }}>✕</button>
+            </div>
+          ) : (
+            <button onClick={() => setSearchOpen(true)} style={{
+              background: "none", border: "none", cursor: "pointer", padding: "0.3rem",
+              color: "#999",
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </nav>
+
       {/* Hero */}
       <section style={{
         position: "relative",
-        height: "45vh",
-        minHeight: 320,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "flex-end",
-        padding: "0 clamp(1.5rem, 5vw, 4rem)",
+        paddingTop: "calc(3rem + 44px)",
+        padding: "calc(2.5rem + 44px) clamp(1rem, 4vw, 2rem) 0",
         overflow: "hidden",
       }}>
         <NoiseCanvas />
-        
-        <a href="/canary-blog/experiments" style={{
-          position: "absolute", top: "2rem", left: "clamp(1.5rem, 5vw, 4rem)",
-          textDecoration: "none", color: "#bbb", fontSize: "0.85rem",
-          zIndex: 2,
-        }}>← experiments</a>
-
-        <div style={{ position: "relative", zIndex: 2, paddingBottom: "2.5rem" }}>
+        <div style={{ position: "relative", zIndex: 2 }}>
           <h1 style={{
             fontFamily: "'Instrument Serif', Georgia, serif",
-            fontSize: "clamp(3.5rem, 10vw, 7rem)",
+            fontSize: "clamp(3rem, 10vw, 7rem)",
             fontWeight: 400,
             color: "#1a1a1a",
             margin: 0,
             lineHeight: 0.9,
             letterSpacing: "-0.03em",
-          }}>
-            Vault
-          </h1>
+          }}>Vault</h1>
           <p style={{
-            fontSize: "clamp(0.85rem, 2vw, 1.1rem)",
+            fontSize: "clamp(0.9rem, 2vw, 1.1rem)",
             color: "#999",
             margin: "1rem 0 0",
             fontWeight: 400,
@@ -236,53 +275,48 @@ export default function Vault() {
             它们的排版、交互、和不易察觉的克制。
           </p>
         </div>
-
-        {/* Filter bar */}
-        <div style={{
-          position: "relative", zIndex: 2,
-          paddingBottom: "1.5rem",
-        }}>
-          <div style={{
-            display: "flex", gap: "0.35rem", flexWrap: "wrap",
-            marginBottom: "0.6rem",
-          }}>
-            {ALL_TAGS.map(tag => {
-              const isActive = activeTag === tag;
-              return (
-                <button key={tag} onClick={() => setActiveTag(isActive ? null : tag)} style={{
-                  padding: "0.3rem 0.75rem",
-                  borderRadius: 24,
-                  border: "none",
-                  background: isActive ? "#1a1a1a" : "rgba(0,0,0,0.05)",
-                  color: isActive ? "#f2f1ed" : "#888",
-                  fontSize: "0.8rem",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  transition: "all 0.25s ease",
-                }}>{tag}</button>
-              );
-            })}
-          </div>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            <input
-              type="text" value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search"
-              style={{
-                flex: 1, maxWidth: 200, padding: "0.4rem 0.75rem",
-                background: "rgba(0,0,0,0.05)",
-                border: "none", borderRadius: 24,
-                color: "#333", fontSize: "0.8rem",
-                outline: "none",
-              }}
-            />
-            <span style={{
-              fontSize: "0.75rem", color: "#bbb",
-              fontVariantNumeric: "tabular-nums",
-            }}>{filtered.length} sites</span>
-          </div>
-        </div>
       </section>
+
+      {/* Tags — single row horizontal scroll */}
+      <div style={{
+        position: "sticky", top: 44, zIndex: 90,
+        background: "rgba(242,241,237,0.9)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        borderBottom: "1px solid rgba(0,0,0,0.04)",
+      }}>
+        <div style={{
+          display: "flex", gap: "0.35rem",
+          padding: "0.6rem clamp(1rem, 4vw, 2rem)",
+          overflowX: "auto",
+          scrollbarWidth: "none",
+          whiteSpace: "nowrap",
+          WebkitOverflowScrolling: "touch",
+        }}>
+          {ALL_TAGS.map(tag => {
+            const isActive = activeTag === tag;
+            return (
+              <button key={tag} onClick={() => setActiveTag(isActive ? null : tag)} style={{
+                padding: "0.3rem 0.75rem",
+                borderRadius: 24,
+                border: "none",
+                background: isActive ? "#1a1a1a" : "rgba(0,0,0,0.05)",
+                color: isActive ? "#f2f1ed" : "#888",
+                fontSize: "0.8rem",
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "all 0.25s ease",
+                flexShrink: 0,
+              }}>{tag}</button>
+            );
+          })}
+          <span style={{
+            fontSize: "0.75rem", color: "#ccc",
+            display: "flex", alignItems: "center",
+            paddingLeft: "0.5rem", flexShrink: 0,
+          }}>{filtered.length}</span>
+        </div>
+      </div>
 
       {/* Horizontal expandable strip — desktop */}
       <section
