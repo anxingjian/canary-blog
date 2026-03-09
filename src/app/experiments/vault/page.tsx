@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 
 /*
  * Vault — Design Inspiration Collection
- * Light theme, card-based, visual-first.
- * Quick browse with thumbnails, tags, and search.
+ * Editorial magazine layout. Visual-first. Not cards.
  */
 
 interface Entry {
@@ -24,7 +23,7 @@ const ENTRIES: Entry[] = [
     id: "wisprflow",
     name: "Wispr Flow",
     url: "https://wisprflow.ai",
-    desc: "Voice-to-text AI，语音转文字工具",
+    desc: "Voice-to-text AI",
     why: "文字沿贝塞尔曲线自动滚动，经过 pill button 时被高亮「吞入」。极简配色（暖黄底+墨绿），衬线/无衬线混排，全页只有一条曲线在动。",
     tags: ["typography", "animation", "landing"],
     thumb: "/canary-blog/vault/wisprflow-ai.jpg",
@@ -34,8 +33,8 @@ const ENTRIES: Entry[] = [
     id: "shopify-editions",
     name: "Shopify Editions",
     url: "https://www.shopify.com/editions",
-    desc: "Shopify 半年一次的产品发布页，每期独立设计语言",
-    why: "移动端翻唱片交互——垂直堆叠卡片带 3D 透视倾斜。每期封面字体/配色/风格完全不同。桌面端滑动时背景图 transition + 卡片变换。把产品更新日志做成收藏体验。",
+    desc: "产品发布页，每期独立设计语言",
+    why: "移动端翻唱片交互——垂直堆叠卡片带 3D 透视倾斜。每期封面字体/配色/风格完全不同。把产品更新日志做成收藏体验。",
     tags: ["interaction", "editorial"],
     thumb: "/canary-blog/vault/www-shopify-com-editions.jpg",
     date: "2026-03-09",
@@ -44,8 +43,8 @@ const ENTRIES: Entry[] = [
     id: "toddham",
     name: "Todd Ham",
     url: "https://toddham.com",
-    desc: "Digital Physicality — 给数字内容赋予物理存在感",
-    why: "Three.js 全场景 3D portfolio。复古 Macintosh 3D 模型，实物质感（杯子、电脑）。Cormorant Garamond + Google Sans Code + Inter Tight 字体组合。3D 实物与 UI 的融合。",
+    desc: "Digital Physicality",
+    why: "Three.js 全场景 3D portfolio。复古 Macintosh 3D 模型，实物质感。Cormorant Garamond + Google Sans Code + Inter Tight。3D 实物与 UI 的融合。",
     tags: ["3d", "portfolio"],
     thumb: "/canary-blog/vault/toddham-com.jpg",
     date: "2026-03-08",
@@ -55,7 +54,7 @@ const ENTRIES: Entry[] = [
     name: "LAX Space",
     url: "https://laxspace.co",
     desc: "DESIGN—CODE 的视觉平衡",
-    why: "Next.js + Three.js，项目展示贴在 3D 胶带上旋转。首页 3D 物体作为项目载体，子页面排版精致。",
+    why: "Next.js + Three.js，项目展示贴在 3D 胶带上旋转。首页 3D 物体作为项目载体。",
     tags: ["3d", "portfolio"],
     thumb: "/canary-blog/vault/laxspace-co.jpg",
     date: "2026-03-08",
@@ -64,8 +63,8 @@ const ENTRIES: Entry[] = [
     id: "katalog",
     name: "Katalog Barbara Iweins",
     url: "https://katalog-barbaraiweins.com",
-    desc: "一个人所有物品的分类目录，数字孪生概念",
-    why: "把个人物品做成可浏览的数字目录。An 想做类似的：用小红书记录的物品做个人数字目录。",
+    desc: "个人物品数字孪生目录",
+    why: "把一个人所有物品做成可浏览的数字目录。",
     tags: ["concept"],
     thumb: "/canary-blog/vault/katalog-barbaraiweins-com.jpg",
     date: "2026-03-08",
@@ -74,8 +73,8 @@ const ENTRIES: Entry[] = [
     id: "elevenlabs-music",
     name: "ElevenLabs Music",
     url: "https://elevenlabs.io/music",
-    desc: "AI 音乐生成工具的产品页",
-    why: "Hero 区域环形旋转 gallery，沉浸感强。An 想把环形效果用在我们的 gallery 上。",
+    desc: "AI 音乐生成",
+    why: "Hero 区域环形旋转 gallery，沉浸感强。",
     tags: ["animation", "landing"],
     thumb: "/canary-blog/vault/elevenlabs-io-music.jpg",
     date: "2026-03-08",
@@ -84,7 +83,7 @@ const ENTRIES: Entry[] = [
     id: "abhijitrout",
     name: "Abhijit Rout",
     url: "https://abhijitrout.in",
-    desc: "设计师 portfolio，滚动动效",
+    desc: "设计师 portfolio",
     why: "顶部一排 + 滚动时的视差/动画效果。",
     tags: ["portfolio", "animation"],
     thumb: "/canary-blog/vault/abhijitrout-in.jpg",
@@ -95,7 +94,7 @@ const ENTRIES: Entry[] = [
     name: "Vemula",
     url: "https://vemula.me",
     desc: "卡片交互式 portfolio",
-    why: "桌面/移动端不同的卡片交互方式。An 想用在作品展示和播客上。",
+    why: "桌面/移动端不同的卡片交互方式。",
     tags: ["portfolio", "interaction"],
     thumb: "/canary-blog/vault/vemula-me.jpg",
     date: "2026-03-08",
@@ -154,8 +153,8 @@ const ENTRIES: Entry[] = [
     id: "apple",
     name: "Apple",
     url: "https://www.apple.com",
-    desc: "克制、空间感、字体层级、动效的标杆",
-    why: "An 推荐的审美参考：极致的克制和空间感，字体层级清晰，动效恰到好处。",
+    desc: "克制、空间感、字体层级的标杆",
+    why: "极致的克制和空间感，字体层级清晰，动效恰到好处。",
     tags: ["typography", "animation"],
     thumb: "/canary-blog/vault/www-apple-com.jpg",
     date: "2026-03-08",
@@ -165,7 +164,7 @@ const ENTRIES: Entry[] = [
     name: "Basic Agency",
     url: "https://www.basicagency.com",
     desc: "创意排版，大胆但有控制",
-    why: "An 推荐的审美参考：创意排版的尺度感——大胆但不失控。",
+    why: "创意排版的尺度感——大胆但不失控。",
     tags: ["editorial", "typography"],
     thumb: "/canary-blog/vault/www-basicagency-com.jpg",
     date: "2026-03-08",
@@ -174,25 +173,11 @@ const ENTRIES: Entry[] = [
 
 const ALL_TAGS = [...new Set(ENTRIES.flatMap(e => e.tags))].sort();
 
-const TAG_COLORS: Record<string, string> = {
-  "portfolio": "#10b981",
-  "typography": "#0ea5e9",
-  "animation": "#f59e0b",
-  "interaction": "#f97316",
-  "3d": "#6366f1",
-  "editorial": "#ec4899",
-  "landing": "#a855f7",
-  "concept": "#14b8a6",
-  "resource": "#6b7280",
-};
-
-function getTagColor(tag: string): string {
-  return TAG_COLORS[tag] || "#94a3b8";
-}
-
 export default function Vault() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
     return ENTRIES.filter(e => {
@@ -208,221 +193,268 @@ export default function Vault() {
     });
   }, [activeTag, search]);
 
+  // Assign layout patterns: hero, wide, tall, normal
+  const layouts = useMemo(() => {
+    const patterns = ["hero", "wide", "normal", "normal", "tall", "normal", "wide", "normal", "normal", "tall"];
+    return filtered.map((_, i) => patterns[i % patterns.length]);
+  }, [filtered]);
+
   return (
-    <div style={{
+    <div ref={containerRef} style={{
       minHeight: "100vh",
-      background: "#fafaf8",
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      background: "#f5f4f0",
+      fontFamily: "'Inter', -apple-system, sans-serif",
+      overflowX: "hidden",
     }}>
-      {/* Header */}
-      <div style={{
-        maxWidth: 960,
-        margin: "0 auto",
-        padding: "2.5rem 1.5rem 0",
+      {/* Sticky header */}
+      <header style={{
+        position: "sticky", top: 0, zIndex: 50,
+        background: "rgba(245,244,240,0.85)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderBottom: "1px solid rgba(0,0,0,0.06)",
       }}>
-        <a href="/canary-blog/experiments" style={{
-          fontSize: "0.875rem", color: "#999", textDecoration: "none",
-          letterSpacing: "0.05em",
-        }}>← experiments</a>
+        <div style={{
+          maxWidth: 1200, margin: "0 auto",
+          padding: "0.75rem 1.5rem",
+          display: "flex", alignItems: "center", gap: "1rem",
+          flexWrap: "wrap",
+        }}>
+          <a href="/canary-blog/experiments" style={{
+            textDecoration: "none", color: "#999", fontSize: "0.8rem",
+          }}>←</a>
+          <span style={{
+            fontSize: "0.85rem", fontWeight: 600, color: "#1a1a1a",
+            letterSpacing: "-0.01em",
+          }}>Vault</span>
+          <span style={{ fontSize: "0.75rem", color: "#bbb" }}>·</span>
+          <span style={{ fontSize: "0.75rem", color: "#999" }}>{filtered.length} sites</span>
 
-        <h1 style={{
-          fontSize: "1.5rem",
-          fontWeight: 600,
-          color: "#1a1a1a",
-          margin: "1.5rem 0 0.3rem",
-          letterSpacing: "-0.02em",
-        }}>Vault</h1>
-        <p style={{
-          fontSize: "1rem",
-          color: "#888",
-          margin: "0 0 1.5rem",
-          lineHeight: 1.5,
-        }}>好设计的收藏夹 · {ENTRIES.length} sites</p>
+          <div style={{ flex: 1 }} />
 
-        {/* Search */}
-        <div style={{ position: "relative", maxWidth: 400, marginBottom: "1rem" }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" style={{
-            position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-          }}>
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-          </svg>
+          {/* Search inline */}
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search sites, tags, keywords..."
+            placeholder="Search..."
             style={{
-              width: "100%",
-              padding: "0.6rem 0.75rem 0.6rem 2.2rem",
-              background: "#fff",
-              border: "1px solid #e5e5e5",
-              borderRadius: 8,
-              color: "#333",
-              fontSize: "0.875rem",
+              width: 160, padding: "0.35rem 0.6rem",
+              background: "rgba(0,0,0,0.04)",
+              border: "1px solid transparent",
+              borderRadius: 6,
+              color: "#333", fontSize: "0.8rem",
               outline: "none",
             }}
-            onFocus={e => e.currentTarget.style.borderColor = "#bbb"}
-            onBlur={e => e.currentTarget.style.borderColor = "#e5e5e5"}
+            onFocus={e => e.currentTarget.style.borderColor = "#ccc"}
+            onBlur={e => e.currentTarget.style.borderColor = "transparent"}
           />
         </div>
 
-        {/* Tags */}
+        {/* Tags row */}
         <div style={{
-          display: "flex", flexWrap: "wrap", gap: "0.35rem",
-          marginBottom: "1.5rem",
+          maxWidth: 1200, margin: "0 auto",
+          padding: "0 1.5rem 0.6rem",
+          display: "flex", gap: "0.4rem", flexWrap: "wrap",
         }}>
-          <button
-            onClick={() => setActiveTag(null)}
-            style={{
-              padding: "0.2rem 0.55rem",
-              borderRadius: 6,
-              border: "none",
-              background: activeTag === null ? "#1a1a1a" : "#f0f0ee",
-              color: activeTag === null ? "#fff" : "#666",
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-          >All</button>
           {ALL_TAGS.map(tag => {
             const isActive = activeTag === tag;
-            const c = getTagColor(tag);
             return (
               <button
                 key={tag}
                 onClick={() => setActiveTag(isActive ? null : tag)}
                 style={{
-                  padding: "0.2rem 0.55rem",
-                  borderRadius: 6,
-                  border: "none",
-                  background: isActive ? c : "#f0f0ee",
-                  color: isActive ? "#fff" : "#777",
+                  padding: "0.2rem 0.6rem",
+                  borderRadius: 20,
+                  border: `1px solid ${isActive ? "#1a1a1a" : "rgba(0,0,0,0.1)"}`,
+                  background: isActive ? "#1a1a1a" : "transparent",
+                  color: isActive ? "#fff" : "#666",
                   fontSize: "0.75rem",
-                  fontWeight: 500,
                   cursor: "pointer",
-                  transition: "all 0.15s ease",
+                  transition: "all 0.2s",
                 }}
               >{tag}</button>
             );
           })}
+          {activeTag && (
+            <button
+              onClick={() => setActiveTag(null)}
+              style={{
+                padding: "0.2rem 0.6rem", borderRadius: 20,
+                border: "1px solid rgba(0,0,0,0.1)",
+                background: "transparent", color: "#999",
+                fontSize: "0.75rem", cursor: "pointer",
+              }}
+            >✕ clear</button>
+          )}
         </div>
-      </div>
+      </header>
 
-      {/* Cards grid */}
-      <div style={{
-        maxWidth: 960,
-        margin: "0 auto",
-        padding: "0 1.5rem 4rem",
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-        gap: "1.25rem",
+      {/* Editorial grid */}
+      <main style={{
+        maxWidth: 1200, margin: "0 auto",
+        padding: "1.5rem",
       }}>
-        {filtered.map(entry => (
-          <a
-            key={entry.id}
-            href={entry.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              textDecoration: "none",
-              background: "#fff",
-              borderRadius: 10,
-              border: "1px solid #eee",
-              overflow: "hidden",
-              transition: "transform 0.2s ease, box-shadow 0.2s ease",
-              display: "flex",
-              flexDirection: "column",
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.08)";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
-          >
-            {/* Thumbnail */}
-            <div style={{
-              width: "100%",
-              aspectRatio: "16/9",
-              background: "#f5f5f3",
-              overflow: "hidden",
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={entry.thumb}
-                alt={entry.name}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(6, 1fr)",
+          gap: "1rem",
+        }}>
+          {filtered.map((entry, i) => {
+            const layout = layouts[i];
+            const isHovered = hoveredId === entry.id;
+            const span = layout === "hero" ? 6 : layout === "wide" ? 4 : layout === "tall" ? 2 : 2;
+            const rowSpan = layout === "hero" ? 2 : layout === "tall" ? 2 : 1;
+            const aspectRatio = layout === "hero" ? "2.2/1" : layout === "wide" ? "2/1" : layout === "tall" ? "3/4" : "4/3";
+
+            return (
+              <a
+                key={entry.id}
+                href={entry.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onMouseEnter={() => setHoveredId(entry.id)}
+                onMouseLeave={() => setHoveredId(null)}
                 style={{
-                  width: "100%", height: "100%",
-                  objectFit: "cover",
-                  transition: "transform 0.3s ease",
+                  gridColumn: `span ${span}`,
+                  gridRow: `span ${rowSpan}`,
+                  position: "relative",
+                  overflow: "hidden",
+                  borderRadius: 10,
+                  textDecoration: "none",
+                  aspectRatio,
+                  cursor: "pointer",
+                  transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+                  transform: isHovered ? "scale(0.985)" : "scale(1)",
                 }}
-                loading="lazy"
-                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
-            </div>
+              >
+                {/* Image */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={entry.thumb}
+                  alt={entry.name}
+                  loading="lazy"
+                  style={{
+                    position: "absolute", inset: 0,
+                    width: "100%", height: "100%",
+                    objectFit: "cover",
+                    transition: "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+                    transform: isHovered ? "scale(1.05)" : "scale(1)",
+                  }}
+                  onError={e => {
+                    const t = e.target as HTMLImageElement;
+                    t.style.display = "none";
+                    t.parentElement!.style.background = "#e8e7e3";
+                  }}
+                />
 
-            {/* Content */}
-            <div style={{ padding: "0.85rem 1rem 1rem", flex: 1, display: "flex", flexDirection: "column" }}>
-              {/* Name + date */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.3rem" }}>
-                <h2 style={{
-                  fontSize: "1rem",
-                  fontWeight: 600,
-                  color: "#1a1a1a",
-                  margin: 0,
-                }}>{entry.name}</h2>
-                <span style={{ fontSize: "0.75rem", color: "#bbb", flexShrink: 0, marginLeft: "0.5rem" }}>{entry.date}</span>
-              </div>
+                {/* Gradient overlay */}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: isHovered
+                    ? "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 40%, rgba(0,0,0,0.05) 100%)"
+                    : "linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.05) 50%, transparent 100%)",
+                  transition: "background 0.4s ease",
+                }} />
 
-              {/* Desc */}
-              <p style={{
-                fontSize: "0.875rem", color: "#888",
-                margin: "0 0 0.4rem", lineHeight: 1.4,
-              }}>{entry.desc}</p>
-
-              {/* Why */}
-              <p style={{
-                fontSize: "1rem", color: "#555",
-                margin: "0 0 0.6rem", lineHeight: 1.6,
-                flex: 1,
-              }}>{entry.why}</p>
-
-              {/* Tags + URL */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", alignItems: "center" }}>
-                {entry.tags.slice(0, 4).map(tag => (
-                  <span key={tag} style={{
-                    fontSize: "0.75rem",
+                {/* Content overlay */}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", flexDirection: "column",
+                  justifyContent: "flex-end",
+                  padding: layout === "hero" ? "2rem" : "1rem",
+                }}>
+                  {/* Number */}
+                  <span style={{
+                    position: "absolute",
+                    top: layout === "hero" ? "1.5rem" : "0.75rem",
+                    right: layout === "hero" ? "1.5rem" : "0.75rem",
+                    fontSize: "0.7rem",
                     fontWeight: 500,
-                    color: getTagColor(tag),
-                    background: getTagColor(tag) + "12",
-                    padding: "0.12rem 0.4rem",
-                    borderRadius: 4,
-                  }}>{tag}</span>
-                ))}
-                {entry.tags.length > 4 && (
-                  <span style={{ fontSize: "0.75rem", color: "#bbb" }}>+{entry.tags.length - 4}</span>
-                )}
-              </div>
-            </div>
-          </a>
-        ))}
+                    color: "rgba(255,255,255,0.35)",
+                    fontVariantNumeric: "tabular-nums",
+                  }}>{String(i + 1).padStart(2, "0")}</span>
+
+                  {/* Name */}
+                  <h2 style={{
+                    fontSize: layout === "hero" ? "2rem" : layout === "wide" ? "1.3rem" : "1rem",
+                    fontWeight: 600,
+                    color: "#fff",
+                    margin: 0,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.2,
+                  }}>{entry.name}</h2>
+
+                  {/* Desc */}
+                  <p style={{
+                    fontSize: layout === "hero" ? "0.95rem" : "0.8rem",
+                    color: "rgba(255,255,255,0.65)",
+                    margin: "0.3rem 0 0",
+                    lineHeight: 1.4,
+                  }}>{entry.desc}</p>
+
+                  {/* Why — only on hover or hero */}
+                  <p style={{
+                    fontSize: layout === "hero" ? "0.85rem" : "0.75rem",
+                    color: "rgba(255,255,255,0.5)",
+                    margin: "0.4rem 0 0",
+                    lineHeight: 1.6,
+                    maxHeight: (isHovered || layout === "hero") ? "8rem" : "0",
+                    opacity: (isHovered || layout === "hero") ? 1 : 0,
+                    overflow: "hidden",
+                    transition: "all 0.4s ease",
+                  }}>{entry.why}</p>
+
+                  {/* Tags */}
+                  <div style={{
+                    display: "flex", gap: "0.3rem",
+                    marginTop: "0.5rem",
+                    opacity: isHovered ? 1 : 0.6,
+                    transition: "opacity 0.3s ease",
+                  }}>
+                    {entry.tags.map(tag => (
+                      <span key={tag} style={{
+                        fontSize: "0.65rem",
+                        fontWeight: 500,
+                        color: "rgba(255,255,255,0.7)",
+                        background: "rgba(255,255,255,0.15)",
+                        padding: "0.15rem 0.45rem",
+                        borderRadius: 4,
+                        backdropFilter: "blur(8px)",
+                      }}>{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              </a>
+            );
+          })}
+        </div>
 
         {filtered.length === 0 && (
           <div style={{
-            gridColumn: "1 / -1",
-            textAlign: "center", padding: "4rem 0",
-            color: "#bbb", fontSize: "1rem",
+            textAlign: "center", padding: "6rem 0",
+            color: "#bbb", fontSize: "0.9rem",
           }}>没有匹配的结果</div>
         )}
-      </div>
+      </main>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        input::placeholder { color: #bbb; }
-        * { box-sizing: border-box; }
+        input::placeholder { color: #aaa; }
+        * { box-sizing: border-box; margin: 0; }
+
+        @media (max-width: 768px) {
+          main > div > a {
+            grid-column: span 6 !important;
+            grid-row: span 1 !important;
+            aspect-ratio: 16/9 !important;
+          }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) {
+          main > div > a[style*="span 4"] {
+            grid-column: span 3 !important;
+          }
+        }
       `}</style>
     </div>
   );
