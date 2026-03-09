@@ -240,12 +240,11 @@ export default function Vault() {
         {/* Filter bar */}
         <div style={{
           position: "relative", zIndex: 2,
-          display: "flex", alignItems: "center", gap: "0.75rem",
           paddingBottom: "1.5rem",
-          flexWrap: "wrap",
         }}>
           <div style={{
-            display: "flex", gap: "0.35rem", flexWrap: "wrap", flex: 1,
+            display: "flex", gap: "0.35rem", flexWrap: "wrap",
+            marginBottom: "0.6rem",
           }}>
             {ALL_TAGS.map(tag => {
               const isActive = activeTag === tag;
@@ -260,28 +259,28 @@ export default function Vault() {
                   fontWeight: 500,
                   cursor: "pointer",
                   transition: "all 0.25s ease",
-                  backdropFilter: "blur(8px)",
                 }}>{tag}</button>
               );
             })}
           </div>
-          <input
-            type="text" value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search"
-            style={{
-              width: 160, padding: "0.4rem 0.75rem",
-              background: "rgba(0,0,0,0.05)",
-              border: "none", borderRadius: 24,
-              color: "#333", fontSize: "0.8rem",
-              outline: "none",
-              backdropFilter: "blur(8px)",
-            }}
-          />
-          <span style={{
-            fontSize: "0.75rem", color: "#bbb",
-            fontVariantNumeric: "tabular-nums",
-          }}>{filtered.length} sites</span>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <input
+              type="text" value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search"
+              style={{
+                flex: 1, maxWidth: 200, padding: "0.4rem 0.75rem",
+                background: "rgba(0,0,0,0.05)",
+                border: "none", borderRadius: 24,
+                color: "#333", fontSize: "0.8rem",
+                outline: "none",
+              }}
+            />
+            <span style={{
+              fontSize: "0.75rem", color: "#bbb",
+              fontVariantNumeric: "tabular-nums",
+            }}>{filtered.length} sites</span>
+          </div>
         </div>
       </section>
 
