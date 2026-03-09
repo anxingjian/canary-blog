@@ -231,19 +231,19 @@ export default function Vault() {
         padding: "2.5rem 1.5rem 0",
       }}>
         <a href="/canary-blog/experiments" style={{
-          fontSize: "0.7rem", color: "#999", textDecoration: "none",
+          fontSize: "0.875rem", color: "#999", textDecoration: "none",
           letterSpacing: "0.05em",
         }}>← experiments</a>
 
         <h1 style={{
-          fontSize: "2rem",
+          fontSize: "1.5rem",
           fontWeight: 600,
           color: "#1a1a1a",
           margin: "1.5rem 0 0.3rem",
           letterSpacing: "-0.02em",
         }}>Vault</h1>
         <p style={{
-          fontSize: "0.85rem",
+          fontSize: "1rem",
           color: "#888",
           margin: "0 0 1.5rem",
           lineHeight: 1.5,
@@ -268,9 +268,8 @@ export default function Vault() {
               border: "1px solid #e5e5e5",
               borderRadius: 8,
               color: "#333",
-              fontSize: "0.8rem",
+              fontSize: "0.875rem",
               outline: "none",
-              transition: "border-color 0.2s",
             }}
             onFocus={e => e.currentTarget.style.borderColor = "#bbb"}
             onBlur={e => e.currentTarget.style.borderColor = "#e5e5e5"}
@@ -290,7 +289,7 @@ export default function Vault() {
               border: "none",
               background: activeTag === null ? "#1a1a1a" : "#f0f0ee",
               color: activeTag === null ? "#fff" : "#666",
-              fontSize: "0.65rem",
+              fontSize: "0.75rem",
               fontWeight: 500,
               cursor: "pointer",
               transition: "all 0.15s ease",
@@ -309,7 +308,7 @@ export default function Vault() {
                   border: "none",
                   background: isActive ? c : "#f0f0ee",
                   color: isActive ? "#fff" : "#777",
-                  fontSize: "0.65rem",
+                  fontSize: "0.75rem",
                   fontWeight: 500,
                   cursor: "pointer",
                   transition: "all 0.15s ease",
@@ -380,23 +379,23 @@ export default function Vault() {
               {/* Name + date */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.3rem" }}>
                 <h2 style={{
-                  fontSize: "0.9rem",
+                  fontSize: "1rem",
                   fontWeight: 600,
                   color: "#1a1a1a",
                   margin: 0,
                 }}>{entry.name}</h2>
-                <span style={{ fontSize: "0.6rem", color: "#bbb", flexShrink: 0, marginLeft: "0.5rem" }}>{entry.date}</span>
+                <span style={{ fontSize: "0.75rem", color: "#bbb", flexShrink: 0, marginLeft: "0.5rem" }}>{entry.date}</span>
               </div>
 
               {/* Desc */}
               <p style={{
-                fontSize: "0.7rem", color: "#888",
+                fontSize: "0.875rem", color: "#888",
                 margin: "0 0 0.4rem", lineHeight: 1.4,
               }}>{entry.desc}</p>
 
               {/* Why */}
               <p style={{
-                fontSize: "0.72rem", color: "#555",
+                fontSize: "1rem", color: "#555",
                 margin: "0 0 0.6rem", lineHeight: 1.6,
                 flex: 1,
               }}>{entry.why}</p>
@@ -405,7 +404,7 @@ export default function Vault() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", alignItems: "center" }}>
                 {entry.tags.slice(0, 4).map(tag => (
                   <span key={tag} style={{
-                    fontSize: "0.55rem",
+                    fontSize: "0.75rem",
                     fontWeight: 500,
                     color: getTagColor(tag),
                     background: getTagColor(tag) + "12",
@@ -414,7 +413,7 @@ export default function Vault() {
                   }}>{tag}</span>
                 ))}
                 {entry.tags.length > 4 && (
-                  <span style={{ fontSize: "0.55rem", color: "#bbb" }}>+{entry.tags.length - 4}</span>
+                  <span style={{ fontSize: "0.75rem", color: "#bbb" }}>+{entry.tags.length - 4}</span>
                 )}
               </div>
             </div>
@@ -425,7 +424,7 @@ export default function Vault() {
           <div style={{
             gridColumn: "1 / -1",
             textAlign: "center", padding: "4rem 0",
-            color: "#bbb", fontSize: "0.85rem",
+            color: "#bbb", fontSize: "1rem",
           }}>没有匹配的结果</div>
         )}
       </div>
