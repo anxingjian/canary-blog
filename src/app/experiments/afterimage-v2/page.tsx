@@ -116,45 +116,38 @@ uniform float u_returnStrength;
 uniform float u_dissipation;
 uniform vec2 u_mouse;
 uniform float u_mouseInfluence;
-
-varying vec2 vUv;
+uniform float u_simSize;
 
 ${CURL_NOISE_GLSL}
 
 void main() {
+  vec2 vUv = gl_FragCoord.xy / u_simSize;
   vec4 pos = texture2D(u_positionTex, vUv);
   vec4 origin = texture2D(u_originTex, vUv);
   
   vec3 p = pos.xyz;
   float life = pos.w;
-  float role = origin.w; // 0 = void particle, 1 = form particle
+  float role = origin.w;
   
-  // Curl noise — the breath of the void
   float t = u_time * u_noiseSpeed;
   vec3 curl = curlNoise(p * u_noiseScale, t);
   
-  // Void particles: drift freely, very slow
-  // Form particles: drift less, pulled back to origin
   float curlAmt = mix(u_curlStrength, u_curlStrength * 0.3, role);
   p += curl * curlAmt * u_dt;
   
-  // Return force — form particles want to go home
   vec3 toOrigin = origin.xyz - p;
   float dist = length(toOrigin);
   float returnForce = role * u_returnStrength * smoothstep(0.0, 0.5, dist);
   p += normalize(toOrigin + 0.0001) * returnForce * u_dt;
   
-  // Mouse repulsion — proximity dissolves form
   vec3 mousePos3 = vec3(u_mouse, 0.0);
   vec3 toMouse = p - mousePos3;
   float mouseDist = length(toMouse);
   float repel = u_mouseInfluence * smoothstep(0.5, 0.0, mouseDist);
   p += normalize(toMouse + 0.0001) * repel * u_dt;
   
-  // Gentle gravity toward center (prevents drift-away)
   p *= (1.0 - 0.001 * u_dt);
   
-  // Life cycle — void particles slowly fade and reset
   life -= u_dt * u_dissipation * (1.0 - role * 0.8);
   if (life < 0.0) {
     p = origin.xyz + curl * 0.02;
@@ -166,19 +159,13 @@ void main() {
 `;
 
 const SIM_VERT = `
-precision highp float;
-attribute vec2 position;
-varying vec2 vUv;
 void main() {
-  vUv = position * 0.5 + 0.5;
-  gl_Position = vec4(position, 0.0, 1.0);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }
 `;
 
 // ---- Render Shader (particles as points) ----
 const RENDER_VERT = `
-precision highp float;
-
 uniform sampler2D u_positionTex;
 uniform sampler2D u_originTex;
 uniform float u_pointSize;
@@ -198,53 +185,38 @@ void main() {
   v_life = pos.w;
   v_role = origin.w;
   
-  // Color: ink tones — from near-white void to dark ink strokes
   float ink = v_role;
-  // Void: warm paper white with very slight variation
   vec3 paperColor = vec3(0.92, 0.90, 0.86);
-  // Ink: dark but warm, like real Chinese ink
   vec3 inkColor = vec3(0.12, 0.11, 0.10);
-  // Water ripple particles: slightly blue-grey
   vec3 waterColor = vec3(0.65, 0.68, 0.70);
   
-  // Mix based on role (stored as 0-1 continuous, not binary)
   v_color = mix(paperColor, inkColor, smoothstep(0.3, 0.8, ink));
   v_color = mix(v_color, waterColor, smoothstep(0.15, 0.25, ink) * (1.0 - smoothstep(0.25, 0.35, ink)));
   
-  // Position — map to screen space
   vec3 p = pos.xyz;
   vec2 screenPos = vec2(p.x / u_aspect, p.y);
   
   gl_Position = vec4(screenPos * 2.0, p.z, 1.0);
   
-  // Point size: form particles slightly larger, void particles tiny
   float sizeMult = mix(0.6, 1.8, smoothstep(0.3, 0.8, ink));
-  // Life fade
   float lifeFade = smoothstep(0.0, 0.2, v_life);
   gl_PointSize = u_pointSize * sizeMult * lifeFade;
 }
 `;
 
 const RENDER_FRAG = `
-precision highp float;
-
 varying float v_life;
 varying float v_role;
 varying vec3 v_color;
 
 void main() {
-  // Soft circle
   vec2 c = gl_PointCoord - 0.5;
   float d = dot(c, c);
   if (d > 0.25) discard;
   
-  // Soft edge
   float alpha = smoothstep(0.25, 0.1, d);
-  
-  // Life-based fade
   alpha *= smoothstep(0.0, 0.3, v_life);
   
-  // Void particles are very transparent; form particles are opaque
   float baseAlpha = mix(0.02, 0.7, smoothstep(0.3, 0.8, v_role));
   alpha *= baseAlpha;
   
@@ -388,19 +360,28 @@ export default function AfterimageV2() {
     renderer.setClearColor(new THREE.Color(0.94, 0.92, 0.88), 1); // Warm paper
     container.appendChild(renderer.domElement);
 
-    // Check float texture support
-    const ext = renderer.getContext().getExtension("OES_texture_float");
-    const ext2 = renderer.getContext().getExtension("OES_texture_float_linear");
-    if (!ext) {
-      console.warn("Float textures not supported");
-    }
+    // Enable float/half-float texture support
+    const gl = renderer.getContext();
+    // WebGL1 extensions
+    gl.getExtension("OES_texture_float");
+    gl.getExtension("OES_texture_float_linear");
+    gl.getExtension("OES_texture_half_float");
+    gl.getExtension("OES_texture_half_float_linear");
+    // WebGL2 extension for rendering to float textures
+    gl.getExtension("EXT_color_buffer_float");
+    gl.getExtension("EXT_color_buffer_half_float");
+    gl.getExtension("EXT_float_blend");
+
+    // Determine best texture type
+    const supportsFloat = !!gl.getExtension("EXT_color_buffer_float") || !!gl.getExtension("OES_texture_float");
+    const texType = supportsFloat ? THREE.FloatType : THREE.HalfFloatType;
 
     // ---- Create particle data ----
     const { positions, origins } = createParticleData(SIM_SIZE);
 
     // ---- FBO Ping-Pong Setup ----
     function createDataTexture(data: Float32Array, size: number): THREE.DataTexture {
-      const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat, THREE.FloatType);
+      const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat, texType);
       tex.minFilter = THREE.NearestFilter;
       tex.magFilter = THREE.NearestFilter;
       tex.needsUpdate = true;
@@ -415,7 +396,7 @@ export default function AfterimageV2() {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
       format: THREE.RGBAFormat,
-      type: THREE.FloatType,
+      type: texType,
       depthBuffer: false,
       stencilBuffer: false,
     };
@@ -428,7 +409,7 @@ export default function AfterimageV2() {
     const simScene = new THREE.Scene();
     const simCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     const simGeo = new THREE.PlaneGeometry(2, 2);
-    const simMat = new THREE.RawShaderMaterial({
+    const simMat = new THREE.ShaderMaterial({
       vertexShader: SIM_VERT,
       fragmentShader: SIM_FRAG,
       uniforms: {
@@ -443,6 +424,7 @@ export default function AfterimageV2() {
         u_dissipation: { value: 0.05 },
         u_mouse: { value: new THREE.Vector2(999, 999) },
         u_mouseInfluence: { value: 0.3 },
+        u_simSize: { value: SIM_SIZE },
       },
     });
     const simQuad = new THREE.Mesh(simGeo, simMat);
@@ -451,15 +433,17 @@ export default function AfterimageV2() {
     // Initialize: render initial positions into rt0
     renderer.setRenderTarget(rt0);
     // We need a passthrough shader to copy positionTex into rt0
-    const copyMat = new THREE.RawShaderMaterial({
+    const copyMat = new THREE.ShaderMaterial({
       vertexShader: SIM_VERT,
       fragmentShader: `
-        precision highp float;
         uniform sampler2D u_tex;
-        varying vec2 vUv;
-        void main() { gl_FragColor = texture2D(u_tex, vUv); }
+        uniform float u_simSize;
+        void main() {
+          vec2 vUv = gl_FragCoord.xy / u_simSize;
+          gl_FragColor = texture2D(u_tex, vUv);
+        }
       `,
-      uniforms: { u_tex: { value: positionTex } },
+      uniforms: { u_tex: { value: positionTex }, u_simSize: { value: SIM_SIZE } },
     });
     simQuad.material = copyMat;
     renderer.render(simScene, simCamera);
@@ -483,13 +467,13 @@ export default function AfterimageV2() {
     const particleGeo = new THREE.BufferGeometry();
     particleGeo.setAttribute("a_uv", new THREE.Float32BufferAttribute(uvs, 2));
 
-    const particleMat = new THREE.RawShaderMaterial({
+    const particleMat = new THREE.ShaderMaterial({
       vertexShader: RENDER_VERT,
       fragmentShader: RENDER_FRAG,
       uniforms: {
         u_positionTex: { value: null },
         u_originTex: { value: originTex },
-        u_pointSize: { value: 2.0 },
+        u_pointSize: { value: Math.min(window.devicePixelRatio, 2) * 3.0 },
         u_aspect: { value: window.innerWidth / window.innerHeight },
         u_time: { value: 0 },
       },
