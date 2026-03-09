@@ -108,20 +108,38 @@ export default function KandinskyParticles() {
     camera.lookAt(0, 0, 0);
 
     // ---- Lights — warm, directional, like stage lighting ----
-    const ambientLight = new THREE.AmbientLight(0xf0e8d0, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xf0e8d0, 0.5);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xfff5e0, 1.2);
+    const keyLight = new THREE.DirectionalLight(0xfff5e0, 1.4);
     keyLight.position.set(5, 8, 6);
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xd0e0f0, 0.4);
+    const fillLight = new THREE.DirectionalLight(0xd0e0f0, 0.5);
     fillLight.position.set(-4, 2, 4);
     scene.add(fillLight);
 
-    const rimLight = new THREE.DirectionalLight(0xffe0c0, 0.3);
+    const rimLight = new THREE.DirectionalLight(0xffe0c0, 0.35);
     rimLight.position.set(0, -3, 5);
     scene.add(rimLight);
+
+    // ---- Environment map for reflections ----
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envScene = new THREE.Scene();
+    envScene.background = new THREE.Color(0xf0e8d0);
+    // Add colored lights to env for interesting reflections
+    const envLight1 = new THREE.PointLight(0x4060ff, 3, 20);
+    envLight1.position.set(5, 5, 5);
+    envScene.add(envLight1);
+    const envLight2 = new THREE.PointLight(0xff6040, 3, 20);
+    envLight2.position.set(-5, -3, 3);
+    envScene.add(envLight2);
+    const envLight3 = new THREE.PointLight(0xf0e8d0, 4, 20);
+    envLight3.position.set(0, 8, -5);
+    envScene.add(envLight3);
+    const envMap = pmrem.fromScene(envScene, 0, 0.1, 100).texture;
+    scene.environment = envMap;
+    pmrem.dispose();
 
     // ---- Materials ----
     function makeMat(color: THREE.Color, opts: Partial<{
@@ -182,16 +200,16 @@ export default function KandinskyParticles() {
     // ---- SECTION 1: Large spheres / circles — the brass section ----
     // Big blue sphere — the anchor
     addElement(sphereGeo, C.deepBlue, new THREE.Vector3(-1.5, 1.2, -1), 0.8, "sphere", 0,
-      { metalness: 0.5, roughness: 0.2, emissiveIntensity: 0.1 });
+      { metalness: 0.8, roughness: 0.15, emissiveIntensity: 0.08 });
     // Warm red sphere
     addElement(sphereGeo, C.warmRed, new THREE.Vector3(2, -0.5, -0.5), 0.5, "sphere", 0,
-      { metalness: 0.4, roughness: 0.3 });
-    // Teal sphere — translucent
+      { metalness: 0.6, roughness: 0.25 });
+    // Teal sphere — translucent glass
     addElement(sphereGeo, C.teal, new THREE.Vector3(0.5, 2, -1.5), 0.6, "sphere", 0,
-      { metalness: 0.2, roughness: 0.1, transparent: true, opacity: 0.7 });
-    // Golden sphere
+      { metalness: 0.1, roughness: 0.05, transparent: true, opacity: 0.6 });
+    // Golden sphere — polished brass
     addElement(icoGeo, C.golden, new THREE.Vector3(-0.8, -1.8, -0.8), 0.45, "sphere", 0,
-      { metalness: 0.7, roughness: 0.15, emissiveIntensity: 0.15 });
+      { metalness: 0.9, roughness: 0.1, emissiveIntensity: 0.12 });
     // Small accent spheres
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2;
@@ -301,6 +319,30 @@ export default function KandinskyParticles() {
       });
     }
 
+    // ---- Watercolor wash background planes ----
+    const washColors = [
+      { color: 0x3a5a9a, x: -2.5, y: 1.5, z: -3, scale: 4, opacity: 0.06, rot: 0.3 },
+      { color: 0xc04030, x: 2, y: -1.5, z: -3.5, scale: 3.5, opacity: 0.05, rot: -0.4 },
+      { color: 0xe8b830, x: 0.5, y: 0, z: -4, scale: 5, opacity: 0.04, rot: 0.1 },
+      { color: 0x2a8a7a, x: -1, y: -2, z: -3.2, scale: 3, opacity: 0.05, rot: 0.6 },
+      { color: 0x7a3a9a, x: 1.8, y: 2, z: -3.8, scale: 2.5, opacity: 0.04, rot: -0.2 },
+    ];
+    const washGeo = new THREE.PlaneGeometry(1, 1);
+    for (const w of washColors) {
+      const washMat = new THREE.MeshBasicMaterial({
+        color: w.color,
+        transparent: true,
+        opacity: w.opacity,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      const washMesh = new THREE.Mesh(washGeo, washMat);
+      washMesh.position.set(w.x, w.y, w.z);
+      washMesh.scale.setScalar(w.scale);
+      washMesh.rotation.z = w.rot;
+      scene.add(washMesh);
+    }
+
     // ---- Animation ----
     let time = 0;
     let prevTime = performance.now();
@@ -350,17 +392,18 @@ export default function KandinskyParticles() {
         let py = el.basePos.y + Math.sin(orbitAngle) * el.orbitRadius;
         let pz = el.basePos.z;
 
-        // Rhythm-driven displacement
+        // Rhythm-driven displacement — smooth eased curves
         if (el.type === "tetra" || el.type === "box" || el.type === "cone") {
-          // Percussion: pop up on beat
-          const pop = attack(time, beatFreq, el.phase, 8);
-          py += pop * 0.08;
-          pz += pop * 0.15;
+          // Percussion: gentle float up on beat, ease out
+          const pop = attack(time, beatFreq, el.phase, 4);
+          const eased = pop * pop * (3 - 2 * pop); // smoothstep
+          py += eased * 0.06;
+          pz += eased * 0.1;
         } else if (el.type === "sphere" || el.type === "dot") {
-          // Brass: gentle swell
-          const swell = breathe(time, 3 + el.phase * 0.5, el.phase);
-          px += Math.cos(el.phase) * swell * 0.04;
-          py += Math.sin(el.phase) * swell * 0.04;
+          // Brass: slow figure-8 drift
+          const swell = breathe(time, 4 + el.phase * 0.3, el.phase);
+          px += Math.cos(el.phase + time * 0.15) * swell * 0.03;
+          py += Math.sin(el.phase * 1.3 + time * 0.12) * swell * 0.03;
         }
 
         mesh.position.set(px, py, pz);

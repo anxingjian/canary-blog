@@ -1412,84 +1412,64 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
         </div>
       </div>
 
-      {/* Bottom — interpretation: drawer on mobile, fixed text on desktop */}
-      {isMobile ? (
-        <>
-          {/* Drawer handle — always visible */}
-          <div
-            onClick={() => setDrawerOpen(!drawerOpen)}
-            style={{
-              position: "fixed",
-              bottom: drawerOpen ? "auto" : 0,
-              top: drawerOpen ? 0 : "auto",
-              left: 0, right: 0,
-              zIndex: 20,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              cursor: "pointer",
-              ...(drawerOpen ? { height: "100vh" } : {}),
-            }}
-          >
-            {drawerOpen && (
-              <div
-                style={{ flex: 1, width: "100%" }}
-                onClick={(e) => { e.stopPropagation(); setDrawerOpen(false); }}
-              />
-            )}
-            <div style={{
-              width: "100%",
-              background: drawerBg,
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              borderRadius: drawerOpen ? 0 : "12px 12px 0 0",
-              padding: drawerOpen ? "1.5rem 1.5rem 2.5rem" : "0.6rem 1.5rem 0.8rem",
-              transition: "all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-              opacity: showText ? 1 : 0,
-            }}>
-              {/* Handle bar */}
-              <div style={{
-                width: 32, height: 3, borderRadius: 2,
-                background: handleColor,
-                margin: "0 auto 0.6rem",
-              }} />
-              {!drawerOpen && (
-                <p style={{
-                  fontFamily: "'Noto Serif SC', serif",
-                  fontWeight: 300, fontSize: "0.7rem",
-                  color: interpColor, margin: 0,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>↑ {painting.interpretation.slice(0, 20)}…</p>
-              )}
-              {drawerOpen && (
-                <p style={{
-                  fontFamily: "'Noto Serif SC', serif",
-                  fontWeight: 300, fontSize: "0.8rem",
-                  color: interpColor, margin: 0,
-                  lineHeight: "2.2", letterSpacing: "0.03em",
-                }}>{painting.interpretation}</p>
-              )}
-            </div>
-          </div>
-        </>
-      ) : (
-        <div style={{
-          position: "fixed", bottom: "2rem", left: "2.5rem", right: "2.5rem", zIndex: 10,
-          maxWidth: "min(80vw, 480px)",
-          opacity: showText ? 1 : 0,
-          transform: showText ? "translateY(0)" : "translateY(10px)",
-          transition: "all 1.5s ease 1s",
-        }}>
-          <p style={{
-            fontFamily: "'Noto Serif SC', serif",
-            fontWeight: 300,
-            fontSize: "0.875rem",
-            color: interpColor,
-            lineHeight: "2.2",
-            letterSpacing: "0.03em",
-          }}>{painting.interpretation}</p>
-        </div>
-      )}
+      {/* Bottom — interpretation: "i" button toggle */}
+      {/* Info button — bottom right */}
+      <div
+        onClick={() => setDrawerOpen(!drawerOpen)}
+        style={{
+          position: "fixed",
+          bottom: isMobile ? "1.25rem" : "2rem",
+          right: isMobile ? "1.25rem" : "2.5rem",
+          zIndex: 20,
+          width: 36, height: 36,
+          borderRadius: "50%",
+          background: drawerBg,
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer",
+          opacity: showText ? (drawerOpen ? 0.6 : 0.35) : 0,
+          transition: "opacity 0.5s ease",
+          border: `1px solid ${handleColor}`,
+        }}
+      >
+        <span style={{
+          fontFamily: "'Instrument Serif', Georgia, serif",
+          fontSize: "1rem",
+          color: interpColor,
+          lineHeight: 1,
+        }}>{drawerOpen ? "✕" : "i"}</span>
+      </div>
+
+      {/* Text panel — expands from bottom right */}
+      <div style={{
+        position: "fixed",
+        bottom: isMobile ? "4rem" : "5rem",
+        right: isMobile ? "1.25rem" : "2.5rem",
+        left: isMobile ? "1.25rem" : "auto",
+        maxWidth: isMobile ? "none" : "min(70vw, 420px)",
+        zIndex: 15,
+        background: drawerBg,
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderRadius: 12,
+        padding: drawerOpen ? "1.25rem 1.5rem" : "0",
+        maxHeight: drawerOpen ? "60vh" : "0",
+        opacity: drawerOpen ? 1 : 0,
+        overflow: "hidden",
+        transition: "all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+        border: drawerOpen ? `1px solid ${handleColor}` : "1px solid transparent",
+      }}>
+        <p style={{
+          fontFamily: "'Noto Serif SC', serif",
+          fontWeight: 300,
+          fontSize: isMobile ? "0.8rem" : "0.875rem",
+          color: interpColor,
+          margin: 0,
+          lineHeight: "2.2",
+          letterSpacing: "0.03em",
+        }}>{painting.interpretation}</p>
+      </div>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Serif+SC:wght@300;400;500&display=swap');
