@@ -1,673 +1,351 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import * as THREE from "three";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 /*
  * 寒江独钓 — Solitary Angler on a Winter River
- *
- * Concept: The painting is 90% emptiness. The emptiness IS the painting.
- * Implementation: ~100k particles. Most are nearly invisible, drifting
- * like fog/water/silence. A tiny cluster forms the boat, the figure,
- * the fishing rod. As you move closer, even these dissolve.
- *
- * Inspired by spite (Jaume Sanchez) — FBO ping-pong particle simulation,
- * curl noise driven motion, GPU-computed positions.
+ * 
+ * Pure Canvas 2D — no WebGL dependencies, runs everywhere.
+ * 
+ * 90% of the painting is emptiness. The emptiness IS the painting.
+ * A few thousand particles: most are near-invisible mist,
+ * a handful condense into the boat, the figure, the rod.
+ * Move your cursor close — even these dissolve.
  */
 
-// ---- Curl Noise GLSL ----
-const CURL_NOISE_GLSL = `
-// Simplex 3D noise (Stefan Gustavson)
-vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
-vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
-
-float snoise(vec3 v){ 
-  const vec2 C = vec2(1.0/6.0, 1.0/3.0);
-  const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-  vec3 i = floor(v + dot(v, C.yyy));
-  vec3 x0 = v - i + dot(i, C.xxx);
-  vec3 g = step(x0.yzx, x0.xyz);
-  vec3 l = 1.0 - g;
-  vec3 i1 = min(g.xyz, l.zxy);
-  vec3 i2 = max(g.xyz, l.zxy);
-  vec3 x1 = x0 - i1 + C.xxx;
-  vec3 x2 = x0 - i2 + C.yyy;
-  vec3 x3 = x0 - D.yyy;
-  i = mod(i, 289.0);
-  vec4 p = permute(permute(permute(
-    i.z + vec4(0.0, i1.z, i2.z, 1.0))
-    + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-    + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-  float n_ = 1.0/7.0;
-  vec3 ns = n_ * D.wyz - D.xzx;
-  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-  vec4 x_ = floor(j * ns.z);
-  vec4 y_ = floor(j - 7.0 * x_);
-  vec4 x = x_ *ns.x + ns.yyyy;
-  vec4 y = y_ *ns.x + ns.yyyy;
-  vec4 h = 1.0 - abs(x) - abs(y);
-  vec4 b0 = vec4(x.xy, y.xy);
-  vec4 b1 = vec4(x.zw, y.zw);
-  vec4 s0 = floor(b0)*2.0 + 1.0;
-  vec4 s1 = floor(b1)*2.0 + 1.0;
-  vec4 sh = -step(h, vec4(0.0));
-  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-  vec3 p0 = vec3(a0.xy,h.x);
-  vec3 p1 = vec3(a0.zw,h.y);
-  vec3 p2 = vec3(a1.xy,h.z);
-  vec3 p3 = vec3(a1.zw,h.w);
-  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
-  p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
-  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-  m = m * m;
-  return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+// ---- Simple 2D curl noise (CPU) ----
+function hash(x: number, y: number): number {
+  let h = x * 374761393 + y * 668265263;
+  h = (h ^ (h >> 13)) * 1274126177;
+  return (h ^ (h >> 16)) / 2147483648;
 }
 
-vec3 curlNoise(vec3 p, float t) {
-  float e = 0.1;
-  vec3 dx = vec3(e, 0.0, 0.0);
-  vec3 dy = vec3(0.0, e, 0.0);
-  vec3 dz = vec3(0.0, 0.0, e);
-  
-  float n1, n2;
-  vec3 curl;
-  
-  n1 = snoise(p + dy + vec3(0., 0., t));
-  n2 = snoise(p - dy + vec3(0., 0., t));
-  curl.x = (n1 - n2) / (2.0 * e);
-  
-  n1 = snoise(p + dz + vec3(0., 0., t));
-  n2 = snoise(p - dz + vec3(0., 0., t));
-  curl.x -= (n1 - n2) / (2.0 * e);
-  
-  n1 = snoise(p + dz + vec3(0., 0., t));
-  n2 = snoise(p - dz + vec3(0., 0., t));
-  curl.y = (n1 - n2) / (2.0 * e);
-  
-  n1 = snoise(p + dx + vec3(0., 0., t));
-  n2 = snoise(p - dx + vec3(0., 0., t));
-  curl.y -= (n1 - n2) / (2.0 * e);
-  
-  n1 = snoise(p + dx + vec3(0., 0., t));
-  n2 = snoise(p - dx + vec3(0., 0., t));
-  curl.z = (n1 - n2) / (2.0 * e);
-  
-  n1 = snoise(p + dy + vec3(0., 0., t));
-  n2 = snoise(p - dy + vec3(0., 0., t));
-  curl.z -= (n1 - n2) / (2.0 * e);
-  
-  return curl;
+function noise2d(x: number, y: number): number {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const n00 = hash(ix, iy), n10 = hash(ix + 1, iy);
+  const n01 = hash(ix, iy + 1), n11 = hash(ix + 1, iy + 1);
+  return n00 * (1 - sx) * (1 - sy) + n10 * sx * (1 - sy) +
+         n01 * (1 - sx) * sy + n11 * sx * sy;
 }
-`;
 
-// ---- Simulation Shader (FBO ping-pong) ----
-const SIM_FRAG = `
-precision highp float;
-
-uniform sampler2D u_positionTex;
-uniform sampler2D u_originTex;
-uniform float u_time;
-uniform float u_dt;
-uniform float u_noiseScale;
-uniform float u_noiseSpeed;
-uniform float u_curlStrength;
-uniform float u_returnStrength;
-uniform float u_dissipation;
-uniform vec2 u_mouse;
-uniform float u_mouseInfluence;
-uniform float u_simSize;
-
-${CURL_NOISE_GLSL}
-
-void main() {
-  vec2 vUv = gl_FragCoord.xy / u_simSize;
-  vec4 pos = texture2D(u_positionTex, vUv);
-  vec4 origin = texture2D(u_originTex, vUv);
-  
-  vec3 p = pos.xyz;
-  float life = pos.w;
-  float role = origin.w;
-  
-  float t = u_time * u_noiseSpeed;
-  vec3 curl = curlNoise(p * u_noiseScale, t);
-  
-  float curlAmt = mix(u_curlStrength, u_curlStrength * 0.3, role);
-  p += curl * curlAmt * u_dt;
-  
-  vec3 toOrigin = origin.xyz - p;
-  float dist = length(toOrigin);
-  float returnForce = role * u_returnStrength * smoothstep(0.0, 0.5, dist);
-  p += normalize(toOrigin + 0.0001) * returnForce * u_dt;
-  
-  vec3 mousePos3 = vec3(u_mouse, 0.0);
-  vec3 toMouse = p - mousePos3;
-  float mouseDist = length(toMouse);
-  float repel = u_mouseInfluence * smoothstep(0.5, 0.0, mouseDist);
-  p += normalize(toMouse + 0.0001) * repel * u_dt;
-  
-  p *= (1.0 - 0.001 * u_dt);
-  
-  life -= u_dt * u_dissipation * (1.0 - role * 0.8);
-  if (life < 0.0) {
-    p = origin.xyz + curl * 0.02;
-    life = 1.0;
-  }
-  
-  gl_FragColor = vec4(p, life);
+function curlNoise2d(x: number, y: number, t: number): [number, number] {
+  const e = 0.01;
+  const n1 = noise2d(x, y + e + t * 0.1);
+  const n2 = noise2d(x, y - e + t * 0.1);
+  const n3 = noise2d(x + e, y + t * 0.1);
+  const n4 = noise2d(x - e, y + t * 0.1);
+  return [(n1 - n2) / (2 * e), -(n3 - n4) / (2 * e)];
 }
-`;
 
-const SIM_VERT = `
-void main() {
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+// ---- Particle types ----
+interface Particle {
+  x: number; y: number;       // current position
+  ox: number; oy: number;     // origin position
+  vx: number; vy: number;     // velocity
+  role: number;               // 0 = void, 1 = ink
+  life: number;
+  size: number;
 }
-`;
 
-// ---- Render Shader (particles as points) ----
-const RENDER_VERT = `
-uniform sampler2D u_positionTex;
-uniform sampler2D u_originTex;
-uniform float u_pointSize;
-uniform float u_aspect;
-uniform float u_time;
+function createParticles(): Particle[] {
+  const particles: Particle[] = [];
+  const N = 6000; // enough for visual density, smooth on mobile
 
-attribute vec2 a_uv;
-
-varying float v_life;
-varying float v_role;
-varying vec3 v_color;
-
-void main() {
-  vec4 pos = texture2D(u_positionTex, a_uv);
-  vec4 origin = texture2D(u_originTex, a_uv);
-  
-  v_life = pos.w;
-  v_role = origin.w;
-  
-  float ink = v_role;
-  vec3 paperColor = vec3(0.92, 0.90, 0.86);
-  vec3 inkColor = vec3(0.12, 0.11, 0.10);
-  vec3 waterColor = vec3(0.65, 0.68, 0.70);
-  
-  v_color = mix(paperColor, inkColor, smoothstep(0.3, 0.8, ink));
-  v_color = mix(v_color, waterColor, smoothstep(0.15, 0.25, ink) * (1.0 - smoothstep(0.25, 0.35, ink)));
-  
-  vec3 p = pos.xyz;
-  vec2 screenPos = vec2(p.x / u_aspect, p.y);
-  
-  gl_Position = vec4(screenPos * 2.0, p.z, 1.0);
-  
-  float sizeMult = mix(0.6, 1.8, smoothstep(0.3, 0.8, ink));
-  float lifeFade = smoothstep(0.0, 0.2, v_life);
-  gl_PointSize = u_pointSize * sizeMult * lifeFade;
-}
-`;
-
-const RENDER_FRAG = `
-varying float v_life;
-varying float v_role;
-varying vec3 v_color;
-
-void main() {
-  vec2 c = gl_PointCoord - 0.5;
-  float d = dot(c, c);
-  if (d > 0.25) discard;
-  
-  float alpha = smoothstep(0.25, 0.1, d);
-  alpha *= smoothstep(0.0, 0.3, v_life);
-  
-  float baseAlpha = mix(0.02, 0.7, smoothstep(0.3, 0.8, v_role));
-  alpha *= baseAlpha;
-  
-  gl_FragColor = vec4(v_color, alpha);
-}
-`;
-
-// ---- Particle Layout: Define the "painting" ----
-function createParticleData(size: number): { positions: Float32Array; origins: Float32Array } {
-  const count = size * size;
-  const positions = new Float32Array(count * 4);
-  const origins = new Float32Array(count * 4);
-  
-  for (let i = 0; i < count; i++) {
-    const i4 = i * 4;
-    
-    // Determine role: most particles are void (空)
-    // Only ~5% are "form" particles (the boat, figure, rod, ripples)
-    let role = 0; // void
-    let x = (Math.random() - 0.5) * 1.6;
-    let y = (Math.random() - 0.5) * 1.6;
-    let z = (Math.random() - 0.5) * 0.02;
-    
+  for (let i = 0; i < N; i++) {
     const r = Math.random();
-    
-    if (r < 0.008) {
-      // THE BOAT — a thin curved stroke, bottom center-left
+    let x: number, y: number, role: number, size: number;
+
+    if (r < 0.012) {
+      // BOAT — thin curved stroke
       const t = Math.random();
-      const boatX = -0.05 + (t - 0.5) * 0.18;
-      const boatY = -0.12 + Math.pow(Math.abs(t - 0.5) * 2, 2) * -0.02;
-      x = boatX + (Math.random() - 0.5) * 0.008;
-      y = boatY + (Math.random() - 0.5) * 0.005;
-      z = (Math.random() - 0.5) * 0.005;
-      role = 0.9 + Math.random() * 0.1;
-    } else if (r < 0.014) {
-      // THE FIGURE — hunched, sitting on the boat
-      const figX = -0.04;
-      const figY = -0.08;
-      // Body — compact oval
-      const angle = Math.random() * Math.PI * 2;
-      const rad = Math.random() * 0.025;
-      x = figX + Math.cos(angle) * rad * 0.6;
-      y = figY + Math.sin(angle) * rad * 1.2 + 0.01;
-      z = (Math.random() - 0.5) * 0.005;
-      role = 0.7 + Math.random() * 0.3;
-    } else if (r < 0.017) {
-      // THE HEAD — small dark dot
-      x = -0.04 + (Math.random() - 0.5) * 0.012;
-      y = -0.055 + (Math.random() - 0.5) * 0.012;
-      z = (Math.random() - 0.5) * 0.003;
+      x = -0.03 + (t - 0.5) * 0.22;
+      y = -0.15 + Math.pow(Math.abs(t - 0.5) * 2, 2) * -0.025;
+      x += (Math.random() - 0.5) * 0.008;
+      y += (Math.random() - 0.5) * 0.004;
       role = 0.85 + Math.random() * 0.15;
-    } else if (r < 0.022) {
+      size = 1.5 + Math.random() * 1.5;
+    } else if (r < 0.02) {
+      // FIGURE — hunched on boat
+      const a = Math.random() * Math.PI * 2;
+      const rad = Math.random() * 0.028;
+      x = -0.025 + Math.cos(a) * rad * 0.5;
+      y = -0.1 + Math.sin(a) * rad * 1.1 + 0.015;
+      role = 0.7 + Math.random() * 0.3;
+      size = 1.2 + Math.random() * 1.5;
+    } else if (r < 0.025) {
+      // HEAD
+      x = -0.025 + (Math.random() - 0.5) * 0.015;
+      y = -0.065 + (Math.random() - 0.5) * 0.015;
+      role = 0.85 + Math.random() * 0.15;
+      size = 1.5 + Math.random() * 1;
+    } else if (r < 0.035) {
       // FISHING ROD — diagonal line
       const t = Math.random();
-      x = -0.035 + t * 0.12;
-      y = -0.06 + t * 0.08;
-      // Slight curve (rod bends)
-      y += Math.sin(t * Math.PI) * 0.01;
+      x = -0.02 + t * 0.13;
+      y = -0.07 + t * 0.09 + Math.sin(t * Math.PI) * 0.012;
       x += (Math.random() - 0.5) * 0.003;
       y += (Math.random() - 0.5) * 0.003;
-      z = (Math.random() - 0.5) * 0.003;
       role = 0.5 + Math.random() * 0.3;
-    } else if (r < 0.026) {
-      // FISHING LINE — thin, hanging down from rod tip
+      size = 0.8 + Math.random() * 0.8;
+    } else if (r < 0.042) {
+      // FISHING LINE — thin vertical
       const t = Math.random();
-      x = 0.085 + Math.sin(t * Math.PI * 0.5) * 0.008;
-      y = 0.02 - t * 0.08;
+      x = 0.11 + Math.sin(t * Math.PI * 0.5) * 0.006;
+      y = 0.02 - t * 0.1;
       x += (Math.random() - 0.5) * 0.002;
-      y += (Math.random() - 0.5) * 0.002;
-      z = (Math.random() - 0.5) * 0.002;
-      role = 0.4 + Math.random() * 0.2;
-    } else if (r < 0.045) {
-      // WATER RIPPLES — concentric arcs around the boat
-      const ringIdx = Math.floor(Math.random() * 6);
-      const ringR = 0.04 + ringIdx * 0.025;
-      const angle = (Math.random() - 0.5) * Math.PI * 0.8; // partial arcs
-      x = -0.05 + Math.cos(angle) * ringR;
-      y = -0.15 + Math.sin(angle) * ringR * 0.25; // flattened — perspective
-      x += (Math.random() - 0.5) * 0.005;
+      role = 0.35 + Math.random() * 0.2;
+      size = 0.5 + Math.random() * 0.5;
+    } else if (r < 0.07) {
+      // WATER RIPPLES
+      const ring = Math.floor(Math.random() * 5);
+      const ringR = 0.05 + ring * 0.03;
+      const a = (Math.random() - 0.5) * Math.PI * 0.7;
+      x = -0.03 + Math.cos(a) * ringR;
+      y = -0.18 + Math.sin(a) * ringR * 0.2;
+      x += (Math.random() - 0.5) * 0.006;
       y += (Math.random() - 0.5) * 0.003;
-      z = (Math.random() - 0.5) * 0.003;
-      role = 0.2 + Math.random() * 0.15; // light ink — barely visible ripples
+      role = 0.15 + Math.random() * 0.12;
+      size = 0.6 + Math.random() * 0.8;
     } else {
-      // VOID — the vast emptiness that IS the painting
-      // Not uniform random — slight bias toward center, like silk texture
-      const angle = Math.random() * Math.PI * 2;
-      const rad = Math.pow(Math.random(), 0.7) * 0.8;
-      x = Math.cos(angle) * rad;
-      y = Math.sin(angle) * rad;
-      z = (Math.random() - 0.5) * 0.02;
-      role = Math.random() * 0.08; // near-zero: almost invisible
+      // VOID — the vast emptiness
+      const a = Math.random() * Math.PI * 2;
+      const rad = Math.pow(Math.random(), 0.6) * 0.9;
+      x = Math.cos(a) * rad;
+      y = Math.sin(a) * rad;
+      role = Math.random() * 0.06;
+      size = 0.3 + Math.random() * 0.5;
     }
-    
-    // Set positions and origins
-    origins[i4] = x;
-    origins[i4 + 1] = y;
-    origins[i4 + 2] = z;
-    origins[i4 + 3] = role;
-    
-    // Start positions: scattered (particles will assemble)
-    const scatter = 1.5;
-    positions[i4] = x + (Math.random() - 0.5) * scatter * (1 - role);
-    positions[i4 + 1] = y + (Math.random() - 0.5) * scatter * (1 - role);
-    positions[i4 + 2] = z + (Math.random() - 0.5) * 0.05;
-    positions[i4 + 3] = Math.random(); // life
+
+    const scatter = (1 - role) * 1.5;
+    particles.push({
+      x: x + (Math.random() - 0.5) * scatter,
+      y: y + (Math.random() - 0.5) * scatter,
+      ox: x, oy: y,
+      vx: 0, vy: 0,
+      role,
+      life: Math.random(),
+      size,
+    });
   }
-  
-  return { positions, origins };
+
+  return particles;
 }
 
-// ---- Seal stamp component ----
-function SealStamp() {
-  return (
-    <svg width="36" height="36" viewBox="0 0 36 36" style={{ position: "absolute", bottom: "2.5rem", right: "2.5rem", opacity: 0.15 }}>
-      <rect x="2" y="2" width="32" height="32" fill="none" stroke="#8B2500" strokeWidth="1.5" rx="1" />
-      <text x="18" y="22" textAnchor="middle" fill="#8B2500" fontSize="12" fontFamily="serif" fontWeight="bold">余</text>
-    </svg>
-  );
+// ---- Seal stamp ----
+function drawSeal(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
+  ctx.save();
+  ctx.globalAlpha = 0.12;
+  ctx.strokeStyle = "#8B2500";
+  ctx.lineWidth = 1.5 * scale;
+  const s = 18 * scale;
+  ctx.strokeRect(x - s, y - s, s * 2, s * 2);
+  ctx.fillStyle = "#8B2500";
+  ctx.font = `${12 * scale}px serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("余", x, y + 1);
+  ctx.restore();
 }
 
-// ---- Main Component ----
 export default function AfterimageV2() {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
 
+  const mouseRef = useRef({ x: 9999, y: 9999 });
+  const targetMouseRef = useRef({ x: 9999, y: 9999 });
+
+  const onMouseMove = useCallback((e: MouseEvent) => {
+    targetMouseRef.current.x = e.clientX;
+    targetMouseRef.current.y = e.clientY;
+  }, []);
+  const onMouseLeave = useCallback(() => {
+    targetMouseRef.current.x = 9999;
+    targetMouseRef.current.y = 9999;
+  }, []);
+  const onTouchMove = useCallback((e: TouchEvent) => {
+    if (e.touches.length > 0) {
+      targetMouseRef.current.x = e.touches[0].clientX;
+      targetMouseRef.current.y = e.touches[0].clientY;
+    }
+  }, []);
+  const onTouchEnd = useCallback(() => {
+    targetMouseRef.current.x = 9999;
+    targetMouseRef.current.y = 9999;
+  }, []);
+
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-    // ---- Setup ----
-    const SIM_SIZE = 256; // 256x256 = 65536 particles
-    const PARTICLE_COUNT = SIM_SIZE * SIM_SIZE;
+    const ctx = canvas.getContext("2d")!;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    const renderer = new THREE.WebGLRenderer({
-      antialias: false,
-      alpha: false,
-      powerPreference: "high-performance",
-    });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(new THREE.Color(0.94, 0.92, 0.88), 1); // Warm paper
-    container.appendChild(renderer.domElement);
-
-    // Enable float/half-float texture support
-    const gl = renderer.getContext();
-    // WebGL1 extensions
-    gl.getExtension("OES_texture_float");
-    gl.getExtension("OES_texture_float_linear");
-    gl.getExtension("OES_texture_half_float");
-    gl.getExtension("OES_texture_half_float_linear");
-    // WebGL2 extension for rendering to float textures
-    gl.getExtension("EXT_color_buffer_float");
-    gl.getExtension("EXT_color_buffer_half_float");
-    gl.getExtension("EXT_float_blend");
-
-    // Determine best texture type
-    const supportsFloat = !!gl.getExtension("EXT_color_buffer_float") || !!gl.getExtension("OES_texture_float");
-    const texType = supportsFloat ? THREE.FloatType : THREE.HalfFloatType;
-
-    // ---- Create particle data ----
-    const { positions, origins } = createParticleData(SIM_SIZE);
-
-    // ---- FBO Ping-Pong Setup ----
-    function createDataTexture(data: Float32Array, size: number): THREE.DataTexture {
-      const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat, texType);
-      tex.minFilter = THREE.NearestFilter;
-      tex.magFilter = THREE.NearestFilter;
-      tex.needsUpdate = true;
-      return tex;
+    function resize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      canvas!.width = w * dpr;
+      canvas!.height = h * dpr;
+      canvas!.style.width = w + "px";
+      canvas!.style.height = h + "px";
     }
-
-    const originTex = createDataTexture(origins, SIM_SIZE);
-    const positionTex = createDataTexture(positions, SIM_SIZE);
-
-    // Render targets for ping-pong
-    const rtOptions: THREE.RenderTargetOptions = {
-      minFilter: THREE.NearestFilter,
-      magFilter: THREE.NearestFilter,
-      format: THREE.RGBAFormat,
-      type: texType,
-      depthBuffer: false,
-      stencilBuffer: false,
-    };
-    const rt0 = new THREE.WebGLRenderTarget(SIM_SIZE, SIM_SIZE, rtOptions);
-    const rt1 = new THREE.WebGLRenderTarget(SIM_SIZE, SIM_SIZE, rtOptions);
-    const targets = [rt0, rt1];
-    let currentTarget = 0;
-
-    // ---- Simulation Scene (FBO) ----
-    const simScene = new THREE.Scene();
-    const simCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    const simGeo = new THREE.PlaneGeometry(2, 2);
-    const simMat = new THREE.ShaderMaterial({
-      vertexShader: SIM_VERT,
-      fragmentShader: SIM_FRAG,
-      uniforms: {
-        u_positionTex: { value: positionTex },
-        u_originTex: { value: originTex },
-        u_time: { value: 0 },
-        u_dt: { value: 0.016 },
-        u_noiseScale: { value: 1.2 },
-        u_noiseSpeed: { value: 0.08 },
-        u_curlStrength: { value: 0.015 },
-        u_returnStrength: { value: 0.8 },
-        u_dissipation: { value: 0.05 },
-        u_mouse: { value: new THREE.Vector2(999, 999) },
-        u_mouseInfluence: { value: 0.3 },
-        u_simSize: { value: SIM_SIZE },
-      },
-    });
-    const simQuad = new THREE.Mesh(simGeo, simMat);
-    simScene.add(simQuad);
-
-    // Initialize: render initial positions into rt0
-    renderer.setRenderTarget(rt0);
-    // We need a passthrough shader to copy positionTex into rt0
-    const copyMat = new THREE.ShaderMaterial({
-      vertexShader: SIM_VERT,
-      fragmentShader: `
-        uniform sampler2D u_tex;
-        uniform float u_simSize;
-        void main() {
-          vec2 vUv = gl_FragCoord.xy / u_simSize;
-          gl_FragColor = texture2D(u_tex, vUv);
-        }
-      `,
-      uniforms: { u_tex: { value: positionTex }, u_simSize: { value: SIM_SIZE } },
-    });
-    simQuad.material = copyMat;
-    renderer.render(simScene, simCamera);
-    simQuad.material = simMat;
-    renderer.setRenderTarget(null);
-
-    // ---- Particle Render Scene ----
-    const renderScene = new THREE.Scene();
-    const renderCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-
-    // Particle UVs — each particle reads its position from the FBO
-    const uvs = new Float32Array(PARTICLE_COUNT * 2);
-    for (let j = 0; j < SIM_SIZE; j++) {
-      for (let i = 0; i < SIM_SIZE; i++) {
-        const idx = (j * SIM_SIZE + i) * 2;
-        uvs[idx] = (i + 0.5) / SIM_SIZE;
-        uvs[idx + 1] = (j + 0.5) / SIM_SIZE;
-      }
-    }
-
-    const particleGeo = new THREE.BufferGeometry();
-    particleGeo.setAttribute("a_uv", new THREE.Float32BufferAttribute(uvs, 2));
-
-    const particleMat = new THREE.ShaderMaterial({
-      vertexShader: RENDER_VERT,
-      fragmentShader: RENDER_FRAG,
-      uniforms: {
-        u_positionTex: { value: null },
-        u_originTex: { value: originTex },
-        u_pointSize: { value: Math.min(window.devicePixelRatio, 2) * 3.0 },
-        u_aspect: { value: window.innerWidth / window.innerHeight },
-        u_time: { value: 0 },
-      },
-      transparent: true,
-      depthTest: false,
-      depthWrite: false,
-      blending: THREE.NormalBlending,
-    });
-
-    const particles = new THREE.Points(particleGeo, particleMat);
-    renderScene.add(particles);
-
-    // ---- Mouse tracking ----
-    const mouse = new THREE.Vector2(999, 999);
-    const targetMouse = new THREE.Vector2(999, 999);
-
-    function onMouseMove(e: MouseEvent) {
-      targetMouse.x = (e.clientX / window.innerWidth - 0.5) * (window.innerWidth / window.innerHeight);
-      targetMouse.y = -(e.clientY / window.innerHeight - 0.5);
-    }
-    function onMouseLeave() {
-      targetMouse.set(999, 999);
-    }
-    function onTouchMove(e: TouchEvent) {
-      if (e.touches.length > 0) {
-        targetMouse.x = (e.touches[0].clientX / window.innerWidth - 0.5) * (window.innerWidth / window.innerHeight);
-        targetMouse.y = -(e.touches[0].clientY / window.innerHeight - 0.5);
-      }
-    }
-    function onTouchEnd() {
-      targetMouse.set(999, 999);
-    }
-
+    resize();
+    window.addEventListener("resize", resize);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseleave", onMouseLeave);
     window.addEventListener("touchmove", onTouchMove, { passive: true });
     window.addEventListener("touchend", onTouchEnd);
 
-    // ---- Animation Loop ----
+    const particles = createParticles();
     let time = 0;
     let prevTime = performance.now();
     let raf = 0;
 
     function animate() {
       raf = requestAnimationFrame(animate);
-
       const now = performance.now();
-      const dt = Math.min((now - prevTime) / 1000, 0.05); // Cap dt
+      const dt = Math.min((now - prevTime) / 1000, 0.05);
       prevTime = now;
       time += dt;
 
+      const w = canvas!.width;
+      const h = canvas!.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const scale = Math.min(w, h);
+
       // Smooth mouse
-      mouse.lerp(targetMouse, 0.05);
+      const m = mouseRef.current;
+      const tm = targetMouseRef.current;
+      m.x += (tm.x - m.x) * 0.05;
+      m.y += (tm.y - m.y) * 0.05;
 
-      // ---- Simulation step (FBO ping-pong) ----
-      const readTarget = targets[currentTarget];
-      const writeTarget = targets[1 - currentTarget];
+      // Mouse in normalized coords
+      const mx = (m.x * dpr - cx) / scale;
+      const my = -(m.y * dpr - cy) / scale;
 
-      simMat.uniforms.u_positionTex.value = readTarget.texture;
-      simMat.uniforms.u_time.value = time;
-      simMat.uniforms.u_dt.value = dt;
-      simMat.uniforms.u_mouse.value = mouse;
+      // Assembly progress (0→1 over 8 seconds)
+      const assembleT = Math.min(time / 8, 1);
+      const returnStr = 0.3 + assembleT * 2.0;
+      const curlStr = 0.4 - assembleT * 0.25;
 
-      // Gradually increase return strength (particles assemble)
-      const assembleProgress = Math.min(time / 8, 1); // 8 seconds to fully assemble
-      simMat.uniforms.u_returnStrength.value = 0.2 + assembleProgress * 1.2;
-      simMat.uniforms.u_curlStrength.value = 0.025 - assembleProgress * 0.012;
+      // Clear with paper color
+      ctx.fillStyle = "#f0ebe0";
+      ctx.fillRect(0, 0, w, h);
 
-      renderer.setRenderTarget(writeTarget);
-      renderer.render(simScene, simCamera);
-      renderer.setRenderTarget(null);
+      for (const p of particles) {
+        // Curl noise
+        const [cx2, cy2] = curlNoise2d(p.x * 1.5, p.y * 1.5, time * 0.12);
+        const curlAmt = (1 - p.role * 0.7) * curlStr;
+        p.vx += cx2 * curlAmt * dt;
+        p.vy += cy2 * curlAmt * dt;
 
-      currentTarget = 1 - currentTarget;
+        // Return to origin
+        const dx = p.ox - p.x;
+        const dy = p.oy - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const ret = p.role * returnStr * Math.min(dist, 0.5) * dt;
+        if (dist > 0.001) {
+          p.vx += (dx / dist) * ret;
+          p.vy += (dy / dist) * ret;
+        }
 
-      // ---- Render particles ----
-      particleMat.uniforms.u_positionTex.value = writeTarget.texture;
-      particleMat.uniforms.u_time.value = time;
+        // Mouse repulsion
+        const mdx = p.x - mx;
+        const mdy = p.y - my;
+        const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
+        if (mDist < 0.15 && mDist > 0.001) {
+          const repel = 0.3 * Math.max(0, 1 - mDist / 0.15) * dt;
+          p.vx += (mdx / mDist) * repel;
+          p.vy += (mdy / mDist) * repel;
+        }
 
-      renderer.render(renderScene, renderCamera);
+        // Damping
+        p.vx *= 0.92;
+        p.vy *= 0.92;
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Life
+        p.life -= dt * 0.08 * (1 - p.role * 0.8);
+        if (p.life < 0) {
+          p.x = p.ox + (Math.random() - 0.5) * 0.02;
+          p.y = p.oy + (Math.random() - 0.5) * 0.02;
+          p.life = 1;
+        }
+
+        // Draw
+        const sx = cx + p.x * scale;
+        const sy = cy - p.y * scale;
+
+        const lifeFade = Math.max(0, Math.min(1, p.life / 0.3));
+        const baseAlpha = p.role < 0.1 ? 0.015 + p.role * 0.1
+                        : p.role < 0.3 ? 0.05 + (p.role - 0.1) * 0.5
+                        : 0.15 + (p.role - 0.3) * 1.2;
+        const alpha = Math.min(1, baseAlpha * lifeFade);
+
+        if (alpha < 0.005) continue;
+
+        // Color
+        const ink = p.role;
+        const r2 = Math.round(235 - ink * 200);
+        const g2 = Math.round(230 - ink * 198);
+        const b2 = Math.round(220 - ink * 190);
+
+        ctx.beginPath();
+        ctx.arc(sx, sy, p.size * dpr, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${r2},${g2},${b2},${alpha})`;
+        ctx.fill();
+      }
+
+      // Seal stamp — bottom right
+      drawSeal(ctx, w - 40 * dpr, h - 40 * dpr, dpr);
     }
 
-    // Start
     setTimeout(() => setLoaded(true), 200);
     animate();
 
-    // ---- Resize ----
-    function onResize() {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      renderer.setSize(w, h);
-      particleMat.uniforms.u_aspect.value = w / h;
-    }
-    window.addEventListener("resize", onResize);
-
-    // ---- Cleanup ----
     return () => {
       cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseleave", onMouseLeave);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
-      window.removeEventListener("resize", onResize);
-      renderer.dispose();
-      rt0.dispose();
-      rt1.dispose();
-      originTex.dispose();
-      positionTex.dispose();
-      particleGeo.dispose();
-      simGeo.dispose();
-      simMat.dispose();
-      copyMat.dispose();
-      particleMat.dispose();
-      container.removeChild(renderer.domElement);
     };
-  }, []);
+  }, [onMouseMove, onMouseLeave, onTouchMove, onTouchEnd]);
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        width: "100vw",
-        height: "100vh",
-        overflow: "hidden",
-        background: "#f0ebe0",
-        position: "relative",
-        cursor: "none",
-      }}
-    >
-      {/* Title — minimal, like a museum plaque */}
-      <div
-        style={{
-          position: "absolute",
-          top: "2.5rem",
-          left: "2.5rem",
-          zIndex: 10,
-          opacity: loaded ? 0.25 : 0,
-          transition: "opacity 3s ease 2s",
-          pointerEvents: "none",
-        }}
-      >
-        <h1
-          style={{
-            fontFamily: "'Noto Serif SC', serif",
-            fontSize: "0.75rem",
-            fontWeight: 300,
-            color: "#2a2520",
-            letterSpacing: "0.3em",
-            margin: 0,
-          }}
-        >
-          寒江独钓
-        </h1>
-        <p
-          style={{
-            fontFamily: "'Space Mono', monospace",
-            fontSize: "0.5rem",
-            color: "#2a2520",
-            letterSpacing: "0.15em",
-            marginTop: "4px",
-            opacity: 0.5,
-          }}
-        >
-          Ma Yuan, c. 1195
-        </p>
+    <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#f0ebe0", position: "relative" }}>
+      <canvas ref={canvasRef} style={{ display: "block", position: "absolute", top: 0, left: 0 }} />
+
+      {/* Title */}
+      <div style={{
+        position: "absolute", top: "2.5rem", left: "2.5rem", zIndex: 10,
+        opacity: loaded ? 0.25 : 0, transition: "opacity 3s ease 2s", pointerEvents: "none",
+      }}>
+        <h1 style={{
+          fontFamily: "'Noto Serif SC', serif", fontSize: "0.75rem",
+          fontWeight: 300, color: "#2a2520", letterSpacing: "0.3em", margin: 0,
+        }}>寒江独钓</h1>
+        <p style={{
+          fontFamily: "'Space Mono', monospace", fontSize: "0.5rem",
+          color: "#2a2520", letterSpacing: "0.15em", marginTop: "4px", opacity: 0.5,
+        }}>Ma Yuan, c. 1195</p>
       </div>
 
-      {/* Interpretation — bottom, appears late */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: "2.5rem",
-          left: "2.5rem",
-          maxWidth: "min(70vw, 420px)",
-          zIndex: 10,
-          opacity: loaded ? 0.2 : 0,
-          transition: "opacity 4s ease 6s",
-          pointerEvents: "none",
-        }}
-      >
-        <p
-          style={{
-            fontFamily: "'Noto Serif SC', serif",
-            fontSize: "0.75rem",
-            fontWeight: 300,
-            color: "#2a2520",
-            lineHeight: 2.4,
-            letterSpacing: "0.05em",
-          }}
-        >
-          你需要多少笔才能让一个生命成立？答案是：比你以为的少得多。
-        </p>
+      {/* Interpretation */}
+      <div style={{
+        position: "absolute", bottom: "2.5rem", left: "2.5rem", maxWidth: "min(70vw, 420px)",
+        zIndex: 10, opacity: loaded ? 0.2 : 0, transition: "opacity 4s ease 6s", pointerEvents: "none",
+      }}>
+        <p style={{
+          fontFamily: "'Noto Serif SC', serif", fontSize: "0.75rem",
+          fontWeight: 300, color: "#2a2520", lineHeight: 2.4, letterSpacing: "0.05em",
+        }}>你需要多少笔才能让一个生命成立？答案是：比你以为的少得多。</p>
       </div>
-
-      <SealStamp />
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400&family=Noto+Serif+SC:wght@300;400&display=swap');
