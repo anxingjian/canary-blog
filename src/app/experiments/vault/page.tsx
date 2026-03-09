@@ -35,6 +35,10 @@ const ENTRIES: Entry[] = [
   { id: "godly", name: "Godly", url: "https://godly.website", desc: "前沿网页设计灵感合集", why: "设计灵感聚合站，收录最新最好的网页设计。", tags: ["resource"], thumb: "/canary-blog/vault/godly-website.jpg", date: "2026-03-05" },
   { id: "apple", name: "Apple", url: "https://www.apple.com", desc: "克制、空间感、字体层级的标杆", why: "极致的克制和空间感，字体层级清晰，动效恰到好处。", tags: ["typography", "animation"], thumb: "/canary-blog/vault/www-apple-com.jpg", date: "2026-03-08" },
   { id: "basicagency", name: "Basic Agency", url: "https://www.basicagency.com", desc: "创意排版，大胆但有控制", why: "创意排版的尺度感——大胆但不失控。", tags: ["editorial", "typography"], thumb: "/canary-blog/vault/www-basicagency-com.jpg", date: "2026-03-08" },
+  { id: "inkwell", name: "Inkwell", url: "https://inkwell.tech", desc: "开场卡片效果惊艳", why: "入场动画的卡片翻转/展开效果，让人停下来看。交互层次丰富但不过载。", tags: ["interaction", "animation", "landing"], thumb: "/canary-blog/vault/inkwell-tech.jpg", date: "2026-03-09" },
+  { id: "microsoft-ai", name: "Microsoft AI", url: "https://microsoft.ai", desc: "企业级 AI 门户", why: "微软的 AI 产品门户——大厂级别的信息密度控制和视觉层级。", tags: ["landing", "editorial"], thumb: "/canary-blog/vault/microsoft-ai.jpg", date: "2026-03-09" },
+  { id: "mindmarket", name: "MindMarket", url: "https://mindmarket.com", desc: "色彩搭配教科书", why: "配色方案的高级感——大胆用色但保持和谐，不俗不闹。", tags: ["color", "landing"], thumb: "/canary-blog/vault/mindmarket-com.jpg", date: "2026-03-09" },
+  { id: "awwwards-honors", name: "Awwwards Honors", url: "https://www.awwwards.com/honors/winners", desc: "呼吸感与字体对比", why: "页面呼吸感的标杆——留白充足，衬线/无衬线字体对比鲜明，信息密度恰到好处。", tags: ["typography", "editorial", "resource"], thumb: "/canary-blog/vault/www-awwwards-com-honors-winners.jpg", date: "2026-03-09" },
 ];
 
 const ALL_TAGS = [...new Set(ENTRIES.flatMap(e => e.tags))].sort();
