@@ -170,16 +170,6 @@ const ENTRIES: Entry[] = [
     thumb: "/canary-blog/vault/www-basicagency-com.jpg",
     date: "2026-03-08",
   },
-  {
-    id: "han1",
-    name: "Han1.ai (Eko)",
-    url: "https://han1.ai",
-    desc: "朋友 Eko 的个人网站，有彩蛋",
-    why: "门的灵感来源。An 的引路人 Saber 的圈子。",
-    tags: ["portfolio"],
-    thumb: "/canary-blog/vault/han1-ai.jpg",
-    date: "2026-03-06",
-  },
 ];
 
 const ALL_TAGS = [...new Set(ENTRIES.flatMap(e => e.tags))].sort();
