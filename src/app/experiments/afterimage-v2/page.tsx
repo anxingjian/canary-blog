@@ -5,9 +5,12 @@ import { useEffect, useRef, useState, useCallback } from "react";
 /*
  * 寒江独钓 — Solitary Angler on a Winter River
  * 
- * Canvas 2D — ink wash rendering with radial gradients.
- * Each particle is a soft ink splash, not a dot.
- * Layers of transparency create the 氤氲 (misty) feel.
+ * The painting is stillness itself.
+ * Motion should be barely perceptible — like staring at still water
+ * for a long time before you notice the faintest drift.
+ * 
+ * Particles are ink strokes, not dots — elongated, directional,
+ * like dry brush marks on xuan paper.
  */
 
 // ---- Noise ----
@@ -15,31 +18,17 @@ function hash(x: number, y: number): number {
   let h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
   return h - Math.floor(h);
 }
-
 function noise2d(x: number, y: number): number {
   const ix = Math.floor(x), iy = Math.floor(y);
   const fx = x - ix, fy = y - iy;
   const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
-  return hash(ix, iy) * (1 - sx) * (1 - sy) + hash(ix + 1, iy) * sx * (1 - sy) +
-         hash(ix, iy + 1) * (1 - sx) * sy + hash(ix + 1, iy + 1) * sx * sy;
+  return hash(ix, iy) * (1-sx)*(1-sy) + hash(ix+1, iy) * sx*(1-sy) +
+         hash(ix, iy+1) * (1-sx)*sy + hash(ix+1, iy+1) * sx*sy;
 }
-
-function fbm(x: number, y: number, octaves: number = 4): number {
-  let val = 0, amp = 0.5, freq = 1;
-  for (let i = 0; i < octaves; i++) {
-    val += amp * noise2d(x * freq, y * freq);
-    amp *= 0.5; freq *= 2;
-  }
-  return val;
-}
-
-function curlNoise(x: number, y: number, t: number): [number, number] {
-  const e = 0.005;
-  const n = fbm;
-  return [
-    (n(x, y + e + t * 0.08, 3) - n(x, y - e + t * 0.08, 3)) / (2 * e),
-    -(n(x + e, y + t * 0.08, 3) - n(x - e, y + t * 0.08, 3)) / (2 * e),
-  ];
+function fbm(x: number, y: number, oct: number = 3): number {
+  let v = 0, a = 0.5, f = 1;
+  for (let i = 0; i < oct; i++) { v += a * noise2d(x*f, y*f); a *= 0.5; f *= 2; }
+  return v;
 }
 
 // ---- Particle ----
@@ -47,112 +36,120 @@ interface Particle {
   x: number; y: number;
   ox: number; oy: number;
   vx: number; vy: number;
-  role: number; // 0=void, 1=deep ink
+  role: number;
   life: number;
-  size: number;
-  phase: number; // for subtle oscillation
+  // Brush stroke properties
+  width: number;
+  length: number;
+  angle: number;  // stroke direction
+  phase: number;
 }
 
 function createParticles(): Particle[] {
   const P: Particle[] = [];
-  const N = 12000;
+  const N = 10000;
 
   for (let i = 0; i < N; i++) {
     const r = Math.random();
-    let x: number, y: number, role: number, size: number;
+    let x: number, y: number, role: number, w: number, l: number, angle: number;
 
     if (r < 0.015) {
-      // BOAT hull — gentle arc
+      // BOAT — horizontal strokes
       const t = Math.random();
-      const curve = Math.pow(Math.abs(t - 0.5) * 2, 1.8) * -0.02;
-      x = (t - 0.5) * 0.24;
+      const curve = Math.pow(Math.abs(t - 0.5) * 2, 1.8) * -0.018;
+      x = (t - 0.5) * 0.22;
       y = -0.14 + curve;
-      // Thickness variation — thicker at center
-      const thickness = 0.004 * (1 - Math.pow(Math.abs(t - 0.5) * 2, 2)) + 0.002;
-      x += (Math.random() - 0.5) * 0.006;
+      const thickness = 0.003 * (1 - Math.pow(Math.abs(t - 0.5) * 2, 2)) + 0.001;
+      x += (Math.random() - 0.5) * 0.005;
       y += (Math.random() - 0.5) * thickness;
       role = 0.75 + Math.random() * 0.25;
-      size = 3 + Math.random() * 4;
+      w = 1.5 + Math.random() * 1.5;
+      l = 3 + Math.random() * 5; // elongated horizontal
+      angle = (Math.random() - 0.5) * 0.15; // nearly horizontal
     } else if (r < 0.027) {
-      // FIGURE body — seated, slightly hunched
+      // FIGURE — mixed direction strokes
       const a = Math.random() * Math.PI * 2;
-      const rx = 0.015, ry = 0.03;
       const rad = Math.pow(Math.random(), 0.5);
-      x = -0.01 + Math.cos(a) * rx * rad;
-      y = -0.09 + Math.sin(a) * ry * rad;
+      x = -0.01 + Math.cos(a) * 0.013 * rad;
+      y = -0.09 + Math.sin(a) * 0.028 * rad;
       role = 0.6 + Math.random() * 0.4;
-      size = 2.5 + Math.random() * 3;
+      w = 1.5 + Math.random() * 2;
+      l = 2 + Math.random() * 3;
+      angle = a + (Math.random() - 0.5) * 0.5; // follow body form
     } else if (r < 0.034) {
-      // HEAD — darker, tighter cluster
+      // HEAD
       const a = Math.random() * Math.PI * 2;
-      const rad = Math.random() * 0.009;
+      const rad = Math.random() * 0.008;
       x = -0.008 + Math.cos(a) * rad;
       y = -0.055 + Math.sin(a) * rad;
       role = 0.8 + Math.random() * 0.2;
-      size = 2 + Math.random() * 2;
-    } else if (r < 0.038) {
-      // HAT — conical suggestion
+      w = 1.2 + Math.random() * 1;
+      l = 1.5 + Math.random() * 2;
+      angle = Math.random() * Math.PI;
+    } else if (r < 0.05) {
+      // FISHING ROD — diagonal strokes following the line
       const t = Math.random();
-      x = -0.008 + (t - 0.5) * 0.025;
-      y = -0.045 + Math.abs(t - 0.5) * -0.01;
-      role = 0.65 + Math.random() * 0.2;
-      size = 2 + Math.random() * 2;
-    } else if (r < 0.052) {
-      // FISHING ROD — long diagonal, slight bow
-      const t = Math.random();
-      x = 0.0 + t * 0.16;
-      y = -0.06 + t * 0.1 + Math.sin(t * Math.PI) * 0.015;
+      x = 0.0 + t * 0.15;
+      y = -0.06 + t * 0.095 + Math.sin(t * Math.PI) * 0.012;
       x += (Math.random() - 0.5) * 0.002;
       y += (Math.random() - 0.5) * 0.002;
-      role = 0.35 + Math.random() * 0.3 * (1 - t * 0.5); // fades toward tip
-      size = 1 + Math.random() * 1.5 * (1 - t * 0.3);
-    } else if (r < 0.058) {
-      // FISHING LINE — thin, slight curve downward
+      role = 0.35 + Math.random() * 0.3 * (1 - t * 0.4);
+      w = 0.6 + Math.random() * 0.8;
+      l = 2 + Math.random() * 3;
+      angle = Math.atan2(0.095, 0.15) + (Math.random() - 0.5) * 0.1; // follow rod angle
+    } else if (r < 0.056) {
+      // FISHING LINE
       const t = Math.random();
-      x = 0.16 + Math.sin(t * Math.PI * 0.3) * 0.005;
-      y = 0.04 - t * 0.12;
-      x += (Math.random() - 0.5) * 0.0015;
-      role = 0.25 + Math.random() * 0.15;
-      size = 0.8 + Math.random() * 0.6;
-    } else if (r < 0.09) {
-      // WATER RIPPLES — concentric arcs, subtle
-      const ring = Math.floor(Math.random() * 7);
-      const ringR = 0.04 + ring * 0.022;
-      const a = (Math.random() - 0.5) * Math.PI * 0.6;
+      x = 0.15 + Math.sin(t * Math.PI * 0.3) * 0.004;
+      y = 0.035 - t * 0.11;
+      x += (Math.random() - 0.5) * 0.001;
+      role = 0.2 + Math.random() * 0.15;
+      w = 0.4 + Math.random() * 0.3;
+      l = 1 + Math.random() * 1.5;
+      angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.15; // vertical
+    } else if (r < 0.085) {
+      // WATER RIPPLES — thin horizontal strokes
+      const ring = Math.floor(Math.random() * 6);
+      const ringR = 0.04 + ring * 0.02;
+      const a = (Math.random() - 0.5) * Math.PI * 0.55;
       x = 0.0 + Math.cos(a) * ringR;
-      y = -0.17 + Math.sin(a) * ringR * 0.15;
-      x += (Math.random() - 0.5) * 0.004;
-      y += (Math.random() - 0.5) * 0.002;
-      role = 0.08 + Math.random() * 0.12;
-      size = 2 + Math.random() * 3;
-    } else if (r < 0.15) {
-      // NEAR-WATER MIST — around the boat, creates atmosphere
+      y = -0.17 + Math.sin(a) * ringR * 0.12;
+      x += (Math.random() - 0.5) * 0.003;
+      y += (Math.random() - 0.5) * 0.001;
+      role = 0.06 + Math.random() * 0.1;
+      w = 0.5 + Math.random() * 0.8;
+      l = 3 + Math.random() * 5; // horizontal ripple marks
+      angle = (Math.random() - 0.5) * 0.08; // nearly horizontal
+    } else if (r < 0.14) {
+      // NEAR MIST
       const a = Math.random() * Math.PI * 2;
-      const rad = 0.08 + Math.random() * 0.15;
+      const rad = 0.06 + Math.random() * 0.18;
       x = 0.0 + Math.cos(a) * rad;
-      y = -0.15 + Math.sin(a) * rad * 0.4;
-      role = 0.03 + Math.random() * 0.06;
-      size = 5 + Math.random() * 8;
+      y = -0.14 + Math.sin(a) * rad * 0.35;
+      role = 0.02 + Math.random() * 0.04;
+      w = 3 + Math.random() * 5;
+      l = 5 + Math.random() * 10;
+      angle = Math.random() * Math.PI; // random wisps
     } else {
-      // VOID — the vast emptiness, atmospheric depth
-      // Biased distribution: denser near center, sparse at edges
+      // VOID
       const a = Math.random() * Math.PI * 2;
       const rad = Math.pow(Math.random(), 0.5) * 0.85;
       x = Math.cos(a) * rad;
-      y = Math.sin(a) * rad;
-      // Subtle vertical gradient — slightly denser at bottom (water region)
-      y -= 0.05;
-      role = Math.random() * 0.04;
-      size = 4 + Math.random() * 10;
+      y = Math.sin(a) * rad - 0.05;
+      role = Math.random() * 0.03;
+      w = 3 + Math.random() * 6;
+      l = 5 + Math.random() * 12;
+      angle = Math.random() * Math.PI;
     }
 
-    const scatter = Math.pow(1 - role, 2) * 2.0;
+    const scatter = Math.pow(1 - role, 2) * 1.8;
     P.push({
       x: x + (Math.random() - 0.5) * scatter,
       y: y + (Math.random() - 0.5) * scatter,
       ox: x, oy: y, vx: 0, vy: 0,
       role, life: Math.random(),
-      size,
+      width: w, length: l,
+      angle,
       phase: Math.random() * Math.PI * 2,
     });
   }
@@ -160,25 +157,42 @@ function createParticles(): Particle[] {
   return P;
 }
 
-// ---- Pre-render soft particle sprite ----
-function createParticleSprite(resolution: number = 64): HTMLCanvasElement {
+// ---- Pre-render ink stroke sprite (elliptical, feathered) ----
+function createStrokeSprite(w: number, h: number): HTMLCanvasElement {
   const c = document.createElement("canvas");
-  c.width = resolution;
-  c.height = resolution;
+  c.width = w; c.height = h;
   const ctx = c.getContext("2d")!;
-  const cx = resolution / 2;
-  const g = ctx.createRadialGradient(cx, cx, 0, cx, cx, cx);
+  const cx = w / 2, cy = h / 2;
+  
+  // Elliptical gradient — wider than tall
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, cx);
   g.addColorStop(0, "rgba(0,0,0,1)");
-  g.addColorStop(0.2, "rgba(0,0,0,0.6)");
-  g.addColorStop(0.5, "rgba(0,0,0,0.15)");
-  g.addColorStop(0.8, "rgba(0,0,0,0.03)");
+  g.addColorStop(0.15, "rgba(0,0,0,0.7)");
+  g.addColorStop(0.4, "rgba(0,0,0,0.2)");
+  g.addColorStop(0.7, "rgba(0,0,0,0.04)");
   g.addColorStop(1, "rgba(0,0,0,0)");
+  
+  ctx.save();
+  ctx.scale(1, h / w); // squash into ellipse
+  ctx.translate(0, (w - h) / 2 * (w / h));
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, resolution, resolution);
+  ctx.fillRect(0, 0, w, w);
+  ctx.restore();
+  
+  // Add slight edge roughness for dry-brush feel
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.globalAlpha = 0.15;
+  for (let i = 0; i < 30; i++) {
+    const ex = Math.random() * w;
+    const ey = Math.random() * h;
+    const es = 1 + Math.random() * 3;
+    ctx.fillStyle = "black";
+    ctx.fillRect(ex, ey, es, es * 0.5);
+  }
+  
   return c;
 }
 
-// ---- Seal ----
 function drawSeal(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) {
   ctx.save();
   ctx.globalAlpha = 0.1;
@@ -197,7 +211,6 @@ function drawSeal(ctx: CanvasRenderingContext2D, x: number, y: number, s: number
 export default function AfterimageV2() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loaded, setLoaded] = useState(false);
-
   const mouseRef = useRef({ x: 9999, y: 9999 });
   const targetMouseRef = useRef({ x: 9999, y: 9999 });
 
@@ -208,8 +221,7 @@ export default function AfterimageV2() {
     targetMouseRef.current = { x: 9999, y: 9999 };
   }, []);
   const onTouchMove = useCallback((e: TouchEvent) => {
-    if (e.touches.length > 0)
-      targetMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    if (e.touches.length) targetMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }, []);
   const onTouchEnd = useCallback(() => {
     targetMouseRef.current = { x: 9999, y: 9999 };
@@ -218,20 +230,16 @@ export default function AfterimageV2() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d", { alpha: false })!;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const sprite = createParticleSprite(64);
+    const sprite = createStrokeSprite(128, 48); // wide ellipse
 
     function resize() {
       const w = window.innerWidth, h = window.innerHeight;
-      canvas!.width = w * dpr;
-      canvas!.height = h * dpr;
-      canvas!.style.width = w + "px";
-      canvas!.style.height = h + "px";
+      canvas!.width = w * dpr; canvas!.height = h * dpr;
+      canvas!.style.width = w + "px"; canvas!.style.height = h + "px";
     }
     resize();
-
     window.addEventListener("resize", resize);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseleave", onMouseLeave);
@@ -239,12 +247,7 @@ export default function AfterimageV2() {
     window.addEventListener("touchend", onTouchEnd);
 
     const particles = createParticles();
-    let time = 0;
-    let prevTime = performance.now();
-    let raf = 0;
-
-    // Paper color
-    const paperR = 240, paperG = 235, paperB = 224;
+    let time = 0, prevTime = performance.now(), raf = 0;
 
     function animate() {
       raf = requestAnimationFrame(animate);
@@ -254,126 +257,98 @@ export default function AfterimageV2() {
       time += dt;
 
       const w = canvas!.width, h = canvas!.height;
-      const cxCanvas = w / 2, cyCanvas = h / 2;
+      const cxC = w / 2, cyC = h / 2;
       const scale = Math.min(w, h);
 
-      // Smooth mouse
-      const m = mouseRef.current;
-      const tm = targetMouseRef.current;
-      m.x += (tm.x - m.x) * 0.04;
-      m.y += (tm.y - m.y) * 0.04;
-      const mx = (m.x * dpr - cxCanvas) / scale;
-      const my = -(m.y * dpr - cyCanvas) / scale;
+      const m = mouseRef.current, tm = targetMouseRef.current;
+      m.x += (tm.x - m.x) * 0.03;
+      m.y += (tm.y - m.y) * 0.03;
+      const mx = (m.x * dpr - cxC) / scale;
+      const my = -(m.y * dpr - cyC) / scale;
 
-      // Assembly
-      const assembleT = Math.min(time / 10, 1);
-      const easeAssemble = assembleT * assembleT * (3 - 2 * assembleT); // smoothstep
-      const returnStr = 0.2 + easeAssemble * 2.5;
-      const curlStr = 0.5 - easeAssemble * 0.3;
+      // Assembly: 12 seconds, very gentle
+      const assembleT = Math.min(time / 12, 1);
+      const ease = assembleT * assembleT * (3 - 2 * assembleT);
+      const returnStr = 0.15 + ease * 1.5;
+      // After assembly, curl is EXTREMELY subtle — the painting is still
+      const curlStr = 0.03 * (1 - ease * 0.7);
 
-      // Clear
-      ctx.fillStyle = `rgb(${paperR},${paperG},${paperB})`;
+      // Clear — warm paper
+      ctx.fillStyle = "#f0ebe0";
       ctx.fillRect(0, 0, w, h);
 
-      // Add very subtle paper grain (every 4th frame to save perf)
-      if (Math.floor(time * 15) % 4 === 0) {
-        ctx.save();
-        ctx.globalAlpha = 0.015;
-        ctx.globalCompositeOperation = "multiply";
-        for (let i = 0; i < 200; i++) {
-          const gx = Math.random() * w;
-          const gy = Math.random() * h;
-          const gs = 1 + Math.random() * 2;
-          ctx.fillStyle = `rgb(${200 + Math.random() * 30},${195 + Math.random() * 30},${185 + Math.random() * 30})`;
-          ctx.fillRect(gx, gy, gs, gs);
-        }
-        ctx.restore();
-      }
-
-      // Sort: void particles first (background), form particles on top
-      // Skip sorting every frame — stable enough
-      
-      ctx.globalCompositeOperation = "multiply"; // ink wash blending
+      ctx.globalCompositeOperation = "multiply";
 
       for (const p of particles) {
-        // Curl noise motion
-        const [cnx, cny] = curlNoise(p.x * 1.2, p.y * 1.2, time);
-        const curlAmt = (1 - p.role * 0.7) * curlStr * 0.6;
+        // VERY gentle curl noise — almost imperceptible
+        const nx = fbm(p.x * 0.8 + time * 0.005, p.y * 0.8, 2);
+        const ny = fbm(p.x * 0.8 + 100, p.y * 0.8 + time * 0.005, 2);
+        const curlAmt = (1 - p.role * 0.8) * curlStr;
         
-        // Subtle breathing oscillation
-        const breathe = Math.sin(time * 0.3 + p.phase) * 0.0003;
+        // Breathing — extremely slow, like watching still water
+        const breathe = Math.sin(time * 0.15 + p.phase) * 0.00005;
         
-        p.vx += cnx * curlAmt * dt + breathe;
-        p.vy += cny * curlAmt * dt + breathe * 0.5;
+        p.vx += (nx - 0.5) * curlAmt * dt * 0.3 + breathe;
+        p.vy += (ny - 0.5) * curlAmt * dt * 0.3;
 
-        // Return to origin
+        // Return to origin — form particles stick
         const dx = p.ox - p.x, dy = p.oy - p.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > 0.0005) {
-          const ret = p.role * returnStr * Math.min(dist, 0.3) * dt;
+        if (dist > 0.0003) {
+          const ret = p.role * returnStr * Math.min(dist, 0.2) * dt;
           p.vx += (dx / dist) * ret;
           p.vy += (dy / dist) * ret;
         }
 
-        // Mouse repulsion
+        // Mouse — gentle scatter, not violent push
         const mdx = p.x - mx, mdy = p.y - my;
         const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
-        if (mDist < 0.18 && mDist > 0.001) {
-          const repel = 0.25 * Math.pow(1 - mDist / 0.18, 2) * dt;
+        if (mDist < 0.12 && mDist > 0.001) {
+          const repel = 0.08 * Math.pow(1 - mDist / 0.12, 2) * dt * (0.3 + p.role * 0.7);
           p.vx += (mdx / mDist) * repel;
           p.vy += (mdy / mDist) * repel;
         }
 
-        // Damping — slow, ink-like viscosity
-        p.vx *= 0.94;
-        p.vy *= 0.94;
+        // Heavy damping — ink is viscous
+        p.vx *= 0.88;
+        p.vy *= 0.88;
         p.x += p.vx;
         p.y += p.vy;
 
-        // Life cycle
-        p.life -= dt * 0.06 * (1 - p.role * 0.85);
+        // Life — very slow cycle, almost static
+        p.life -= dt * 0.02 * (1 - p.role * 0.9);
         if (p.life < 0) {
-          p.x = p.ox + (Math.random() - 0.5) * 0.015;
-          p.y = p.oy + (Math.random() - 0.5) * 0.015;
+          p.x = p.ox + (Math.random() - 0.5) * 0.005;
+          p.y = p.oy + (Math.random() - 0.5) * 0.005;
           p.vx = 0; p.vy = 0;
-          p.life = 0.8 + Math.random() * 0.2;
+          p.life = 0.9 + Math.random() * 0.1;
         }
 
-        // Screen position
-        const sx = cxCanvas + p.x * scale;
-        const sy = cyCanvas - p.y * scale;
-        const drawSize = p.size * dpr;
+        // Draw
+        const sx = cxC + p.x * scale;
+        const sy = cyC - p.y * scale;
+        const drawW = p.length * dpr;
+        const drawH = p.width * dpr;
 
-        // Alpha — ink density
-        const lifeFade = Math.min(1, p.life / 0.25);
+        const lifeFade = Math.min(1, p.life / 0.3);
         let alpha: number;
-        if (p.role < 0.05) {
-          // Void: very subtle fog
-          alpha = 0.008 + p.role * 0.15;
-        } else if (p.role < 0.2) {
-          // Mist/ripples: light wash
-          alpha = 0.02 + (p.role - 0.05) * 0.4;
-        } else if (p.role < 0.5) {
-          // Light ink: rod, outline
-          alpha = 0.08 + (p.role - 0.2) * 0.6;
-        } else {
-          // Deep ink: figure, boat
-          alpha = 0.25 + (p.role - 0.5) * 0.8;
-        }
+        if (p.role < 0.04) alpha = 0.006 + p.role * 0.1;
+        else if (p.role < 0.15) alpha = 0.01 + (p.role - 0.04) * 0.35;
+        else if (p.role < 0.5) alpha = 0.05 + (p.role - 0.15) * 0.5;
+        else alpha = 0.22 + (p.role - 0.5) * 0.7;
         alpha *= lifeFade;
-        
         if (alpha < 0.003) continue;
 
-        // Draw using pre-rendered soft sprite
+        ctx.save();
         ctx.globalAlpha = alpha;
-        ctx.drawImage(sprite, sx - drawSize, sy - drawSize, drawSize * 2, drawSize * 2);
+        ctx.translate(sx, sy);
+        ctx.rotate(-p.angle); // negative because canvas Y is inverted
+        ctx.drawImage(sprite, -drawW, -drawH, drawW * 2, drawH * 2);
+        ctx.restore();
       }
 
-      // Reset composite mode
       ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = 1;
-
-      // Seal
       drawSeal(ctx, w - 35 * dpr, h - 35 * dpr, dpr);
     }
 
@@ -399,7 +374,7 @@ export default function AfterimageV2() {
         opacity: loaded ? 0.3 : 0, transition: "opacity 4s ease 3s", pointerEvents: "none",
       }}>
         <h1 style={{
-          fontFamily: "'Noto Serif SC', 'Song', serif", fontSize: "0.8rem",
+          fontFamily: "'Noto Serif SC', serif", fontSize: "0.8rem",
           fontWeight: 300, color: "#2a2520", letterSpacing: "0.4em", margin: 0,
         }}>寒江独钓</h1>
         <p style={{
