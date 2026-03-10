@@ -158,8 +158,8 @@ export default function NighthawksFlow() {
       for (let i = 0; i < NUM; i++) trails.push(spawnTrail());
 
       // Draw a very faint version of the original painting as base
-      // Draw brightened painting as base
-      ctx.globalAlpha = 0.5;
+      // Draw brightened painting as base — subtle enough that lines dominate
+      ctx.globalAlpha = 0.25;
       ctx.drawImage(brightCanvas, 0, 0, sampleW, sampleH, offsetX, offsetY, drawW, drawH);
       ctx.globalAlpha = 1;
 
@@ -174,7 +174,7 @@ export default function NighthawksFlow() {
         ctx.fillStyle = "rgba(15, 25, 20, 0.003)";
         ctx.fillRect(0, 0, w, h);
         // Re-apply brightened painting base
-        ctx.globalAlpha = 0.02;
+        ctx.globalAlpha = 0.01;
         ctx.drawImage(brightCanvas, 0, 0, sampleW, sampleH, offsetX, offsetY, drawW, drawH);
         ctx.globalAlpha = 1;
 
@@ -227,19 +227,19 @@ export default function NighthawksFlow() {
             const fadeAlpha = ratio < 0.2 ? ratio / 0.2 : ratio > 0.8 ? (1 - ratio) / 0.2 : 1;
 
             // Boost colors slightly for visibility on dark bg
-            const boost = 1.0;
+            const boost = 1.4;
             const cr = Math.min(255, r * boost);
             const cg = Math.min(255, g * boost);
             const cb = Math.min(255, b * boost);
 
             // Alpha based on brightness + fade
-            const alpha = (0.2 + br * 0.6) * fadeAlpha;
+            const alpha = (0.3 + br * 0.6) * fadeAlpha;
 
             ctx.beginPath();
             ctx.moveTo(p0.x, p0.y);
             ctx.lineTo(p1.x, p1.y);
             ctx.strokeStyle = `rgba(${cr | 0},${cg | 0},${cb | 0},${alpha})`;
-            ctx.lineWidth = 0.3 + br * 0.7;
+            ctx.lineWidth = 0.6 + br * 1.2;
             ctx.lineCap = "round";
             ctx.stroke();
           }
