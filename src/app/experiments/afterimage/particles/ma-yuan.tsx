@@ -3,175 +3,44 @@
 import { useEffect, useRef, useCallback } from "react";
 
 /*
- * 寒江独钓 — Particle Canvas
- * 
- * Stillness. 90% void. Ink stroke particles.
- * Almost no motion — like staring at still water.
+ * 寒江独钓 — Pixel Particle Deconstruction
+ *
+ * Inspired by 千里江山图 visual art: layered silhouette colors,
+ * ink-wash dissolution. Particles sample from the painting and
+ * drift like ink dissolving in water.
+ *
+ * The vast emptiness of the original is preserved — particles in
+ * empty areas are sparse and ghostly, while the boat/figure area
+ * has dense, dark ink particles.
  */
 
-// ---- Noise ----
-function hash(x: number, y: number): number {
-  let h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-  return h - Math.floor(h);
-}
-function noise2d(x: number, y: number): number {
-  const ix = Math.floor(x), iy = Math.floor(y);
-  const fx = x - ix, fy = y - iy;
-  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
-  return hash(ix, iy)*(1-sx)*(1-sy) + hash(ix+1, iy)*sx*(1-sy) +
-         hash(ix, iy+1)*(1-sx)*sy + hash(ix+1, iy+1)*sx*sy;
-}
-function fbm(x: number, y: number, oct: number = 3): number {
-  let v = 0, a = 0.5, f = 1;
-  for (let i = 0; i < oct; i++) { v += a * noise2d(x*f, y*f); a *= 0.5; f *= 2; }
-  return v;
-}
-
 interface Particle {
-  x: number; y: number; ox: number; oy: number;
-  vx: number; vy: number; role: number; life: number;
-  width: number; length: number; angle: number; phase: number;
-}
-
-function createParticles(): Particle[] {
-  const P: Particle[] = [];
-  const N = 10000;
-  for (let i = 0; i < N; i++) {
-    const r = Math.random();
-    let x: number, y: number, role: number, w: number, l: number, angle: number;
-
-    if (r < 0.015) {
-      const t = Math.random();
-      x = (t - 0.5) * 0.22;
-      y = -0.14 + Math.pow(Math.abs(t - 0.5) * 2, 1.8) * -0.018;
-      x += (Math.random() - 0.5) * 0.005;
-      y += (Math.random() - 0.5) * (0.003 * (1 - Math.pow(Math.abs(t - 0.5) * 2, 2)) + 0.001);
-      role = 0.75 + Math.random() * 0.25;
-      w = 1.5 + Math.random() * 1.5; l = 3 + Math.random() * 5;
-      angle = (Math.random() - 0.5) * 0.15;
-    } else if (r < 0.027) {
-      const a = Math.random() * Math.PI * 2;
-      const rad = Math.pow(Math.random(), 0.5);
-      x = -0.01 + Math.cos(a) * 0.013 * rad;
-      y = -0.09 + Math.sin(a) * 0.028 * rad;
-      role = 0.6 + Math.random() * 0.4;
-      w = 1.5 + Math.random() * 2; l = 2 + Math.random() * 3;
-      angle = a + (Math.random() - 0.5) * 0.5;
-    } else if (r < 0.034) {
-      const a = Math.random() * Math.PI * 2;
-      const rad = Math.random() * 0.008;
-      x = -0.008 + Math.cos(a) * rad;
-      y = -0.055 + Math.sin(a) * rad;
-      role = 0.8 + Math.random() * 0.2;
-      w = 1.2 + Math.random(); l = 1.5 + Math.random() * 2;
-      angle = Math.random() * Math.PI;
-    } else if (r < 0.038) {
-      const t = Math.random();
-      x = -0.008 + (t - 0.5) * 0.025;
-      y = -0.045 + Math.abs(t - 0.5) * -0.01;
-      role = 0.65 + Math.random() * 0.2;
-      w = 2 + Math.random() * 2; l = 2 + Math.random() * 2;
-      angle = (Math.random() - 0.5) * 0.3;
-    } else if (r < 0.052) {
-      const t = Math.random();
-      x = 0.0 + t * 0.15;
-      y = -0.06 + t * 0.095 + Math.sin(t * Math.PI) * 0.012;
-      x += (Math.random() - 0.5) * 0.002;
-      y += (Math.random() - 0.5) * 0.002;
-      role = 0.35 + Math.random() * 0.3 * (1 - t * 0.4);
-      w = 0.6 + Math.random() * 0.8; l = 2 + Math.random() * 3;
-      angle = Math.atan2(0.095, 0.15) + (Math.random() - 0.5) * 0.1;
-    } else if (r < 0.058) {
-      const t = Math.random();
-      x = 0.15 + Math.sin(t * Math.PI * 0.3) * 0.004;
-      y = 0.035 - t * 0.11;
-      x += (Math.random() - 0.5) * 0.001;
-      role = 0.2 + Math.random() * 0.15;
-      w = 0.4 + Math.random() * 0.3; l = 1 + Math.random() * 1.5;
-      angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.15;
-    } else if (r < 0.085) {
-      const ring = Math.floor(Math.random() * 6);
-      const ringR = 0.04 + ring * 0.02;
-      const a = (Math.random() - 0.5) * Math.PI * 0.55;
-      x = 0.0 + Math.cos(a) * ringR;
-      y = -0.17 + Math.sin(a) * ringR * 0.12;
-      x += (Math.random() - 0.5) * 0.003;
-      y += (Math.random() - 0.5) * 0.001;
-      role = 0.06 + Math.random() * 0.1;
-      w = 0.5 + Math.random() * 0.8; l = 3 + Math.random() * 5;
-      angle = (Math.random() - 0.5) * 0.08;
-    } else if (r < 0.14) {
-      const a = Math.random() * Math.PI * 2;
-      const rad = 0.06 + Math.random() * 0.18;
-      x = Math.cos(a) * rad; y = -0.14 + Math.sin(a) * rad * 0.35;
-      role = 0.02 + Math.random() * 0.04;
-      w = 3 + Math.random() * 5; l = 5 + Math.random() * 10;
-      angle = Math.random() * Math.PI;
-    } else {
-      const a = Math.random() * Math.PI * 2;
-      const rad = Math.pow(Math.random(), 0.5) * 0.85;
-      x = Math.cos(a) * rad; y = Math.sin(a) * rad - 0.05;
-      role = Math.random() * 0.03;
-      w = 3 + Math.random() * 6; l = 5 + Math.random() * 12;
-      angle = Math.random() * Math.PI;
-    }
-
-    const scatter = Math.pow(1 - role, 2) * 1.8;
-    P.push({
-      x: x + (Math.random() - 0.5) * scatter,
-      y: y + (Math.random() - 0.5) * scatter,
-      ox: x, oy: y, vx: 0, vy: 0,
-      role, life: Math.random(),
-      width: w, length: l, angle,
-      phase: Math.random() * Math.PI * 2,
-    });
-  }
-  return P;
-}
-
-function createStrokeSprite(w: number, h: number): HTMLCanvasElement {
-  const c = document.createElement("canvas");
-  c.width = w; c.height = h;
-  const ctx = c.getContext("2d")!;
-  const cx = w / 2;
-  const g = ctx.createRadialGradient(cx, cx, 0, cx, cx, cx);
-  g.addColorStop(0, "rgba(0,0,0,1)");
-  g.addColorStop(0.15, "rgba(0,0,0,0.7)");
-  g.addColorStop(0.4, "rgba(0,0,0,0.2)");
-  g.addColorStop(0.7, "rgba(0,0,0,0.04)");
-  g.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.save();
-  ctx.scale(1, h / w);
-  ctx.translate(0, (w - h) / 2 * (w / h));
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, w, w);
-  ctx.restore();
-  // Dry brush roughness
-  ctx.globalCompositeOperation = "destination-out";
-  ctx.globalAlpha = 0.12;
-  for (let i = 0; i < 25; i++) {
-    ctx.fillStyle = "black";
-    ctx.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 3, 0.5 + Math.random());
-  }
-  return c;
+  hx: number; hy: number;
+  x: number; y: number;
+  vx: number; vy: number;
+  r: number; g: number; b: number;
+  br: number;
+  phase: number;
+  size: number;
+  inkWeight: number; // How "inky" — thicker for dark areas
 }
 
 export default function MaYuanParticles() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mouseRef = useRef({ x: 9999, y: 9999 });
-  const targetMouseRef = useRef({ x: 9999, y: 9999 });
+  const mouseRef = useRef({ x: -9999, y: -9999 });
+  const targetMouseRef = useRef({ x: -9999, y: -9999 });
 
   const onMouseMove = useCallback((e: MouseEvent) => {
     targetMouseRef.current = { x: e.clientX, y: e.clientY };
   }, []);
   const onMouseLeave = useCallback(() => {
-    targetMouseRef.current = { x: 9999, y: 9999 };
+    targetMouseRef.current = { x: -9999, y: -9999 };
   }, []);
   const onTouchMove = useCallback((e: TouchEvent) => {
     if (e.touches.length) targetMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }, []);
   const onTouchEnd = useCallback(() => {
-    targetMouseRef.current = { x: 9999, y: 9999 };
+    targetMouseRef.current = { x: -9999, y: -9999 };
   }, []);
 
   useEffect(() => {
@@ -179,12 +48,17 @@ export default function MaYuanParticles() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d", { alpha: false })!;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const sprite = createStrokeSprite(128, 48);
+
+    let W = window.innerWidth;
+    let H = window.innerHeight;
 
     function resize() {
-      const w = window.innerWidth, h = window.innerHeight;
-      canvas!.width = w * dpr; canvas!.height = h * dpr;
-      canvas!.style.width = w + "px"; canvas!.style.height = h + "px";
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas!.width = W * dpr;
+      canvas!.height = H * dpr;
+      canvas!.style.width = W + "px";
+      canvas!.style.height = H + "px";
     }
     resize();
     window.addEventListener("resize", resize);
@@ -193,93 +67,198 @@ export default function MaYuanParticles() {
     window.addEventListener("touchmove", onTouchMove, { passive: true });
     window.addEventListener("touchend", onTouchEnd);
 
-    const particles = createParticles();
-    let time = 0, prevTime = performance.now(), raf = 0;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = "/canary-blog/paintings/ma-yuan-angler.jpg";
+
+    let particles: Particle[] = [];
+    let raf = 0;
+    let time = 0;
+    let prevTime = performance.now();
+    let imageLoaded = false;
+    let drawX = 0, drawY = 0, drawW = 0, drawH = 0;
+
+    function computeDrawRect() {
+      const imgAspect = img.naturalWidth / img.naturalHeight;
+      const vpAspect = W / H;
+      if (imgAspect > vpAspect) {
+        drawH = H; drawW = H * imgAspect;
+        drawX = (W - drawW) / 2; drawY = 0;
+      } else {
+        drawW = W; drawH = W / imgAspect;
+        drawX = 0; drawY = (H - drawH) / 2;
+      }
+    }
+
+    img.onload = () => {
+      const sampleCanvas = document.createElement("canvas");
+      const sW = img.naturalWidth;
+      const sH = img.naturalHeight;
+      sampleCanvas.width = sW;
+      sampleCanvas.height = sH;
+      const sCtx = sampleCanvas.getContext("2d")!;
+      sCtx.drawImage(img, 0, 0);
+      const imageData = sCtx.getImageData(0, 0, sW, sH);
+      const data = imageData.data;
+
+      computeDrawRect();
+
+      // For Ma Yuan's painting: the paper background is warm beige.
+      // We want MORE particles in dark ink areas, FEWER in light/empty areas.
+      // This preserves the vast emptiness that makes this painting powerful.
+      const totalPixels = sW * sH;
+      const step = Math.max(1, Math.round(Math.sqrt(totalPixels / 60000)));
+
+      particles = [];
+      for (let y = 0; y < sH; y += step) {
+        for (let x = 0; x < sW; x += step) {
+          const i = (y * sW + x) * 4;
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const br = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+
+          // Ink darkness — higher = more ink
+          const inkDark = 1 - br;
+
+          // Probability of keeping this particle:
+          // Very light areas (paper): only ~5% chance
+          // Dark areas (ink): ~95% chance
+          const keepProb = 0.05 + inkDark * 0.9;
+          if (Math.random() > keepProb) continue;
+
+          const nx = x / sW;
+          const ny = y / sH;
+
+          // Ink particles are larger and more opaque
+          const inkWeight = Math.pow(inkDark, 1.5);
+
+          particles.push({
+            hx: nx, hy: ny,
+            x: nx + (Math.random() - 0.5) * 0.4,
+            y: ny + (Math.random() - 0.5) * 0.4,
+            vx: 0, vy: 0,
+            r, g, b, br,
+            phase: Math.random() * Math.PI * 2,
+            // Ink strokes are elongated, light particles are round/small
+            size: inkWeight > 0.3
+              ? 1.5 + inkWeight * 2.5 + Math.random()
+              : 0.8 + Math.random() * 1.2,
+            inkWeight,
+          });
+        }
+      }
+
+      imageLoaded = true;
+    };
+
+    // Create an ink-brush sprite for dark particles
+    function createInkDot(sz: number): HTMLCanvasElement {
+      const c = document.createElement("canvas");
+      c.width = sz; c.height = sz;
+      const g = c.getContext("2d")!;
+      const cx = sz / 2;
+      const grad = g.createRadialGradient(cx, cx, 0, cx, cx, cx);
+      grad.addColorStop(0, "rgba(0,0,0,1)");
+      grad.addColorStop(0.3, "rgba(0,0,0,0.6)");
+      grad.addColorStop(0.6, "rgba(0,0,0,0.15)");
+      grad.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = grad;
+      g.fillRect(0, 0, sz, sz);
+      return c;
+    }
+    const inkSprite = createInkDot(32);
 
     function animate() {
       raf = requestAnimationFrame(animate);
+      if (!imageLoaded) return;
+
       const now = performance.now();
       const dt = Math.min((now - prevTime) / 1000, 0.05);
       prevTime = now;
       time += dt;
 
-      const w = canvas!.width, h = canvas!.height;
-      const cxC = w / 2, cyC = h / 2;
-      const scale = Math.min(w, h);
+      const cW = canvas!.width;
+      const cH = canvas!.height;
 
+      // Smooth mouse
       const m = mouseRef.current, tm = targetMouseRef.current;
-      m.x += (tm.x - m.x) * 0.03;
-      m.y += (tm.y - m.y) * 0.03;
-      const mx = (m.x * dpr - cxC) / scale;
-      const my = -(m.y * dpr - cyC) / scale;
+      m.x += (tm.x - m.x) * 0.06;
+      m.y += (tm.y - m.y) * 0.06;
+      const mnx = (m.x - drawX) / drawW;
+      const mny = (m.y - drawY) / drawH;
 
-      const assembleT = Math.min(time / 12, 1);
+      // Assembly
+      const assembleT = Math.min(time / 8, 1);
       const ease = assembleT * assembleT * (3 - 2 * assembleT);
-      const returnStr = 0.15 + ease * 1.5;
-      const curlStr = 0.03 * (1 - ease * 0.7);
+      const returnStrength = 0.3 + ease * 2.5;
 
-      // Warm paper background
-      ctx.fillStyle = "#f0ebe0";
-      ctx.fillRect(0, 0, w, h);
+      // Warm paper background — like aged xuan paper
+      ctx.fillStyle = "#f0e8d8";
+      ctx.fillRect(0, 0, cW, cH);
+
+      computeDrawRect();
 
       ctx.globalCompositeOperation = "multiply";
 
       for (const p of particles) {
-        const nx = fbm(p.x * 0.8 + time * 0.005, p.y * 0.8, 2);
-        const ny = fbm(p.x * 0.8 + 100, p.y * 0.8 + time * 0.005, 2);
-        const curlAmt = (1 - p.role * 0.8) * curlStr;
-        const breathe = Math.sin(time * 0.15 + p.phase) * 0.00005;
+        // Ink particles: subtle drift like water current
+        // Light particles: barely move
+        const driftScale = p.inkWeight > 0.2 ? 0.0015 : 0.0003;
+        const breathX = Math.sin(time * 0.2 + p.phase) * driftScale;
+        const breathY = Math.cos(time * 0.15 + p.phase * 1.7) * driftScale * 0.6;
 
-        p.vx += (nx - 0.5) * curlAmt * dt * 0.3 + breathe;
-        p.vy += (ny - 0.5) * curlAmt * dt * 0.3;
-
-        const dx = p.ox - p.x, dy = p.oy - p.y;
+        // Return to home
+        const dx = p.hx - p.x;
+        const dy = p.hy - p.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > 0.0003) {
-          const ret = p.role * returnStr * Math.min(dist, 0.2) * dt;
-          p.vx += (dx / dist) * ret;
-          p.vy += (dy / dist) * ret;
+        if (dist > 0.0001) {
+          const retStr = returnStrength * (0.5 + p.inkWeight * 0.5);
+          p.vx += dx * retStr * dt;
+          p.vy += dy * retStr * dt;
         }
 
-        const mdx = p.x - mx, mdy = p.y - my;
+        // Mouse: ink particles scatter like water disturbed
+        const mdx = p.x - mnx;
+        const mdy = p.y - mny;
         const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
-        if (mDist < 0.12 && mDist > 0.001) {
-          const repel = 0.08 * Math.pow(1 - mDist / 0.12, 2) * dt * (0.3 + p.role * 0.7);
-          p.vx += (mdx / mDist) * repel;
-          p.vy += (mdy / mDist) * repel;
+        const mouseRadius = 0.1;
+        if (mDist < mouseRadius && mDist > 0.001) {
+          const force = 0.12 * Math.pow(1 - mDist / mouseRadius, 2) * dt;
+          p.vx += (mdx / mDist) * force;
+          p.vy += (mdy / mDist) * force;
         }
 
-        p.vx *= 0.88; p.vy *= 0.88;
-        p.x += p.vx; p.y += p.vy;
+        p.vx = (p.vx + breathX) * 0.9;
+        p.vy = (p.vy + breathY) * 0.9;
+        p.x += p.vx;
+        p.y += p.vy;
 
-        p.life -= dt * 0.02 * (1 - p.role * 0.9);
-        if (p.life < 0) {
-          p.x = p.ox + (Math.random() - 0.5) * 0.005;
-          p.y = p.oy + (Math.random() - 0.5) * 0.005;
-          p.vx = 0; p.vy = 0;
-          p.life = 0.9 + Math.random() * 0.1;
+        const sx = (drawX + p.x * drawW) * dpr;
+        const sy = (drawY + p.y * drawH) * dpr;
+        if (sx < -20 || sx > cW + 20 || sy < -20 || sy > cH + 20) continue;
+
+        const displacement = Math.sqrt((p.x - p.hx) ** 2 + (p.y - p.hy) ** 2);
+        const displaceFade = Math.max(0.2, 1 - displacement * 6);
+
+        if (p.inkWeight > 0.15) {
+          // Dark ink particles — use ink sprite with multiply blend
+          const alpha = (0.3 + p.inkWeight * 0.65) * displaceFade;
+          const size = p.size * dpr * 1.5;
+          ctx.globalAlpha = alpha;
+          // Tint: use the painting's actual color
+          // For ink wash, we draw the sprite tinted
+          ctx.drawImage(inkSprite, sx - size / 2, sy - size / 2, size, size);
+        } else {
+          // Light / paper-tone particles — subtle dots
+          const alpha = (0.08 + p.br * 0.15) * displaceFade;
+          const size = p.size * dpr;
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+          ctx.beginPath();
+          ctx.arc(sx, sy, size / 2, 0, Math.PI * 2);
+          ctx.fill();
         }
-
-        const sx = cxC + p.x * scale;
-        const sy = cyC - p.y * scale;
-        const drawW = p.length * dpr;
-        const drawH = p.width * dpr;
-
-        const lifeFade = Math.min(1, p.life / 0.3);
-        let alpha: number;
-        if (p.role < 0.04) alpha = 0.06 + p.role * 0.8;
-        else if (p.role < 0.15) alpha = 0.1 + (p.role - 0.04) * 1.5;
-        else if (p.role < 0.5) alpha = 0.25 + (p.role - 0.15) * 1.2;
-        else alpha = 0.65 + (p.role - 0.5) * 0.6;
-        alpha *= lifeFade;
-        if (alpha < 0.01) continue;
-
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.translate(sx, sy);
-        ctx.rotate(-p.angle);
-        ctx.drawImage(sprite, -drawW, -drawH, drawW * 2, drawH * 2);
-        ctx.restore();
       }
 
       ctx.globalCompositeOperation = "source-over";
@@ -298,5 +277,17 @@ export default function MaYuanParticles() {
     };
   }, [onMouseMove, onMouseLeave, onTouchMove, onTouchEnd]);
 
-  return <canvas ref={canvasRef} style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 0 }} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        zIndex: 0,
+      }}
+    />
+  );
 }
