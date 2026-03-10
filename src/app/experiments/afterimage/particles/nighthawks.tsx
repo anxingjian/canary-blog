@@ -1,277 +1,261 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 /*
-  Nighthawks — Edward Hopper, 1942
-  
-  Approach: Load the original painting, sample its pixels as a color/brightness map.
-  Flow field lines trace through the image space, picking up colors from the painting.
-  Brighter areas get denser, longer lines. Dark areas get sparse, faint lines.
-  Style inspired by reference 1: thin flowing luminous lines on dark background.
-*/
+ * Nighthawks — Pixel Particle Deconstruction (方案 A)
+ *
+ * Sample every pixel from the painting, turn each into a colored particle.
+ * Particles breathe and drift slightly — like the painting is alive.
+ * Mouse interaction disperses nearby particles.
+ * Recognizable as the original, but clearly a digital afterimage.
+ */
 
-interface Trail {
-  points: { x: number; y: number }[];
-  maxLen: number;
-  speed: number;
-  dead: boolean;
+interface Particle {
+  // Home position (normalized 0-1)
+  hx: number;
+  hy: number;
+  // Current position
+  x: number;
+  y: number;
+  // Velocity
+  vx: number;
+  vy: number;
+  // Color from painting
+  r: number;
+  g: number;
+  b: number;
+  // Brightness (0-1)
+  br: number;
+  // Animation phase offset
+  phase: number;
+  // Size
+  size: number;
 }
 
-export default function NighthawksFlow() {
+export default function NighthawksParticles() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mouseRef = useRef({ x: -9999, y: -9999 });
+  const targetMouseRef = useRef({ x: -9999, y: -9999 });
+
+  const onMouseMove = useCallback((e: MouseEvent) => {
+    targetMouseRef.current = { x: e.clientX, y: e.clientY };
+  }, []);
+  const onMouseLeave = useCallback(() => {
+    targetMouseRef.current = { x: -9999, y: -9999 };
+  }, []);
+  const onTouchMove = useCallback((e: TouchEvent) => {
+    if (e.touches.length) targetMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, []);
+  const onTouchEnd = useCallback(() => {
+    targetMouseRef.current = { x: -9999, y: -9999 };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const ctx = canvas.getContext("2d", { alpha: false })!;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    let w = window.innerWidth;
-    let h = window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio, 2);
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = w + "px";
-    canvas.style.height = h + "px";
-    ctx.scale(dpr, dpr);
+    let W = window.innerWidth;
+    let H = window.innerHeight;
 
-    // Load original painting as color map
+    function resize() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas!.width = W * dpr;
+      canvas!.height = H * dpr;
+      canvas!.style.width = W + "px";
+      canvas!.style.height = H + "px";
+    }
+    resize();
+    window.addEventListener("resize", resize);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseleave", onMouseLeave);
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchend", onTouchEnd);
+
+    // Load painting and sample pixels
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = "/canary-blog/paintings/nighthawks.jpg";
 
-    img.onload = () => {
-      // Draw image to offscreen canvas to sample pixels
-      const offscreen = document.createElement("canvas");
-      // Use a smaller sampling resolution for performance
-      const sampleW = 400;
-      const sampleH = Math.round(sampleW * (img.height / img.width));
-      offscreen.width = sampleW;
-      offscreen.height = sampleH;
-      const offCtx = offscreen.getContext("2d")!;
-      offCtx.drawImage(img, 0, 0, sampleW, sampleH);
-      const imageData = offCtx.getImageData(0, 0, sampleW, sampleH);
-      const pixels = imageData.data;
+    let particles: Particle[] = [];
+    let raf = 0;
+    let time = 0;
+    let prevTime = performance.now();
+    let imageLoaded = false;
 
-      // Create a brightened version for the base layer (lift shadows)
-      const brightCanvas = document.createElement("canvas");
-      brightCanvas.width = sampleW;
-      brightCanvas.height = sampleH;
-      const brightCtx = brightCanvas.getContext("2d")!;
-      const brightData = brightCtx.createImageData(sampleW, sampleH);
-      for (let i = 0; i < pixels.length; i += 4) {
-        // Lift shadows: remap 0-255 to ~40-255 range
-        brightData.data[i] = Math.min(255, pixels[i] * 0.85 + 40);
-        brightData.data[i + 1] = Math.min(255, pixels[i + 1] * 0.85 + 40);
-        brightData.data[i + 2] = Math.min(255, pixels[i + 2] * 0.85 + 40);
-        brightData.data[i + 3] = 255;
-      }
-      brightCtx.putImageData(brightData, 0, 0);
+    // Drawing area (cover viewport while maintaining aspect ratio)
+    let drawX = 0, drawY = 0, drawW = 0, drawH = 0;
 
-      // Calculate image display area (cover the viewport, centered)
-      const imgAspect = img.width / img.height;
-      const vpAspect = w / h;
-      let drawW: number, drawH: number, offsetX: number, offsetY: number;
-      if (vpAspect > imgAspect) {
-        drawW = w;
-        drawH = w / imgAspect;
-        offsetX = 0;
-        offsetY = (h - drawH) / 2;
+    function computeDrawRect() {
+      const imgAspect = img.naturalWidth / img.naturalHeight;
+      const vpAspect = W / H;
+      if (imgAspect > vpAspect) {
+        // Image wider — fit height, crop width
+        drawH = H;
+        drawW = H * imgAspect;
+        drawX = (W - drawW) / 2;
+        drawY = 0;
       } else {
-        drawH = h;
-        drawW = h * imgAspect;
-        offsetX = (w - drawW) / 2;
-        offsetY = 0;
+        // Image taller — fit width, crop height
+        drawW = W;
+        drawH = W / imgAspect;
+        drawX = 0;
+        drawY = (H - drawH) / 2;
       }
+    }
 
-      // Sample color at a screen position
-      function sampleColor(sx: number, sy: number): [number, number, number, number] {
-        // Map screen coords to image sample coords
-        const ix = Math.floor(((sx - offsetX) / drawW) * sampleW);
-        const iy = Math.floor(((sy - offsetY) / drawH) * sampleH);
-        if (ix < 0 || ix >= sampleW || iy < 0 || iy >= sampleH) {
-          return [5, 8, 5, 0]; // dark background outside image
+    img.onload = () => {
+      // Sample pixels from painting
+      const sampleCanvas = document.createElement("canvas");
+      const sW = img.naturalWidth;
+      const sH = img.naturalHeight;
+      sampleCanvas.width = sW;
+      sampleCanvas.height = sH;
+      const sCtx = sampleCanvas.getContext("2d")!;
+      sCtx.drawImage(img, 0, 0);
+      const imageData = sCtx.getImageData(0, 0, sW, sH);
+      const data = imageData.data;
+
+      computeDrawRect();
+
+      // Sample every Nth pixel — aim for ~40-60k particles
+      const totalPixels = sW * sH;
+      const targetParticles = 50000;
+      const step = Math.max(1, Math.round(Math.sqrt(totalPixels / targetParticles)));
+
+      particles = [];
+      for (let y = 0; y < sH; y += step) {
+        for (let x = 0; x < sW; x += step) {
+          const i = (y * sW + x) * 4;
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const br = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+
+          // Skip very dark pixels (reduce particle count in shadows)
+          if (br < 0.04 && Math.random() > 0.3) continue;
+
+          // Normalized position 0-1
+          const nx = x / sW;
+          const ny = y / sH;
+
+          particles.push({
+            hx: nx,
+            hy: ny,
+            x: nx + (Math.random() - 0.5) * 0.3, // Start scattered
+            y: ny + (Math.random() - 0.5) * 0.3,
+            vx: 0,
+            vy: 0,
+            r, g, b, br,
+            phase: Math.random() * Math.PI * 2,
+            size: 1.2 + br * 1.5 + Math.random() * 0.5,
+          });
         }
-        const idx = (iy * sampleW + ix) * 4;
-        return [pixels[idx], pixels[idx + 1], pixels[idx + 2], pixels[idx + 3]];
       }
 
-      function brightness(r: number, g: number, b: number): number {
-        return (r * 0.299 + g * 0.587 + b * 0.114) / 255;
-      }
-
-      const rand = (a: number, b: number) => Math.random() * (b - a) + a;
-
-      // Flow field based on image brightness gradients
-      function flowAngle(sx: number, sy: number, time: number): number {
-        const step = 3;
-        const [r1, g1, b1] = sampleColor(sx + step, sy);
-        const [r2, g2, b2] = sampleColor(sx - step, sy);
-        const [r3, g3, b3] = sampleColor(sx, sy + step);
-        const [r4, g4, b4] = sampleColor(sx, sy - step);
-
-        const dx = brightness(r1, g1, b1) - brightness(r2, g2, b2);
-        const dy = brightness(r3, g3, b3) - brightness(r4, g4, b4);
-
-        // Flow perpendicular to brightness gradient (follows contour lines)
-        // Plus some time-based noise for organic movement
-        const gradAngle = Math.atan2(dy, dx);
-        const perpAngle = gradAngle + Math.PI / 2;
-        const noise = Math.sin(sx * 0.008 + time * 0.5) * Math.cos(sy * 0.008 + time * 0.3) * 0.6;
-
-        return perpAngle + noise;
-      }
-
-      // Spawn trail at random position, weighted by brightness
-      function spawnTrail(): Trail {
-        // Try a few random positions, prefer brighter areas
-        let bestX = 0, bestY = 0, bestBr = -1;
-        for (let attempt = 0; attempt < 5; attempt++) {
-          const sx = rand(0, w);
-          const sy = rand(0, h);
-          const [r, g, b] = sampleColor(sx, sy);
-          const br = brightness(r, g, b);
-          // Weighted: bright areas more likely, but don't exclude dark entirely
-          const score = br * 0.6 + rand(0, 0.4);
-          if (score > bestBr) {
-            bestBr = score;
-            bestX = sx;
-            bestY = sy;
-          }
-        }
-
-        // Longer trails in brighter areas
-        const maxLen = Math.floor(25 + bestBr * 100);
-        const speed = 0.4 + bestBr * 1.0;
-
-        return {
-          points: [{ x: bestX, y: bestY }],
-          maxLen,
-          speed,
-          dead: false,
-        };
-      }
-
-      const NUM = 1200;
-      const trails: Trail[] = [];
-      for (let i = 0; i < NUM; i++) trails.push(spawnTrail());
-
-      // Draw a very faint version of the original painting as base
-      // Draw brightened painting as base — subtle enough that lines dominate
-      ctx.globalAlpha = 0.25;
-      ctx.drawImage(brightCanvas, 0, 0, sampleW, sampleH, offsetX, offsetY, drawW, drawH);
-      ctx.globalAlpha = 1;
-
-      let time = 0;
-      let animId = 0;
-
-      const animate = () => {
-        time += 0.016;
-
-        // Dark background with slight persistence
-        // Fade with a color that matches painting's dark tones (dark teal-green)
-        ctx.fillStyle = "rgba(15, 25, 20, 0.003)";
-        ctx.fillRect(0, 0, w, h);
-        // Re-apply brightened painting base
-        ctx.globalAlpha = 0.01;
-        ctx.drawImage(brightCanvas, 0, 0, sampleW, sampleH, offsetX, offsetY, drawW, drawH);
-        ctx.globalAlpha = 1;
-
-        for (let i = 0; i < trails.length; i++) {
-          const tr = trails[i];
-
-          if (tr.dead) {
-            trails[i] = spawnTrail();
-            continue;
-          }
-
-          const last = tr.points[tr.points.length - 1];
-
-          // Advance along flow field
-          const angle = flowAngle(last.x, last.y, time);
-          const nx = last.x + Math.cos(angle) * tr.speed;
-          const ny = last.y + Math.sin(angle) * tr.speed;
-          tr.points.push({ x: nx, y: ny });
-
-          // Trim
-          if (tr.points.length > tr.maxLen) tr.points.shift();
-
-          // Kill if out of bounds
-          if (nx < -20 || nx > w + 20 || ny < -20 || ny > h + 20) {
-            tr.dead = true;
-            continue;
-          }
-
-          // Kill after enough steps (natural turnover)
-          if (tr.points.length >= tr.maxLen && Math.random() < 0.02) {
-            tr.dead = true;
-            continue;
-          }
-
-          // Draw: each segment colored from the painting
-          if (tr.points.length < 2) continue;
-
-          for (let j = 1; j < tr.points.length; j++) {
-            const p0 = tr.points[j - 1];
-            const p1 = tr.points[j];
-
-            // Sample color at midpoint
-            const mx = (p0.x + p1.x) / 2;
-            const my = (p0.y + p1.y) / 2;
-            const [r, g, b] = sampleColor(mx, my);
-            const br = brightness(r, g, b);
-
-            // Alpha: fade in at head, fade out at tail
-            const ratio = j / tr.points.length;
-            const fadeAlpha = ratio < 0.2 ? ratio / 0.2 : ratio > 0.8 ? (1 - ratio) / 0.2 : 1;
-
-            // Boost colors slightly for visibility on dark bg
-            const boost = 1.4;
-            const cr = Math.min(255, r * boost);
-            const cg = Math.min(255, g * boost);
-            const cb = Math.min(255, b * boost);
-
-            // Alpha based on brightness + fade
-            const alpha = (0.3 + br * 0.6) * fadeAlpha;
-
-            ctx.beginPath();
-            ctx.moveTo(p0.x, p0.y);
-            ctx.lineTo(p1.x, p1.y);
-            ctx.strokeStyle = `rgba(${cr | 0},${cg | 0},${cb | 0},${alpha})`;
-            ctx.lineWidth = 0.6 + br * 1.2;
-            ctx.lineCap = "round";
-            ctx.stroke();
-          }
-        }
-
-        animId = requestAnimationFrame(animate);
-      };
-
-      animate();
-
-      const onResize = () => {
-        w = window.innerWidth;
-        h = window.innerHeight;
-        canvas.width = w * dpr;
-        canvas.height = h * dpr;
-        canvas.style.width = w + "px";
-        canvas.style.height = h + "px";
-        ctx.scale(dpr, dpr);
-      };
-      window.addEventListener("resize", onResize);
-
-      // Cleanup stored in ref
-      (canvas as any).__cleanup = () => {
-        cancelAnimationFrame(animId);
-        window.removeEventListener("resize", onResize);
-      };
+      imageLoaded = true;
     };
+
+    function animate() {
+      raf = requestAnimationFrame(animate);
+      if (!imageLoaded) return;
+
+      const now = performance.now();
+      const dt = Math.min((now - prevTime) / 1000, 0.05);
+      prevTime = now;
+      time += dt;
+
+      const cW = canvas!.width;
+      const cH = canvas!.height;
+
+      // Smooth mouse
+      const m = mouseRef.current;
+      const tm = targetMouseRef.current;
+      m.x += (tm.x - m.x) * 0.08;
+      m.y += (tm.y - m.y) * 0.08;
+
+      // Convert mouse to normalized painting coords
+      const mnx = (m.x - drawX) / drawW;
+      const mny = (m.y - drawY) / drawH;
+
+      // Assembly animation — particles gather to their home positions
+      const assembleT = Math.min(time / 6, 1);
+      const ease = assembleT < 1 ? assembleT * assembleT * (3 - 2 * assembleT) : 1;
+      const returnStrength = 0.5 + ease * 3;
+
+      // Dark background matching the painting's mood
+      ctx.fillStyle = "#0a0e0c";
+      ctx.fillRect(0, 0, cW, cH);
+
+      computeDrawRect();
+
+      for (const p of particles) {
+        // Breathing motion — gentle oscillation
+        const breathX = Math.sin(time * 0.3 + p.phase) * 0.001 * (1 - p.br * 0.5);
+        const breathY = Math.cos(time * 0.25 + p.phase * 1.3) * 0.0008 * (1 - p.br * 0.5);
+
+        // Return to home position
+        const dx = p.hx - p.x;
+        const dy = p.hy - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 0.0001) {
+          const ret = returnStrength * dt;
+          p.vx += dx * ret;
+          p.vy += dy * ret;
+        }
+
+        // Mouse repulsion
+        const mdx = p.x - mnx;
+        const mdy = p.y - mny;
+        const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
+        const mouseRadius = 0.08;
+        if (mDist < mouseRadius && mDist > 0.001) {
+          const force = 0.15 * Math.pow(1 - mDist / mouseRadius, 2) * dt;
+          p.vx += (mdx / mDist) * force;
+          p.vy += (mdy / mDist) * force;
+        }
+
+        // Apply velocity with damping
+        p.vx = (p.vx + breathX) * 0.92;
+        p.vy = (p.vy + breathY) * 0.92;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Convert to screen coordinates
+        const sx = (drawX + p.x * drawW) * dpr;
+        const sy = (drawY + p.y * drawH) * dpr;
+
+        // Skip off-screen
+        if (sx < -10 || sx > cW + 10 || sy < -10 || sy > cH + 10) continue;
+
+        // Draw particle
+        const displacement = Math.sqrt((p.x - p.hx) ** 2 + (p.y - p.hy) ** 2);
+        const displacementFade = Math.max(0.3, 1 - displacement * 8);
+        const alpha = (0.4 + p.br * 0.5) * displacementFade;
+
+        const size = p.size * dpr;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+        ctx.fillRect(sx - size / 2, sy - size / 2, size, size);
+      }
+
+      ctx.globalAlpha = 1;
+    }
+
+    animate();
 
     return () => {
-      if ((canvas as any).__cleanup) (canvas as any).__cleanup();
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseleave", onMouseLeave);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
     };
-  }, []);
+  }, [onMouseMove, onMouseLeave, onTouchMove, onTouchEnd]);
 
   return (
     <canvas
@@ -283,7 +267,6 @@ export default function NighthawksFlow() {
         width: "100vw",
         height: "100vh",
         zIndex: 0,
-        background: "#0f1914",
       }}
     />
   );
