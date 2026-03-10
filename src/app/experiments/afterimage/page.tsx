@@ -4,10 +4,9 @@ import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react"
 import Lenis from "lenis";
 
 const NighthawksParticles = lazy(() => import("./particles/nighthawks"));
-const MaYuanParticles = lazy(() => import("./particles/ma-yuan"));
 const KandinskyParticles = lazy(() => import("./particles/kandinsky"));
 
-const PARTICLE_PAINTINGS = new Set(["nighthawks", "ma-yuan-angler", "kandinsky-viii"]);
+const PARTICLE_PAINTINGS = new Set(["nighthawks", "kandinsky-viii"]);
 
 // ---- Simplex Noise (Stefan Gustavson, public domain) ----
 class SimplexNoise {
@@ -138,26 +137,7 @@ const PAINTINGS: Painting[] = [
     imageUrl: "/canary-blog/paintings/fan-kuan-travelers.jpg",
     aspect: 0.52,
   },
-  {
-    id: "ma-yuan-angler",
-    title: "寒江独钓图",
-    artist: "马远",
-    year: "约 1195",
-    colors: ["#F0EDE5", "#D8D4C8", "#A8A498", "#686458", "#383428"],
-    interpretation: "整幅画几乎是空白。一叶扁舟，一个人，一根钓竿，几道水纹。剩下的全是留白——但那不是'什么都没有'，那是水、是雾、是空气、是寂静本身。马远被叫做'马一角'，因为他只画画面的一个角落。但正是因为少，每一笔都有千斤重。",
-    imageUrl: "/canary-blog/paintings/ma-yuan-angler.jpg",
-    aspect: 1.0,
-  },
-  {
-    id: "bada-shanren-fish",
-    title: "鱼",
-    artist: "朱耷（八大山人）",
-    year: "约 1694",
-    colors: ["#F5F0E0", "#D8D0C0", "#888070", "#484038", "#1A1810"],
-    interpretation: "这条鱼在翻白眼。一个亡了国的皇族后裔，出家当了和尚又装了几十年疯，画了一条翻白眼的鱼。他不说话。他不控诉。他只是画。鱼的眼睛朝上看，嘴角向下撇——如果你觉得它在鄙视什么，那是你自己的投射。八大山人只是在画鱼。冷到极致反而有温度。",
-    imageUrl: "/canary-blog/paintings/bada-shanren-fish.jpg",
-    aspect: 0.65,
-  },
+
 ];
 
 // ---- GLSL Shaders (imported from mood-palette) ----
@@ -930,7 +910,7 @@ const SHADER_MAP: Record<string, string> = {
   "the-kiss": SHADER_KISS, "wanderer-sea-fog": SHADER_WANDERER,
   "the-milkmaid": SHADER_MILKMAID, "caravaggio-calling": SHADER_CARAVAGGIO,
   "kandinsky-viii": SHADER_KANDINSKY, "fan-kuan-travelers": SHADER_FAN_KUAN,
-  "ma-yuan-angler": SHADER_MA_YUAN, "bada-shanren-fish": SHADER_BADA_FISH,
+  
 };
 
 // ---- WebGL Shader Canvas (for ArtView) ----
@@ -1362,8 +1342,8 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
       {PARTICLE_PAINTINGS.has(painting.id) ? (
-        <Suspense fallback={<div style={{ width: "100vw", height: "100vh", background: painting.id === "ma-yuan-angler" ? "#f0ebe0" : painting.id === "nighthawks" ? "#050805" : "#E8E0D0" }} />}>
-          {painting.id === "nighthawks" ? <NighthawksParticles /> : painting.id === "ma-yuan-angler" ? <MaYuanParticles /> : <KandinskyParticles />}
+        <Suspense fallback={<div style={{ width: "100vw", height: "100vh", background: painting.id === "nighthawks" ? "#050805" : "#E8E0D0" }} />}>
+          {painting.id === "nighthawks" ? <NighthawksParticles /> : <KandinskyParticles />}
         </Suspense>
       ) : (
         <ShaderCanvas painting={painting} />

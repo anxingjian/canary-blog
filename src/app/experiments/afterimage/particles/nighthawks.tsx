@@ -121,14 +121,13 @@ export default function NighthawksParticles() {
 
       computeDrawRect();
 
-      // Sample every Nth pixel — aim for ~40-60k particles
+      // Sample pixels — denser in bright/figure areas for recognizability
       const totalPixels = sW * sH;
-      const targetParticles = 50000;
-      const step = Math.max(1, Math.round(Math.sqrt(totalPixels / targetParticles)));
+      const baseStep = Math.max(1, Math.round(Math.sqrt(totalPixels / 80000)));
 
       particles = [];
-      for (let y = 0; y < sH; y += step) {
-        for (let x = 0; x < sW; x += step) {
+      for (let y = 0; y < sH; y += baseStep) {
+        for (let x = 0; x < sW; x += baseStep) {
           const i = (y * sW + x) * 4;
           const r = data[i];
           const g = data[i + 1];
@@ -138,21 +137,29 @@ export default function NighthawksParticles() {
           // Skip very dark pixels (reduce particle count in shadows)
           if (br < 0.04 && Math.random() > 0.3) continue;
 
-          // Normalized position 0-1
+          // Bright areas (figures, lit surfaces) get extra density
+          // by adding particles at sub-pixel offsets
+          const extraSamples = br > 0.35 ? (br > 0.6 ? 2 : 1) : 0;
+
           const nx = x / sW;
           const ny = y / sH;
 
-          particles.push({
-            hx: nx,
-            hy: ny,
-            x: nx + (Math.random() - 0.5) * 0.3, // Start scattered
-            y: ny + (Math.random() - 0.5) * 0.3,
-            vx: 0,
-            vy: 0,
-            r, g, b, br,
-            phase: Math.random() * Math.PI * 2,
-            size: 1.2 + br * 1.5 + Math.random() * 0.5,
-          });
+          for (let s = 0; s <= extraSamples; s++) {
+            const jx = s === 0 ? 0 : (Math.random() - 0.5) * (baseStep / sW) * 0.8;
+            const jy = s === 0 ? 0 : (Math.random() - 0.5) * (baseStep / sH) * 0.8;
+            particles.push({
+              hx: nx + jx,
+              hy: ny + jy,
+              x: nx + jx + (Math.random() - 0.5) * 0.3,
+              y: ny + jy + (Math.random() - 0.5) * 0.3,
+              vx: 0,
+              vy: 0,
+              r, g, b, br,
+              phase: Math.random() * Math.PI * 2,
+              // Smaller particles overall — denser packing for sharper image
+              size: 0.6 + br * 0.8 + Math.random() * 0.3,
+            });
+          }
         }
       }
 
