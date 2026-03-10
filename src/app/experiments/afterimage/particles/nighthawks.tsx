@@ -54,6 +54,21 @@ export default function NighthawksFlow() {
       const imageData = offCtx.getImageData(0, 0, sampleW, sampleH);
       const pixels = imageData.data;
 
+      // Create a brightened version for the base layer (lift shadows)
+      const brightCanvas = document.createElement("canvas");
+      brightCanvas.width = sampleW;
+      brightCanvas.height = sampleH;
+      const brightCtx = brightCanvas.getContext("2d")!;
+      const brightData = brightCtx.createImageData(sampleW, sampleH);
+      for (let i = 0; i < pixels.length; i += 4) {
+        // Lift shadows: remap 0-255 to ~40-255 range
+        brightData.data[i] = Math.min(255, pixels[i] * 0.85 + 40);
+        brightData.data[i + 1] = Math.min(255, pixels[i + 1] * 0.85 + 40);
+        brightData.data[i + 2] = Math.min(255, pixels[i + 2] * 0.85 + 40);
+        brightData.data[i + 3] = 255;
+      }
+      brightCtx.putImageData(brightData, 0, 0);
+
       // Calculate image display area (cover the viewport, centered)
       const imgAspect = img.width / img.height;
       const vpAspect = w / h;
@@ -143,8 +158,9 @@ export default function NighthawksFlow() {
       for (let i = 0; i < NUM; i++) trails.push(spawnTrail());
 
       // Draw a very faint version of the original painting as base
-      ctx.globalAlpha = 1.0;
-      ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+      // Draw brightened painting as base
+      ctx.globalAlpha = 0.5;
+      ctx.drawImage(brightCanvas, 0, 0, sampleW, sampleH, offsetX, offsetY, drawW, drawH);
       ctx.globalAlpha = 1;
 
       let time = 0;
@@ -157,9 +173,9 @@ export default function NighthawksFlow() {
         // Fade with a color that matches painting's dark tones (dark teal-green)
         ctx.fillStyle = "rgba(15, 25, 20, 0.003)";
         ctx.fillRect(0, 0, w, h);
-        // Re-apply painting base very subtly each frame
-        ctx.globalAlpha = 0.025;
-        ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+        // Re-apply brightened painting base
+        ctx.globalAlpha = 0.02;
+        ctx.drawImage(brightCanvas, 0, 0, sampleW, sampleH, offsetX, offsetY, drawW, drawH);
         ctx.globalAlpha = 1;
 
         for (let i = 0; i < trails.length; i++) {
