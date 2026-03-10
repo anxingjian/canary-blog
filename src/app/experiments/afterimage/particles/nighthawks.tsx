@@ -4,35 +4,18 @@ import { useEffect, useRef } from "react";
 
 /*
   Nighthawks — Edward Hopper, 1942
-  Flow field with persistent trail lines.
-  Each line stores its full path and draws as a continuous curve.
+  
+  Approach: Load the original painting, sample its pixels as a color/brightness map.
+  Flow field lines trace through the image space, picking up colors from the painting.
+  Brighter areas get denser, longer lines. Dark areas get sparse, faint lines.
+  Style inspired by reference 1: thin flowing luminous lines on dark background.
 */
 
 interface Trail {
   points: { x: number; y: number }[];
-  color: string;
-  lineWidth: number;
   maxLen: number;
-  zone: string;
-}
-
-const PALETTE = {
-  dinerWarm: [212, 160, 48],
-  dinerGlow: [240, 232, 200],
-  greenCeil: [74, 122, 92],
-  building: [28, 58, 40],
-  figure: [15, 15, 12],
-  counter: [139, 105, 20],
-  redDress: [160, 45, 20],
-  sidewalk: [160, 140, 80],
-  lamp: [200, 170, 80],
-};
-
-function rgb(c: number[], a: number) {
-  return `rgba(${c[0]},${c[1]},${c[2]},${a})`;
-}
-function lerp(a: number[], b: number[], t: number) {
-  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  speed: number;
+  dead: boolean;
 }
 
 export default function NighthawksFlow() {
@@ -53,210 +36,214 @@ export default function NighthawksFlow() {
     canvas.style.height = h + "px";
     ctx.scale(dpr, dpr);
 
-    const rand = (a: number, b: number) => Math.random() * (b - a) + a;
+    // Load original painting as color map
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = "/canary-blog/paintings/nighthawks.jpg";
 
-    // Diner bounds (pixel coords)
-    const d = {
-      l: 0.28 * w, r: 0.72 * w,
-      t: 0.32 * h, b: 0.52 * h,
-      cy: 0.42 * h,
-    };
+    img.onload = () => {
+      // Draw image to offscreen canvas to sample pixels
+      const offscreen = document.createElement("canvas");
+      // Use a smaller sampling resolution for performance
+      const sampleW = 400;
+      const sampleH = Math.round(sampleW * (img.height / img.width));
+      offscreen.width = sampleW;
+      offscreen.height = sampleH;
+      const offCtx = offscreen.getContext("2d")!;
+      offCtx.drawImage(img, 0, 0, sampleW, sampleH);
+      const imageData = offCtx.getImageData(0, 0, sampleW, sampleH);
+      const pixels = imageData.data;
 
-    function flowAngle(x: number, y: number, t: number): number {
-      const nx = x / w, ny = y / h;
-      // Inside diner — gentle circular flow
-      if (nx > 0.28 && nx < 0.72 && ny > 0.32 && ny < 0.52) {
-        const cx = 0.5 * w, cy = 0.42 * h;
-        return Math.atan2(y - cy, x - cx) + Math.PI / 2 + Math.sin(t * 0.3 + nx * 5) * 0.3;
-      }
-      // Light spill
-      if (ny > 0.52 && ny < 0.72 && nx > 0.23 && nx < 0.77) {
-        return Math.atan2(y - 0.52 * h, x - 0.5 * w) + Math.sin(t * 0.5) * 0.2;
-      }
-      // Glass top edge — flow right
-      if (Math.abs(ny - 0.32) < 0.02 && nx > 0.28 && nx < 0.72) {
-        return Math.sin(t * 0.4 + nx * 8) * 0.3;
-      }
-      // Buildings
-      if (ny < 0.3) return -Math.PI / 2 + Math.sin(nx * 10 + t * 0.2) * 0.5;
-      // Street
-      return Math.sin(nx * 6 + t * 0.3) * Math.cos(ny * 6 + t * 0.2) * Math.PI;
-    }
-
-    function spawnTrail(): Trail {
-      const r = Math.random();
-      let x: number, y: number, color: number[], alpha: number, lw: number, zone: string, maxLen: number;
-
-      if (r < 0.4) {
-        // Diner interior
-        x = rand(d.l, d.r);
-        y = rand(d.t, d.b);
-        const t = (x - d.l) / (d.r - d.l);
-        const nf = 0.6 + 0.4 * t;
-        const yr = (d.b - d.t) * nf / 2;
-        if (Math.abs(y - d.cy) > yr) y = d.cy + (Math.random() - 0.5) * yr;
-        const nearTop = (y - d.t) / (d.b - d.t) < 0.25;
-        color = nearTop
-          ? lerp(PALETTE.greenCeil, PALETTE.dinerWarm, rand(0.3, 0.6))
-          : lerp(PALETTE.dinerWarm, PALETTE.dinerGlow, rand(0, 0.4));
-        alpha = rand(0.5, 0.9);
-        lw = rand(0.5, 1.2);
-        maxLen = Math.floor(rand(40, 120));
-        zone = "diner";
-      } else if (r < 0.5) {
-        // Glass edges
-        x = rand(d.l, d.r);
-        y = Math.random() > 0.5 ? d.t + rand(-3, 3) : d.b + rand(-3, 3);
-        color = PALETTE.dinerGlow;
-        alpha = rand(0.6, 1.0);
-        lw = rand(0.3, 0.8);
-        maxLen = Math.floor(rand(60, 150));
-        zone = "edge";
-      } else if (r < 0.55) {
-        // Corner
-        x = d.l + rand(-10, 5);
-        y = d.cy + rand(-20, 20);
-        color = lerp(PALETTE.dinerGlow, PALETTE.greenCeil, rand(0, 0.4));
-        alpha = rand(0.5, 0.8);
-        lw = rand(0.3, 0.7);
-        maxLen = Math.floor(rand(30, 80));
-        zone = "corner";
-      } else if (r < 0.6) {
-        // Counter
-        x = rand(d.l + 30, d.r - 20);
-        y = d.cy + rand(-5, 8);
-        color = lerp(PALETTE.counter, PALETTE.dinerWarm, rand(0.2, 0.5));
-        alpha = rand(0.4, 0.7);
-        lw = rand(0.4, 1.0);
-        maxLen = Math.floor(rand(30, 80));
-        zone = "counter";
-      } else if (r < 0.65) {
-        // Figures
-        const figs = [
-          [0.55 * w, d.cy], [0.6 * w, d.cy - 3],
-          [0.38 * w, d.cy + 3], [0.47 * w, d.cy + 5],
-        ];
-        const f = figs[Math.floor(Math.random() * figs.length)];
-        x = f[0] + rand(-6, 6);
-        y = f[1] + rand(-8, 10);
-        color = f[0] / w > 0.54 && f[0] / w < 0.57 && Math.random() > 0.6
-          ? PALETTE.redDress
-          : lerp(PALETTE.figure, PALETTE.dinerWarm, rand(0, 0.15));
-        alpha = rand(0.5, 0.8);
-        lw = rand(0.4, 0.8);
-        maxLen = Math.floor(rand(20, 50));
-        zone = "figure";
-      } else if (r < 0.78) {
-        // Light spill
-        x = rand(d.l - 40, d.r + 30);
-        y = rand(d.b, d.b + h * 0.2);
-        const dist = (y - d.b) / (h * 0.2);
-        color = lerp(PALETTE.dinerWarm, PALETTE.sidewalk, rand(0.2, 0.6));
-        alpha = rand(0.1, 0.35) * (1 - dist);
-        lw = rand(0.3, 0.7);
-        maxLen = Math.floor(rand(30, 80));
-        zone = "spill";
-      } else if (r < 0.84) {
-        // Lamp
-        x = 0.22 * w + rand(-8, 8);
-        y = Math.random() > 0.4 ? 0.25 * h + rand(-8, 8) : rand(0.27 * h, 0.55 * h);
-        color = Math.random() > 0.4 ? PALETTE.lamp : PALETTE.building;
-        alpha = rand(0.2, 0.5);
-        lw = rand(0.3, 0.6);
-        maxLen = Math.floor(rand(20, 60));
-        zone = "lamp";
+      // Calculate image display area (cover the viewport, centered)
+      const imgAspect = img.width / img.height;
+      const vpAspect = w / h;
+      let drawW: number, drawH: number, offsetX: number, offsetY: number;
+      if (vpAspect > imgAspect) {
+        drawW = w;
+        drawH = w / imgAspect;
+        offsetX = 0;
+        offsetY = (h - drawH) / 2;
       } else {
-        // Buildings & street
-        x = rand(0, w);
-        y = rand(0, h);
-        if (x > d.l - 10 && x < d.r + 10 && y > d.t - 10 && y < d.b + 10) {
-          x = Math.random() > 0.5 ? rand(0, d.l - 30) : rand(d.r + 30, w);
-        }
-        const isB = y < 0.35 * h && ((x / w > 0.05 && x / w < 0.2) || (x / w > 0.78 && x / w < 0.95));
-        color = isB ? lerp(PALETTE.building, PALETTE.greenCeil, rand(0, 0.3)) : PALETTE.building;
-        alpha = rand(0.06, 0.18);
-        lw = rand(0.3, 0.5);
-        maxLen = Math.floor(rand(20, 60));
-        zone = "street";
+        drawH = h;
+        drawW = h * imgAspect;
+        offsetX = (w - drawW) / 2;
+        offsetY = 0;
       }
 
-      return {
-        points: [{ x, y }],
-        color: rgb(color, alpha),
-        lineWidth: lw,
-        maxLen,
-        zone,
+      // Sample color at a screen position
+      function sampleColor(sx: number, sy: number): [number, number, number, number] {
+        // Map screen coords to image sample coords
+        const ix = Math.floor(((sx - offsetX) / drawW) * sampleW);
+        const iy = Math.floor(((sy - offsetY) / drawH) * sampleH);
+        if (ix < 0 || ix >= sampleW || iy < 0 || iy >= sampleH) {
+          return [5, 8, 5, 0]; // dark background outside image
+        }
+        const idx = (iy * sampleW + ix) * 4;
+        return [pixels[idx], pixels[idx + 1], pixels[idx + 2], pixels[idx + 3]];
+      }
+
+      function brightness(r: number, g: number, b: number): number {
+        return (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+      }
+
+      const rand = (a: number, b: number) => Math.random() * (b - a) + a;
+
+      // Flow field based on image brightness gradients
+      function flowAngle(sx: number, sy: number, time: number): number {
+        const step = 3;
+        const [r1, g1, b1] = sampleColor(sx + step, sy);
+        const [r2, g2, b2] = sampleColor(sx - step, sy);
+        const [r3, g3, b3] = sampleColor(sx, sy + step);
+        const [r4, g4, b4] = sampleColor(sx, sy - step);
+
+        const dx = brightness(r1, g1, b1) - brightness(r2, g2, b2);
+        const dy = brightness(r3, g3, b3) - brightness(r4, g4, b4);
+
+        // Flow perpendicular to brightness gradient (follows contour lines)
+        // Plus some time-based noise for organic movement
+        const gradAngle = Math.atan2(dy, dx);
+        const perpAngle = gradAngle + Math.PI / 2;
+        const noise = Math.sin(sx * 0.008 + time * 0.5) * Math.cos(sy * 0.008 + time * 0.3) * 0.6;
+
+        return perpAngle + noise;
+      }
+
+      // Spawn trail at random position, weighted by brightness
+      function spawnTrail(): Trail {
+        // Try a few random positions, prefer brighter areas
+        let bestX = 0, bestY = 0, bestBr = -1;
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const sx = rand(0, w);
+          const sy = rand(0, h);
+          const [r, g, b] = sampleColor(sx, sy);
+          const br = brightness(r, g, b);
+          // Weighted: bright areas more likely, but don't exclude dark entirely
+          const score = br + rand(0, 0.15);
+          if (score > bestBr) {
+            bestBr = score;
+            bestX = sx;
+            bestY = sy;
+          }
+        }
+
+        // Longer trails in brighter areas
+        const maxLen = Math.floor(30 + bestBr * 150);
+        const speed = 0.5 + bestBr * 1.5;
+
+        return {
+          points: [{ x: bestX, y: bestY }],
+          maxLen,
+          speed,
+          dead: false,
+        };
+      }
+
+      const NUM = 1200;
+      const trails: Trail[] = [];
+      for (let i = 0; i < NUM; i++) trails.push(spawnTrail());
+
+      let time = 0;
+      let animId = 0;
+
+      const animate = () => {
+        time += 0.016;
+
+        // Dark background with slight persistence
+        ctx.fillStyle = "rgba(5, 8, 5, 0.025)";
+        ctx.fillRect(0, 0, w, h);
+
+        for (let i = 0; i < trails.length; i++) {
+          const tr = trails[i];
+
+          if (tr.dead) {
+            trails[i] = spawnTrail();
+            continue;
+          }
+
+          const last = tr.points[tr.points.length - 1];
+
+          // Advance along flow field
+          const angle = flowAngle(last.x, last.y, time);
+          const nx = last.x + Math.cos(angle) * tr.speed;
+          const ny = last.y + Math.sin(angle) * tr.speed;
+          tr.points.push({ x: nx, y: ny });
+
+          // Trim
+          if (tr.points.length > tr.maxLen) tr.points.shift();
+
+          // Kill if out of bounds
+          if (nx < -20 || nx > w + 20 || ny < -20 || ny > h + 20) {
+            tr.dead = true;
+            continue;
+          }
+
+          // Kill after enough steps (natural turnover)
+          if (tr.points.length >= tr.maxLen && Math.random() < 0.02) {
+            tr.dead = true;
+            continue;
+          }
+
+          // Draw: each segment colored from the painting
+          if (tr.points.length < 2) continue;
+
+          for (let j = 1; j < tr.points.length; j++) {
+            const p0 = tr.points[j - 1];
+            const p1 = tr.points[j];
+
+            // Sample color at midpoint
+            const mx = (p0.x + p1.x) / 2;
+            const my = (p0.y + p1.y) / 2;
+            const [r, g, b] = sampleColor(mx, my);
+            const br = brightness(r, g, b);
+
+            // Alpha: fade in at head, fade out at tail
+            const ratio = j / tr.points.length;
+            const fadeAlpha = ratio < 0.2 ? ratio / 0.2 : ratio > 0.8 ? (1 - ratio) / 0.2 : 1;
+
+            // Boost colors slightly for visibility on dark bg
+            const boost = 1.3;
+            const cr = Math.min(255, r * boost);
+            const cg = Math.min(255, g * boost);
+            const cb = Math.min(255, b * boost);
+
+            // Alpha based on brightness + fade
+            const alpha = (0.15 + br * 0.7) * fadeAlpha;
+
+            ctx.beginPath();
+            ctx.moveTo(p0.x, p0.y);
+            ctx.lineTo(p1.x, p1.y);
+            ctx.strokeStyle = `rgba(${cr | 0},${cg | 0},${cb | 0},${alpha})`;
+            ctx.lineWidth = 0.5 + br * 1.0;
+            ctx.lineCap = "round";
+            ctx.stroke();
+          }
+        }
+
+        animId = requestAnimationFrame(animate);
       };
-    }
 
-    const NUM = 800;
-    const trails: Trail[] = [];
-    for (let i = 0; i < NUM; i++) trails.push(spawnTrail());
+      animate();
 
-    let time = 0;
-    let animId = 0;
+      const onResize = () => {
+        w = window.innerWidth;
+        h = window.innerHeight;
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+        ctx.scale(dpr, dpr);
+      };
+      window.addEventListener("resize", onResize);
 
-    const animate = () => {
-      time += 0.016;
-
-      // Clear and redraw all trails each frame
-      ctx.fillStyle = "#050805";
-      ctx.fillRect(0, 0, w, h);
-
-      for (let i = 0; i < trails.length; i++) {
-        const tr = trails[i];
-        const last = tr.points[tr.points.length - 1];
-
-        // Advance
-        const angle = flowAngle(last.x, last.y, time);
-        const speed = tr.zone === "edge" ? 1.5 : tr.zone === "diner" ? 1.0 : 0.6;
-        const nx = last.x + Math.cos(angle) * speed;
-        const ny = last.y + Math.sin(angle) * speed;
-        tr.points.push({ x: nx, y: ny });
-
-        // Trim to max length
-        if (tr.points.length > tr.maxLen) tr.points.shift();
-
-        // Respawn if out of bounds
-        if (nx < -20 || nx > w + 20 || ny < -20 || ny > h + 20) {
-          trails[i] = spawnTrail();
-          continue;
-        }
-
-        // Draw trail with gradient alpha
-        if (tr.points.length < 2) continue;
-
-        ctx.beginPath();
-        ctx.moveTo(tr.points[0].x, tr.points[0].y);
-        for (let j = 1; j < tr.points.length; j++) {
-          ctx.lineTo(tr.points[j].x, tr.points[j].y);
-        }
-        ctx.strokeStyle = tr.color;
-        ctx.lineWidth = tr.lineWidth;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.stroke();
-      }
-
-      animId = requestAnimationFrame(animate);
+      // Cleanup stored in ref
+      (canvas as any).__cleanup = () => {
+        cancelAnimationFrame(animId);
+        window.removeEventListener("resize", onResize);
+      };
     };
-
-    animate();
-
-    const onResize = () => {
-      w = window.innerWidth;
-      h = window.innerHeight;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      canvas.style.width = w + "px";
-      canvas.style.height = h + "px";
-      ctx.scale(dpr, dpr);
-    };
-    window.addEventListener("resize", onResize);
 
     return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener("resize", onResize);
+      if ((canvas as any).__cleanup) (canvas as any).__cleanup();
     };
   }, []);
 
@@ -270,6 +257,7 @@ export default function NighthawksFlow() {
         width: "100vw",
         height: "100vh",
         zIndex: 0,
+        background: "#050805",
       }}
     />
   );
