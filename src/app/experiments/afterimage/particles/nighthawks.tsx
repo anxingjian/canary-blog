@@ -118,7 +118,7 @@ export default function NighthawksFlow() {
           const [r, g, b] = sampleColor(sx, sy);
           const br = brightness(r, g, b);
           // Weighted: bright areas more likely, but don't exclude dark entirely
-          const score = br + rand(0, 0.15);
+          const score = br * 0.6 + rand(0, 0.4);
           if (score > bestBr) {
             bestBr = score;
             bestX = sx;
@@ -127,8 +127,8 @@ export default function NighthawksFlow() {
         }
 
         // Longer trails in brighter areas
-        const maxLen = Math.floor(30 + bestBr * 150);
-        const speed = 0.5 + bestBr * 1.5;
+        const maxLen = Math.floor(25 + bestBr * 100);
+        const speed = 0.4 + bestBr * 1.0;
 
         return {
           points: [{ x: bestX, y: bestY }],
@@ -149,7 +149,7 @@ export default function NighthawksFlow() {
         time += 0.016;
 
         // Dark background with slight persistence
-        ctx.fillStyle = "rgba(5, 8, 5, 0.025)";
+        ctx.fillStyle = "rgba(5, 8, 5, 0.018)";
         ctx.fillRect(0, 0, w, h);
 
         for (let i = 0; i < trails.length; i++) {
@@ -201,19 +201,19 @@ export default function NighthawksFlow() {
             const fadeAlpha = ratio < 0.2 ? ratio / 0.2 : ratio > 0.8 ? (1 - ratio) / 0.2 : 1;
 
             // Boost colors slightly for visibility on dark bg
-            const boost = 1.3;
+            const boost = 1.5;
             const cr = Math.min(255, r * boost);
             const cg = Math.min(255, g * boost);
             const cb = Math.min(255, b * boost);
 
             // Alpha based on brightness + fade
-            const alpha = (0.15 + br * 0.7) * fadeAlpha;
+            const alpha = (0.1 + br * 0.5) * fadeAlpha;
 
             ctx.beginPath();
             ctx.moveTo(p0.x, p0.y);
             ctx.lineTo(p1.x, p1.y);
             ctx.strokeStyle = `rgba(${cr | 0},${cg | 0},${cb | 0},${alpha})`;
-            ctx.lineWidth = 0.5 + br * 1.0;
+            ctx.lineWidth = 0.3 + br * 0.7;
             ctx.lineCap = "round";
             ctx.stroke();
           }
