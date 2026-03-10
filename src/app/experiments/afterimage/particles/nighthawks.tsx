@@ -143,7 +143,7 @@ export default function NighthawksFlow() {
       for (let i = 0; i < NUM; i++) trails.push(spawnTrail());
 
       // Draw a very faint version of the original painting as base
-      ctx.globalAlpha = 0.75;
+      ctx.globalAlpha = 1.0;
       ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
       ctx.globalAlpha = 1;
 
@@ -154,11 +154,11 @@ export default function NighthawksFlow() {
         time += 0.016;
 
         // Dark background with slight persistence
-        // Redraw faint painting periodically to maintain base visibility
-        ctx.fillStyle = "rgba(5, 8, 5, 0.004)";
+        // Fade with a color that matches painting's dark tones (dark teal-green)
+        ctx.fillStyle = "rgba(15, 25, 20, 0.003)";
         ctx.fillRect(0, 0, w, h);
         // Re-apply painting base very subtly each frame
-        ctx.globalAlpha = 0.015;
+        ctx.globalAlpha = 0.025;
         ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
         ctx.globalAlpha = 1;
 
@@ -267,7 +267,7 @@ export default function NighthawksFlow() {
         width: "100vw",
         height: "100vh",
         zIndex: 0,
-        background: "#050805",
+        background: "#0f1914",
       }}
     />
   );
