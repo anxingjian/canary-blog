@@ -142,6 +142,11 @@ export default function NighthawksFlow() {
       const trails: Trail[] = [];
       for (let i = 0; i < NUM; i++) trails.push(spawnTrail());
 
+      // Draw a very faint version of the original painting as base
+      ctx.globalAlpha = 0.5;
+      ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+      ctx.globalAlpha = 1;
+
       let time = 0;
       let animId = 0;
 
@@ -149,8 +154,13 @@ export default function NighthawksFlow() {
         time += 0.016;
 
         // Dark background with slight persistence
-        ctx.fillStyle = "rgba(5, 8, 5, 0.018)";
+        // Redraw faint painting periodically to maintain base visibility
+        ctx.fillStyle = "rgba(5, 8, 5, 0.006)";
         ctx.fillRect(0, 0, w, h);
+        // Re-apply painting base very subtly each frame
+        ctx.globalAlpha = 0.012;
+        ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+        ctx.globalAlpha = 1;
 
         for (let i = 0; i < trails.length; i++) {
           const tr = trails[i];
@@ -201,13 +211,13 @@ export default function NighthawksFlow() {
             const fadeAlpha = ratio < 0.2 ? ratio / 0.2 : ratio > 0.8 ? (1 - ratio) / 0.2 : 1;
 
             // Boost colors slightly for visibility on dark bg
-            const boost = 1.5;
+            const boost = 1.0;
             const cr = Math.min(255, r * boost);
             const cg = Math.min(255, g * boost);
             const cb = Math.min(255, b * boost);
 
             // Alpha based on brightness + fade
-            const alpha = (0.1 + br * 0.5) * fadeAlpha;
+            const alpha = (0.2 + br * 0.6) * fadeAlpha;
 
             ctx.beginPath();
             ctx.moveTo(p0.x, p0.y);
