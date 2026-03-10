@@ -3,10 +3,11 @@
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
 import Lenis from "lenis";
 
+const NighthawksParticles = lazy(() => import("./particles/nighthawks"));
 const MaYuanParticles = lazy(() => import("./particles/ma-yuan"));
 const KandinskyParticles = lazy(() => import("./particles/kandinsky"));
 
-const PARTICLE_PAINTINGS = new Set(["ma-yuan-angler", "kandinsky-viii"]);
+const PARTICLE_PAINTINGS = new Set(["nighthawks", "ma-yuan-angler", "kandinsky-viii"]);
 
 // ---- Simplex Noise (Stefan Gustavson, public domain) ----
 class SimplexNoise {
@@ -1361,8 +1362,8 @@ function ArtView({ painting, onBack }: { painting: Painting; onBack: () => void 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
       {PARTICLE_PAINTINGS.has(painting.id) ? (
-        <Suspense fallback={<div style={{ width: "100vw", height: "100vh", background: painting.id === "ma-yuan-angler" ? "#f0ebe0" : "#E8E0D0" }} />}>
-          {painting.id === "ma-yuan-angler" ? <MaYuanParticles /> : <KandinskyParticles />}
+        <Suspense fallback={<div style={{ width: "100vw", height: "100vh", background: painting.id === "ma-yuan-angler" ? "#f0ebe0" : painting.id === "nighthawks" ? "#050805" : "#E8E0D0" }} />}>
+          {painting.id === "nighthawks" ? <NighthawksParticles /> : painting.id === "ma-yuan-angler" ? <MaYuanParticles /> : <KandinskyParticles />}
         </Suspense>
       ) : (
         <ShaderCanvas painting={painting} />
