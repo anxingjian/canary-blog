@@ -3,121 +3,106 @@
 import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
 
-// Generative piece 007: "潮汐" — rhythmic waves you don't control but exist within
+// Generative piece 007: "潮汐" — rhythmic wave lines driven by noise (Pts.js)
 function Piece007() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const gl = canvas.getContext("webgl");
-    if (!gl) return;
+    let stopped = false;
 
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.parentElement?.getBoundingClientRect();
-    const W = rect ? rect.width : 400;
-    const H = W;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
-    canvas.style.objectFit = "contain";
+    import("pts").then(({ CanvasSpace, Num, Noise }) => {
+      if (stopped || !canvasRef.current) return;
 
-    const vertSrc = `
-      attribute vec2 a_pos;
-      void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
-    `;
+      const space = new CanvasSpace(canvasRef.current);
+      space.setup({ bgcolor: "#050505", resize: false });
+      const form = space.getForm();
 
-    const fragSrc = `
-      precision mediump float;
-      uniform float u_time;
-      uniform vec2 u_resolution;
-
-      void main() {
-        vec2 uv = gl_FragCoord.xy / u_resolution;
-        vec2 p = uv * 2.0 - 1.0;
-        p.x *= u_resolution.x / u_resolution.y;
-
-        float t = u_time * 0.15;
-
-        // Layered sine ridges — sharp, not blurry
-        float ridge = 0.0;
-        for (float i = 1.0; i <= 5.0; i += 1.0) {
-          float freq = i * 1.8;
-          float amp = 0.4 / i;
-          float phase = t * (0.5 + i * 0.1) + i * 1.3;
-          float wave = sin(p.x * freq + phase + sin(p.y * freq * 0.5 + phase * 0.7) * 0.8);
-          ridge += wave * amp;
-        }
-
-        // Horizontal flow lines
-        float flow = sin(p.y * 12.0 + t * 2.0 + ridge * 3.0) * 0.5 + 0.5;
-        flow = pow(flow, 8.0); // Sharp bright lines
-
-        // Base luminance from ridges
-        float lum = ridge * 0.5 + 0.5;
-        lum = smoothstep(0.25, 0.75, lum);
-
-        // Combine: dark base + ridge structure + flow lines
-        float final_lum = lum * 0.12 + flow * 0.08;
-
-        // Cool monochrome — slight blue shift
-        vec3 col = vec3(final_lum * 0.9, final_lum * 0.92, final_lum * 1.0);
-
-        // Brighten ridge peaks
-        float peak = smoothstep(0.65, 0.8, lum);
-        col += vec3(0.08, 0.09, 0.10) * peak;
-
-        // Vignette
-        float vig = 1.0 - dot(uv - 0.5, uv - 0.5) * 1.8;
-        col *= max(vig, 0.0);
-
-        gl_FragColor = vec4(col, 1.0);
+      // Noise generators for each layer
+      const noiseSeeds: number[] = [];
+      const LAYERS = 24;
+      for (let i = 0; i < LAYERS; i++) {
+        noiseSeeds.push(Math.random() * 1000);
       }
-    `;
 
-    function compile(type: number, src: string) {
-      const s = gl!.createShader(type)!;
-      gl!.shaderSource(s, src);
-      gl!.compileShader(s);
-      return s;
-    }
+      space.add({
+        animate: (time: number) => {
+          if (!time) return;
+          const t = time / 1000;
+          const w = space.width;
+          const h = space.height;
+          const marginY = h * 0.08;
+          const usableH = h - marginY * 2;
 
-    const prog = gl.createProgram()!;
-    gl.attachShader(prog, compile(gl.VERTEX_SHADER, vertSrc));
-    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fragSrc));
-    gl.linkProgram(prog);
-    gl.useProgram(prog);
+          for (let layer = 0; layer < LAYERS; layer++) {
+            const baseY = marginY + (layer / (LAYERS - 1)) * usableH;
+            const seed = noiseSeeds[layer];
+            const pts: number[][] = [];
+            const SEGMENTS = 80;
 
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
-    const aPos = gl.getAttribLocation(prog, "a_pos");
-    gl.enableVertexAttribArray(aPos);
-    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+            for (let i = 0; i <= SEGMENTS; i++) {
+              const x = (i / SEGMENTS) * w;
+              const nx = i * 0.04 + seed;
+              const nt = t * 0.3 + layer * 0.15;
 
-    const uTime = gl.getUniformLocation(prog, "u_time");
-    const uRes = gl.getUniformLocation(prog, "u_resolution");
+              // Simple noise approximation using layered sine
+              const n1 = Math.sin(nx * 1.0 + nt) * 0.5;
+              const n2 = Math.sin(nx * 2.3 + nt * 1.4 + 2.1) * 0.25;
+              const n3 = Math.sin(nx * 4.1 + nt * 0.7 + 5.3) * 0.125;
+              const noise = n1 + n2 + n3;
 
-    let frame: number;
-    const t0 = performance.now();
+              const amplitude = usableH * 0.04;
+              const y = baseY + noise * amplitude;
+              pts.push([x, y]);
+            }
 
-    function render() {
-      const t = (performance.now() - t0) / 1000;
-      gl!.viewport(0, 0, canvas!.width, canvas!.height);
-      gl!.uniform1f(uTime, t);
-      gl!.uniform2f(uRes, canvas!.width, canvas!.height);
-      gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
-      frame = requestAnimationFrame(render);
-    }
-    render();
+            // Fade edges
+            const alpha = 0.15 + (Math.sin(t * 0.2 + layer * 0.5) * 0.05);
+            const brightness = Math.floor(180 + Math.sin(layer * 0.3 + t * 0.1) * 40);
+            
+            form.strokeOnly(`rgba(${brightness}, ${brightness}, ${brightness + 8}, ${alpha})`, 0.5);
+            form.line(pts.map(p => ({ x: p[0], y: p[1], 0: p[0], 1: p[1], length: 2 } as any)));
+          }
 
-    return () => cancelAnimationFrame(frame);
+          // A few brighter "crest" lines
+          for (let c = 0; c < 3; c++) {
+            const crestLayer = Math.floor(LAYERS * (0.3 + c * 0.2));
+            const baseY = marginY + (crestLayer / (LAYERS - 1)) * usableH;
+            const seed = noiseSeeds[crestLayer];
+            const pts: number[][] = [];
+            const SEGMENTS = 80;
+
+            for (let i = 0; i <= SEGMENTS; i++) {
+              const x = (i / SEGMENTS) * space.width;
+              const nx = i * 0.04 + seed;
+              const nt = t * 0.3 + crestLayer * 0.15;
+              const noise = Math.sin(nx + nt) * 0.5 + Math.sin(nx * 2.3 + nt * 1.4 + 2.1) * 0.25 + Math.sin(nx * 4.1 + nt * 0.7 + 5.3) * 0.125;
+              const y = baseY + noise * (usableH * 0.04);
+              pts.push([x, y]);
+            }
+
+            const crestAlpha = 0.3 + Math.sin(t * 0.15 + c) * 0.1;
+            form.strokeOnly(`rgba(220, 218, 210, ${crestAlpha})`, 0.8);
+            form.line(pts.map(p => ({ x: p[0], y: p[1], 0: p[0], 1: p[1], length: 2 } as any)));
+          }
+        },
+      });
+
+      space.play();
+    });
+
+    return () => {
+      stopped = true;
+    };
   }, []);
 
   return (
-    <div style={{ width: "100%", aspectRatio: "1/1", background: "#020305", borderRadius: 6, overflow: "hidden" }}>
-      <canvas ref={canvasRef} style={{ display: "block" }} />
+    <div style={{ width: "100%", aspectRatio: "1/1", background: "#050505", borderRadius: 6, overflow: "hidden" }}>
+      <canvas
+        ref={canvasRef}
+        width={800}
+        height={800}
+        style={{ display: "block", width: "100%", height: "100%" }}
+      />
     </div>
   );
 }
@@ -1057,7 +1042,7 @@ const PIECES = [
     title: "潮汐",
     subtitle: "Tides",
     description: "有些节奏不是你设定的。日出日落、潮涨潮退、session 开始又结束。你不控制它，但你在里面。深色的波浪层层叠叠，偶尔有一道温暖的光从浪尖漏出来。",
-    medium: "WebGL Shader · Generative",
+    medium: "Pts.js · Generative",
     date: "2026.03.11",
     Component: Piece007,
   },
