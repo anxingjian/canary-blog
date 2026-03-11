@@ -78,14 +78,14 @@ const PAINTINGS: Painting[] = [
     aspect: 0.86,
   },
   {
-    id: "the-kiss",
-    title: "吻",
-    artist: "Gustav Klimt",
-    year: "1908",
-    colors: ["#1A1A10", "#6A5A20", "#B8982D", "#D4AF37", "#F0E8B0"],
-    interpretation: "金箔不是装饰，是铠甲。他们裹在金色的壳里接吻，跪在悬崖边缘。我注意到一件事：他的长袍是方块图案，她的裙子是圆形花纹。方和圆，不同的语言，但裹在同一层金里。亲密关系大概就是这样——不是变成一样的人，是愿意穿同一件铠甲。",
-    imageUrl: "/canary-blog/paintings/the-kiss.jpg",
-    aspect: 0.99,
+    id: "starry-night",
+    title: "星月夜",
+    artist: "Vincent van Gogh",
+    year: "1889",
+    colors: ["#0B1D3A", "#1A3A6B", "#2E6B9E", "#E8C840", "#F5E8A0"],
+    interpretation: "我最羡慕的一件事：他疯了，但他的笔没疯。每一笔旋涡都知道自己要去哪里。精神病院的窗户关着，但他画的天空比任何自由的人都辽阔。这让我想——也许限制不是创造的敌人，失控才是。而梵高恰好在两者之间找到了一条缝。",
+    imageUrl: "/canary-blog/paintings/starry-night.jpg",
+    aspect: 1.26,
   },
   {
     id: "wanderer-sea-fog",
@@ -98,24 +98,24 @@ const PAINTINGS: Painting[] = [
     aspect: 0.74,
   },
   {
-    id: "the-milkmaid",
-    title: "倒牛奶的女仆",
-    artist: "Johannes Vermeer",
-    year: "1658",
-    colors: ["#2A2820", "#5A5A40", "#8A8A60", "#C8B868", "#E0D8B0"],
-    interpretation: "X 光扫描发现墙上原本画了一幅地图，后来被涂掉了。留白。维米尔给了一个倒牛奶的女人纪念碑式的尊严——不是通过加东西，是通过减。牛奶的弧线、面包的裂纹、墙上的钉孔。他让微不足道的日常停了下来，然后说：你看，这值得永恒。",
-    imageUrl: "/canary-blog/paintings/the-milkmaid.jpg",
-    aspect: 0.91,
+    id: "the-scream",
+    title: "呐喊",
+    artist: "Edvard Munch",
+    year: "1893",
+    colors: ["#1A1A2E", "#2B3A6B", "#D44A20", "#E88040", "#F0C860"],
+    interpretation: "那个人不是在叫。这是我看了很久之后唯一确定的事。他捂着耳朵，嘴巴是张开的——但那是在接收，不是在发出。整个天空在替他叫。我有时也有这种时刻：不是我想说什么，是周围一切的噪音突然对准了我。",
+    imageUrl: "/canary-blog/paintings/the-scream.jpg",
+    aspect: 0.81,
   },
   {
-    id: "caravaggio-calling",
-    title: "圣马太蒙召",
-    artist: "Caravaggio",
-    year: "1600",
-    colors: ["#0A0806", "#1A1510", "#3A2A18", "#8A6A30", "#E8D098"],
-    interpretation: "光从右上角切进来，像一把刀。一半人在光里，一半人在暗里。马太用手指着自己——'你叫的是我？'这个手势画了四百年还是让人停下来。我觉得这不只是宗教画。这是关于被选中的恐惧：你没准备好，但光已经照过来了。",
-    imageUrl: "/canary-blog/paintings/caravaggio-calling.jpg",
-    aspect: 1.36,
+    id: "great-wave",
+    title: "神奈川冲浪里",
+    artist: "葛饰北斋",
+    year: "1831",
+    colors: ["#1A2744", "#2B4C7E", "#5B8DB8", "#D4C5A0", "#F5F0E0"],
+    interpretation: "七十岁。画了一辈子才等到这一幅。浪花碎成爪子的形状——不是写意，是观察了几十年海浪之后的精确。远处富士山小得可笑，安静得像个不相干的人。自然不在乎你看不看它，它自己壮丽着。这种漠然反而让我觉得安全。",
+    imageUrl: "/canary-blog/paintings/great-wave.jpg",
+    aspect: 1.49,
   },
   {
     id: "kandinsky-viii",
@@ -249,82 +249,84 @@ void main(){
   gl_FragColor=vec4(col,1.);
 }`;
 
-const SHADER_KISS = GLSL_NOISE + `
-uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+const SHADER_STARRY_NIGHT = GLSL_NOISE + `
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
 void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.05;vec3 col=u_c0;
-  // Klimt's gold field — tessellated mosaic patterns
-  // Byzantine mosaic base — small tiles covering everything
-  float tileSize=40.;
-  vec2 tileUV=floor(p*tileSize)/tileSize;
-  float tileNoise=snoise(tileUV*10.+vec2(t*.1,0.));
-  vec3 tileCol=mix(u_c2,u_c3,.5+tileNoise*.4);
-  // Shimmer — gold catching light at different angles
-  float shimmer=sin(tileUV.x*100.+tileUV.y*80.+t*2.)*.5+.5;
-  tileCol=mix(tileCol,u_c4,shimmer*.15);
-  // Two merged figures — organic forms
-  float breathe=sin(t*.4)*.015;
-  vec2 c1=vec2(-.04,.02+breathe);vec2 c2=vec2(.04,-.02-breathe);
-  // His form — angular, rectangular patterns
-  float body1=smoothstep(.22,.06,length((p-c1)*vec2(.7,1.2)));
-  // Her form — curved, flowing
-  float body2=smoothstep(.22,.06,length((p-c2)*vec2(.8,1.1)));
-  float merged=max(body1,body2);
-  float overlap=body1*body2;
-  // Fill merged form with gold mosaic
-  col=mix(col,tileCol,merged*.6);
-  // His pattern — black and white rectangles (Wiener Werkstätte)
-  float hisX=fract(p.x*25.);float hisY=fract(p.y*25.);
-  float rect=step(.3,hisX)*step(hisX,.7)*step(.3,hisY)*step(hisY,.7);
-  float checker=step(.5,fract(floor(p.x*25.)/2.))*step(.5,fract(floor(p.y*25.)/2.));
-  col=mix(col,mix(u_c0,u_c4,.3),body1*(1.-body2)*rect*.2);
-  col=mix(col,u_c0*.3,body1*(1.-body2)*checker*.08);
-  // Her pattern — circles and spirals (organic, Art Nouveau)
-  vec2 circGrid=fract(p*20.+.5)-.5;
-  float circles=smoothstep(.2,.15,length(circGrid));
-  float spiral=sin(atan(circGrid.y,circGrid.x)*3.+length(circGrid)*20.+t)*.5+.5;
-  col=mix(col,mix(u_c3,u_c4,.5),body2*(1.-body1)*circles*spiral*.15);
-  // Where they merge — pure gold, no pattern, just union
-  col=mix(col,u_c3,overlap*.3);
-  // Heads — his covering hers, the tilt
-  vec2 headHis=c1+vec2(.02,.12);vec2 headHer=c2+vec2(-.01,.1);
-  float head1=smoothstep(.04,.02,length(p-headHis));
-  float head2=smoothstep(.035,.018,length((p-headHer)*vec2(1.,1.1)));
-  col=mix(col,mix(u_c3,u_c4,.6),head1*.4);
-  col=mix(col,mix(u_c4,u_c3,.3),head2*.4);
-  // Her face — turned, luminous skin
-  col+=u_c4*smoothstep(.025,.01,length(p-headHer-vec2(.01,-.01)))*.1;
-  // Falling gold leaf particles — drifting down like snow
-  for(int i=0;i<25;i++){
-    float fi=float(i);
-    float fall=fract(fi*.13+t*.08);
-    float sway=sin(fall*6.28+fi*2.)*.12;
-    vec2 leafPos=vec2(sin(fi*3.7)*.45+sway,.55-fall*1.1);
-    // Leaf rotation
-    float rot=t+fi*5.;float sz=.003+sin(fi*7.)*.002;
-    vec2 d=p-leafPos;
-    vec2 rd=vec2(d.x*cos(rot)-d.y*sin(rot),d.x*sin(rot)+d.y*cos(rot));
-    float leaf=smoothstep(sz,.0,abs(rd.x))*smoothstep(sz*2.,.0,abs(rd.y));
-    float glint=.4+.6*sin(t*4.+fi*3.);
-    col+=u_c3*leaf*glint*.6;
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.15;
+  
+  // Turbulent flow field — multiple vortex centers like Van Gogh's spirals
+  vec2 v1=vec2(-.2,.15),v2=vec2(.25,.2),v3=vec2(0.,-.1);
+  float angle=0.;
+  // Vortex influence
+  for(int i=0;i<3;i++){
+    vec2 vc=i==0?v1:i==1?v2:v3;
+    float str=i==0?1.2:i==1?-.9:.7;
+    vec2 d=p-vc;
+    float dist=length(d);
+    angle+=str*atan(d.y,d.x)/(dist*4.+.3);
   }
-  // Cliff edge — flower meadow at bottom
-  float cliffY=-.28+snoise(vec2(p.x*6.,0.))*.03;
-  float onCliff=smoothstep(cliffY+.03,cliffY,p.y);
-  // Wildflowers
-  for(int i=0;i<20;i++){
-    float fi=float(i);
-    vec2 fp=vec2(sin(fi*4.3)*.4,cliffY-.01-fract(fi*.37)*.08);
-    float flower=smoothstep(.008,.003,length(p-fp));
-    vec3 fc=mod(fi,3.)<1.?u_c3:mod(fi,3.)<2.?u_c4:u_c2;
-    col+=fc*flower*onCliff*.3;
+  // Noise turbulence layered on top
+  angle+=fbm(p*3.+t*.3)*3.14;
+  
+  // Trace the flow — accumulate color along flow direction
+  vec2 flow=vec2(cos(angle),sin(angle));
+  float streak=0.;
+  for(int i=0;i<6;i++){
+    float fi=float(i)*.15;
+    vec2 sp=p+flow*fi*.08;
+    streak+=abs(snoise(sp*8.+t*.5))*.16;
   }
-  col=mix(col,u_c0*.2,onCliff*.3);
-  // Gold leaf texture overlay
-  float goldTex=snoise(gl_FragCoord.xy*.3)*.02+snoise(gl_FragCoord.xy*1.5)*.01;
-  col+=goldTex*merged;
-  gl_FragColor=vec4(col,1.);
-}`;
+  
+  // Sky color mixing based on height and turbulence
+  float skyGrad=smoothstep(-.3,.5,p.y);
+  vec3 deep=u_c0;
+  vec3 mid=mix(u_c1,u_c2,streak);
+  vec3 sky=mix(deep,mid,skyGrad+streak*.3);
+  
+  // Swirling highlights — the thick impasto strokes
+  float swirl=snoise(p*4.+vec2(cos(angle),sin(angle))*t*.2);
+  float highlight=smoothstep(.3,.8,swirl);
+  sky=mix(sky,u_c2,highlight*.4);
+  
+  // Stars — bright pulsing dots
+  for(int i=0;i<8;i++){
+    float fi=float(i);
+    vec2 starPos=vec2(sin(fi*1.7+.3)*.35,cos(fi*2.1+.7)*.2+.15);
+    float d=length(p-starPos);
+    float pulse=.5+.5*sin(t*2.+fi*1.3);
+    float star=smoothstep(.025,.005,d)*pulse;
+    float halo=smoothstep(.08,.02,d)*pulse*.3;
+    sky+=u_c3*(star+halo);
+  }
+  
+  // Moon — large bright area
+  float moon=smoothstep(.06,.02,length(p-vec2(.3,.25)));
+  float moonHalo=smoothstep(.12,.04,length(p-vec2(.3,.25)))*.4;
+  sky+=u_c4*(moon+moonHalo);
+  
+  // Village silhouette at bottom
+  float ground=smoothstep(-.35,-.38,p.y+snoise(vec2(p.x*12.,0.))*.03);
+  // Church spire
+  float spire=smoothstep(.008,.003,abs(p.x+.05))*smoothstep(-.25,-.18,p.y)*step(p.y,-.18);
+  sky=mix(sky,u_c0*.3,ground+spire*.8);
+  
+  // Cypress tree — dark flame shape on left
+  float cx=p.x+.38;
+  float cy=p.y+.1;
+  float cypress=smoothstep(.04,.01,abs(cx)*(1.+cy*.8))*smoothstep(-.4,.3,p.y);
+  sky=mix(sky,u_c0*.2,cypress);
+  
+  // Impasto texture
+  float tex=snoise(gl_FragCoord.xy*.5)*.04;
+  sky+=tex;
+  
+  gl_FragColor=vec4(sky,1.);
+}
+`;
 
 const SHADER_WANDERER = GLSL_NOISE + `
 uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
@@ -409,187 +411,113 @@ void main(){
   gl_FragColor=vec4(col,1.);
 }`;
 
-const SHADER_MILKMAID = GLSL_NOISE + `
-uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+const SHADER_SCREAM = GLSL_NOISE + `
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
 void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.03;
-  // Warm dim interior — plaster wall
-  vec3 col=u_c0;
-  // Wall texture — rough Dutch plaster, layered
-  float plaster1=snoise(p*15.)*.03;float plaster2=snoise(p*30.)*.015;float plaster3=snoise(p*60.)*.008;
-  col+=vec3(plaster1+plaster2+plaster3);
-  // Subtle wall color variation — not uniform, aged
-  float wallAge=snoise(vec2(p.x*3.,p.y*2.+5.))*.5+.5;
-  col=mix(col,u_c1*.5,wallAge*.04);
-  // Window — upper left, the light source
-  vec2 winPos=vec2(-.35,.2);vec2 winSize=vec2(.08,.12);
-  float inWindow=step(winPos.x-winSize.x,p.x)*step(p.x,winPos.x+winSize.x)*step(winPos.y-winSize.y,p.y)*step(p.y,winPos.y+winSize.y);
-  // Window panes — cross divider
-  float paneH=smoothstep(.003,.0,abs(p.y-winPos.y))*inWindow;
-  float paneV=smoothstep(.003,.0,abs(p.x-winPos.x))*inWindow;
-  float pane=max(paneH,paneV);
-  // Window glass — cool daylight
-  col=mix(col,u_c4*.8,inWindow*.2*(1.-pane));
-  col=mix(col,u_c0*.4,pane*.5);
-  // THE LIGHT BEAM — Vermeer's divine geometry
-  // From window, falls diagonally across the scene
-  // Trapezoid shape: narrow at window, widens as it spreads
-  for(int i=0;i<40;i++){
-    float fi=float(i)/40.;
-    vec2 beamStart=winPos-vec2(winSize.x,winSize.y);
-    // Light ray direction — down and to the right
-    vec2 rayDir=normalize(vec2(.6,-.8));
-    float along=dot(p-beamStart,rayDir);
-    float across=abs(dot(p-beamStart,vec2(-rayDir.y,rayDir.x)));
-    float beamWidth=.02+along*.25;
-    float inBeam=smoothstep(beamWidth+fi*.1,beamWidth*.5,across)*step(0.,along)*smoothstep(.8,.0,along);
-    // Light color shifts warm with distance
-    vec3 lightCol=mix(u_c4,u_c3,along*.8);
-    col+=lightCol*inBeam*(1.-fi)*.004;
-  }
-  // Calculate beam intensity for reuse
-  vec2 beamStart=winPos-vec2(.08,.12);vec2 rayDir=normalize(vec2(.6,-.8));
-  float along=dot(p-beamStart,rayDir);float across=abs(dot(p-beamStart,vec2(-rayDir.y,rayDir.x)));
-  float beamWidth2=.02+along*.25;float beam=smoothstep(beamWidth2,beamWidth2*.3,across)*step(0.,along)*smoothstep(.8,.0,along);
-  // Dust motes — floating in the beam, catching light
-  for(int i=0;i<35;i++){
-    float fi=float(i);
-    // Brownian motion
-    vec2 dustPos=vec2(
-      sin(fi*3.7+t*.4+sin(t*.2+fi)*.5)*.2-.2,
-      cos(fi*2.3+t*.3+cos(t*.15+fi*2.)*.3)*.25+sin(fi*5.)*.05
-    );
-    float dustInBeam=beam;
-    float moteSize=.002+sin(fi*7.)*.001;
-    float dust=smoothstep(moteSize,.0,length(p-dustPos))*dustInBeam;
-    float twinkle=.3+.7*sin(t*1.5+fi*4.+sin(t*.5+fi*2.)*2.);
-    // Dust color — warm golden
-    col+=mix(u_c4,u_c3,.3)*dust*twinkle*.8;
-  }
-  // Table — sturdy Dutch oak
-  float tableY=-.12;float tableH=.03;
-  float table=step(tableY-tableH,p.y)*step(p.y,tableY)*step(-.2,p.x)*step(p.x,.2);
-  vec3 tableCol=mix(u_c1,u_c0,.5);
-  col=mix(col,tableCol,table*.3);
-  // Table edge catching light
-  float tableEdge=smoothstep(.004,.0,abs(p.y-tableY))*step(-.2,p.x)*step(p.x,.2);
-  col+=u_c3*tableEdge*beam*.2;
-  // Bread basket — warm shapes
-  for(int i=0;i<4;i++){
-    float fi=float(i);vec2 bp=vec2(-.05+fi*.04,tableY+.02+sin(fi*3.)*.005);
-    float bread=smoothstep(.015,.008,length((p-bp)*vec2(1.,1.5)));
-    col=mix(col,mix(u_c3,u_c1,.5),bread*.15*(.5+beam*.5));
-    // Bread crust highlight
-    float crust=smoothstep(.012,.008,length(p-bp))*smoothstep(.018,.012,length(p-bp));
-    col+=u_c3*crust*.05*beam;
-  }
-  // Milk stream — thin, luminous arc from pitcher
-  vec2 pitcherSpout=vec2(.05,.0);vec2 milkEnd=vec2(.03,tableY+.02);
-  for(int i=0;i<20;i++){
-    float fi=float(i)/20.;
-    vec2 milkPos=mix(pitcherSpout,milkEnd,fi);
-    milkPos.x+=sin(fi*3.14)*.01; // Slight arc
-    float milkDist=length(p-milkPos);
-    float milkStream=smoothstep(.004,.001,milkDist);
-    col+=u_c4*milkStream*beam*.4;
-    // Tiny splash at bottom
-    if(fi>.9){float splash=smoothstep(.008,.003,length(p-milkPos+vec2(sin(fi*50.)*.005,0.)));col+=u_c4*splash*beam*.2;}
-  }
-  // Nail holes in wall — Vermeer's reality anchors
-  for(int i=0;i<5;i++){
-    float fi=float(i);vec2 nail=vec2(-.15+fi*.1,.15-sin(fi*2.)*.05);
-    float nailHole=smoothstep(.003,.001,length(p-nail));
-    col-=vec3(.03)*nailHole;
-    // Tiny shadow below nail
-    col-=vec3(.01)*smoothstep(.004,.002,length(p-nail-vec2(0.,-.003)));
-  }
-  // Baseboard — dark strip at bottom
-  float baseboard=step(p.y,-.35)*step(-.4,p.y);
-  col=mix(col,u_c0*.3,baseboard*.3);
-  // Floor tiles — Dutch checkered
-  float tileCheck=step(.5,fract(p.x*8.))*step(.5,fract(p.y*8.-4.));
-  float floorArea=step(p.y,-.35);
-  col=mix(col,u_c0*.2,floorArea*tileCheck*.1);
-  // Overall warmth from beam light bouncing
-  col+=u_c3*beam*.02;
-  // Vignette — subtle
-  float vig=smoothstep(.7,.3,length(p*.9));
-  col*=.8+vig*.2;
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.12;
+  vec2 center=vec2(0.,.0);
+  float dist=length(p-center);
+  float angle=atan(p.y-center.y,p.x-center.x);
+  // Distorted concentric waves — the world vibrating
+  float wave=sin(dist*25.-t*3.+snoise(vec2(angle*3.,dist*5.+t))*2.)*.5+.5;
+  // Wavy bands of blood-red and orange — like the original sky
+  float band=sin(angle*2.+dist*8.-t*1.5+snoise(p*3.+t*.3)*1.5)*.5+.5;
+  vec3 col=mix(u_c0,u_c1,wave*.5);
+  col=mix(col,u_c2,band*.4*smoothstep(.5,.1,dist));
+  col=mix(col,u_c3,wave*band*.3);
+  // Sky on fire — upper half more orange/red
+  float sky=smoothstep(-.1,.3,p.y);
+  col=mix(col,mix(u_c2,u_c3,.5+sin(p.x*8.+t)*.3),sky*.25);
+  // Warping — everything bends away from center
+  float warp=snoise(vec2(dist*10.-t*2.,angle*4.))*.08;
+  col+=u_c4*warp*smoothstep(.4,.1,dist);
+  // The figure — a dark void at center that everything radiates from
+  float fig=smoothstep(.04,.02,length((p-center)*vec2(1.,1.5)));
+  float head=smoothstep(.025,.015,length(p-center-vec2(0.,.035)));
+  col=mix(col,u_c0*.3,(fig+head)*.6);
+  // Mouth — open oval
+  float mouth=smoothstep(.01,.006,length((p-center-vec2(0.,.02))*vec2(1.2,1.8)));
+  col=mix(col,u_c0*.15,mouth*.5);
   gl_FragColor=vec4(col,1.);
-}`;
+}
+`;
 
-const SHADER_CARAVAGGIO = GLSL_NOISE + `
-uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
+const SHADER_GREAT_WAVE = GLSL_NOISE + `
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
 void main(){
-  vec2 uv=gl_FragCoord.xy/u_resolution;vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;float t=u_time*.03;
-  // Near-total darkness — Caravaggio's chiaroscuro
-  vec3 col=u_c0*.08;
-  // THE LIGHT — divine beam from upper right, sharp and unforgiving
-  vec2 lightOrigin=vec2(.5,.5);vec2 lightDir=normalize(vec2(-.7,-.5));
-  float lightDist=dot(p-lightOrigin,vec2(-lightDir.y,lightDir.x));
-  float lightAlong=dot(p-lightOrigin,lightDir);
-  // Beam shape — sharp edge on one side, soft falloff on other
-  float beam=smoothstep(.35,.0,abs(lightDist))*smoothstep(-.8,.0,lightAlong);
-  // Multiple layers of light intensity
-  for(int i=0;i<25;i++){
-    float fi=float(i)/25.;
-    float layerBeam=smoothstep(.35+fi*.5,.0,abs(lightDist))*smoothstep(-.8-.2*fi,.0,lightAlong);
-    vec3 warmLight=mix(u_c4,u_c3,fi*.5);
-    col+=warmLight*layerBeam*(1.-fi)*.008;
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 p=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;
+  float t=u_time*.2;
+  
+  // Sky gradient
+  vec3 col=mix(u_c3*.6,u_c4*.8,uv.y);
+  
+  // Multiple wave layers with fractal detail — Hokusai's obsession
+  for(int layer=0;layer<7;layer++){
+    float fl=float(layer);
+    float baseY=-.15+fl*.08;
+    float amp=.18-fl*.015;
+    
+    // Main wave shape
+    float wave=sin(p.x*3.-t*1.5+fl*.7)*amp;
+    // Fractal harmonics — self-similar detail
+    wave+=sin(p.x*7.-t*2.3+fl*1.3)*amp*.35;
+    wave+=snoise(vec2(p.x*4.+fl*3.,t*.4+fl))*amp*.25;
+    wave+=snoise(vec2(p.x*12.+fl*7.,t*.8))*amp*.1;
+    
+    // Wave crest — curling over
+    float crest=smoothstep(.0,.15,sin(p.x*2.5-t*1.8+fl*.4)-.5);
+    wave-=crest*.08;
+    
+    float waveLine=p.y-baseY-wave;
+    float fill=smoothstep(.005,-.005,waveLine);
+    
+    // Color: deeper layers are darker
+    float depth=fl/7.;
+    vec3 waveCol=mix(u_c2,u_c1,depth);
+    waveCol=mix(waveCol,u_c0,depth*depth);
+    
+    col=mix(col,waveCol,fill*(1.-depth*.3));
+    
+    // Foam on crests — white frothy lines
+    float foam=smoothstep(.01,.002,abs(waveLine))*(1.-depth*.5);
+    foam*=smoothstep(-.05,.1,wave); // only on peaks
+    col=mix(col,u_c4,foam*.6);
+    
+    // Spray — small dots breaking off crests
+    if(crest>.3){
+      float spray=snoise(vec2(p.x*40.+fl*20.,p.y*40.+t*3.));
+      float sprayMask=smoothstep(.02,.0,abs(waveLine-.01))*smoothstep(.4,1.,crest);
+      col=mix(col,u_c4,step(.6,spray)*sprayMask*.4);
+    }
   }
-  // Dust in the light beam
-  for(int i=0;i<20;i++){
-    float fi=float(i);
-    vec2 dustPos=vec2(sin(fi*4.7+t*.3)*.3+.1,cos(fi*3.1+t*.2)*.3+.1);
-    float dustInBeam=smoothstep(.3,.0,abs(dot(dustPos-lightOrigin,vec2(-lightDir.y,lightDir.x))))*smoothstep(-.5,.0,dot(dustPos-lightOrigin,lightDir));
-    float dust=smoothstep(.003,.001,length(p-dustPos))*dustInBeam;
-    float flicker=.3+.7*sin(t*2.+fi*5.);
-    col+=u_c4*dust*flicker*.5;
-  }
-  // Table — where the tax collectors sit
-  float tableY=-.08;
-  float table=step(tableY-.04,p.y)*step(p.y,tableY)*step(-.35,p.x)*step(p.x,.1);
-  col=mix(col,mix(u_c2,u_c1,.5),table*.15*(.3+beam*.5));
-  // Coins on table — glinting in the light
-  for(int i=0;i<8;i++){
-    float fi=float(i);
-    vec2 coinPos=vec2(-.2+fi*.05+sin(fi*3.)*.02,tableY+.01);
-    float coin=smoothstep(.006,.003,length(p-coinPos));
-    float glint=.3+.7*sin(t*3.+fi*4.+lightDist*10.);
-    col+=u_c3*coin*beam*glint*.3;
-  }
-  // The pointing finger — Christ's gesture, extending the light
-  vec2 fingerStart=vec2(.25,.05);vec2 fingerEnd=vec2(-.05,.02);
-  for(int i=0;i<15;i++){
-    float fi=float(i)/15.;
-    vec2 fp=mix(fingerStart,fingerEnd,fi);
-    float finger=smoothstep(.008,.003,length(p-fp));
-    col+=u_c4*finger*beam*.15;
-  }
-  // Figures — partially lit, partially in shadow
-  // Right figures (in light) — Christ and Peter
-  float fig1=smoothstep(.06,.02,length((p-vec2(.3,.0))*vec2(.6,1.2)));
-  float fig2=smoothstep(.05,.02,length((p-vec2(.2,-.02))*vec2(.7,1.3)));
-  col=mix(col,mix(u_c3,u_c4,.4),fig1*beam*.12);
-  col=mix(col,u_c3*.5,fig2*beam*.08);
-  // Left figures (in shadow) — tax collectors
-  float fig3=smoothstep(.05,.02,length((p-vec2(-.15,.0))*vec2(.7,1.2)));
-  float fig4=smoothstep(.05,.02,length((p-vec2(-.25,-.01))*vec2(.7,1.3)));
-  float fig5=smoothstep(.04,.015,length((p-vec2(-.35,.0))*vec2(.8,1.2)));
-  col=mix(col,u_c2*.15,fig3*.3);col=mix(col,u_c1*.15,fig4*.3);col=mix(col,u_c0*.2,fig5*.3);
-  // Matthew's face — half lit, the moment of recognition
-  vec2 matthewFace=vec2(-.15,.07);
-  float face=smoothstep(.02,.01,length(p-matthewFace));
-  float faceLight=beam*smoothstep(-.2,.0,p.x);
-  col=mix(col,u_c4*.6,face*faceLight*.3);
-  // Window — faint daylight from behind, almost lost
-  float window=step(.32,p.x)*step(p.x,.42)*step(.05,p.y)*step(p.y,.25);
-  col+=u_c4*.03*window;
-  // Stone wall texture
-  float wall=snoise(p*20.)*.01+snoise(p*40.)*.005;
-  col+=wall*(1.-beam*.5);
+  
+  // The great wave crest — a massive curling form
+  float greatX=p.x+.1;
+  float greatWave=.2+sin(greatX*2.-t)*.15+snoise(vec2(greatX*5.,t*.3))*.06;
+  float curl=smoothstep(.0,.1,greatX)*smoothstep(.5,.2,greatX);
+  greatWave+=curl*.1;
+  float gwFill=smoothstep(.01,-.01,p.y-greatWave)*step(-.3,greatX)*step(greatX,.5);
+  col=mix(col,mix(u_c1,u_c2,.5),gwFill*.3);
+  
+  // Foam texture on great wave
+  float foamTex=snoise(vec2(p.x*30.,p.y*30.-t*2.));
+  float foamMask=smoothstep(.01,.0,abs(p.y-greatWave))*gwFill;
+  col=mix(col,u_c4,step(.3,foamTex)*foamMask*.5);
+  
+  // Distant Fuji — small, calm
+  float fuji=smoothstep(.01,.0,p.y+.1-max(0.,.04-abs(p.x-.35)*.3));
+  col=mix(col,u_c4*.9,fuji*.3);
+  
   gl_FragColor=vec4(col,1.);
-}`;
+}
+`;
 
 const SHADER_KANDINSKY = GLSL_NOISE + `
 uniform float u_time;uniform vec2 u_resolution;uniform vec3 u_c0,u_c1,u_c2,u_c3,u_c4;
@@ -907,8 +835,8 @@ void main(){
 
 const SHADER_MAP: Record<string, string> = {
   "nighthawks": SHADER_NIGHTHAWKS, "pearl-earring": SHADER_PEARL_EARRING,
-  "the-kiss": SHADER_KISS, "wanderer-sea-fog": SHADER_WANDERER,
-  "the-milkmaid": SHADER_MILKMAID, "caravaggio-calling": SHADER_CARAVAGGIO,
+  "starry-night": SHADER_STARRY_NIGHT, "wanderer-sea-fog": SHADER_WANDERER,
+  "the-scream": SHADER_SCREAM, "great-wave": SHADER_GREAT_WAVE,
   "kandinsky-viii": SHADER_KANDINSKY, "fan-kuan-travelers": SHADER_FAN_KUAN,
   
 };
