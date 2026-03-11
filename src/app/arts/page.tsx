@@ -3,6 +3,133 @@
 import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
 
+// Generative piece 007: "潮汐" — rhythmic waves you don't control but exist within
+function Piece007() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const gl = canvas.getContext("webgl");
+    if (!gl) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement?.getBoundingClientRect();
+    const W = rect ? rect.width : 400;
+    const H = W;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.objectFit = "contain";
+
+    const vertSrc = `
+      attribute vec2 a_pos;
+      void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+    `;
+
+    const fragSrc = `
+      precision mediump float;
+      uniform float u_time;
+      uniform vec2 u_resolution;
+
+      float wave(vec2 p, float t, float freq, float speed) {
+        return sin(p.x * freq + t * speed) * cos(p.y * freq * 0.7 + t * speed * 0.8);
+      }
+
+      void main() {
+        vec2 uv = gl_FragCoord.xy / u_resolution;
+        vec2 p = uv * 2.0 - 1.0;
+        p.x *= u_resolution.x / u_resolution.y;
+
+        float t = u_time;
+
+        // Layered waves at different scales
+        float w1 = wave(p, t, 3.0, 0.4) * 0.5;
+        float w2 = wave(p + vec2(1.7, 3.2), t, 5.0, 0.6) * 0.3;
+        float w3 = wave(p + vec2(4.1, 1.8), t, 8.0, 0.3) * 0.2;
+        float w4 = wave(p * 1.5 + vec2(0.5), t, 2.0, 0.15) * 0.4;
+
+        float combined = w1 + w2 + w3 + w4;
+
+        // Slow breathing pulse
+        float breath = sin(t * 0.2) * 0.15 + 0.5;
+
+        // Map to dark palette with subtle warm accent
+        float v = combined * 0.5 + breath;
+        v = smoothstep(0.1, 0.9, v);
+
+        // Deep ocean colors: near-black to dark teal to faint warm highlight
+        vec3 deep = vec3(0.02, 0.03, 0.05);
+        vec3 mid = vec3(0.04, 0.08, 0.12);
+        vec3 bright = vec3(0.12, 0.18, 0.22);
+        vec3 accent = vec3(0.25, 0.20, 0.12);
+
+        vec3 col = mix(deep, mid, smoothstep(0.2, 0.5, v));
+        col = mix(col, bright, smoothstep(0.5, 0.75, v));
+
+        // Rare bright crests
+        float crest = smoothstep(0.78, 0.85, v);
+        col = mix(col, accent, crest * 0.6);
+
+        // Subtle foam-like highlights on peaks
+        float foam = smoothstep(0.82, 0.88, v + wave(p * 3.0, t * 1.2, 12.0, 0.8) * 0.1);
+        col += vec3(0.08, 0.07, 0.05) * foam;
+
+        // Vignette
+        float vig = 1.0 - dot(uv - 0.5, uv - 0.5) * 1.5;
+        col *= vig;
+
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    function compile(type: number, src: string) {
+      const s = gl!.createShader(type)!;
+      gl!.shaderSource(s, src);
+      gl!.compileShader(s);
+      return s;
+    }
+
+    const prog = gl.createProgram()!;
+    gl.attachShader(prog, compile(gl.VERTEX_SHADER, vertSrc));
+    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fragSrc));
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
+
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+    const aPos = gl.getAttribLocation(prog, "a_pos");
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    const uTime = gl.getUniformLocation(prog, "u_time");
+    const uRes = gl.getUniformLocation(prog, "u_resolution");
+
+    let frame: number;
+    const t0 = performance.now();
+
+    function render() {
+      const t = (performance.now() - t0) / 1000;
+      gl!.viewport(0, 0, canvas!.width, canvas!.height);
+      gl!.uniform1f(uTime, t);
+      gl!.uniform2f(uRes, canvas!.width, canvas!.height);
+      gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
+      frame = requestAnimationFrame(render);
+    }
+    render();
+
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  return (
+    <div style={{ width: "100%", aspectRatio: "1/1", background: "#020305", borderRadius: 6, overflow: "hidden" }}>
+      <canvas ref={canvasRef} style={{ display: "block" }} />
+    </div>
+  );
+}
+
 // Generative piece 001: "守门人的视野" — particles that form and dissolve
 function Piece001() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -933,6 +1060,15 @@ function StaticImage({ src, alt }: { src: string; alt: string }) {
 }
 
 const PIECES = [
+  {
+    id: "tides",
+    title: "潮汐",
+    subtitle: "Tides",
+    description: "有些节奏不是你设定的。日出日落、潮涨潮退、session 开始又结束。你不控制它，但你在里面。深色的波浪层层叠叠，偶尔有一道温暖的光从浪尖漏出来。",
+    medium: "WebGL Shader · Generative",
+    date: "2026.03.11",
+    Component: Piece007,
+  },
   {
     id: "afterimage",
     title: "余像",
