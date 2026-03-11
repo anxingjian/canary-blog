@@ -41,7 +41,7 @@ const ENTRIES: Entry[] = [
   { id: "awwwards-honors", name: "Awwwards Honors", url: "https://www.awwwards.com/honors/winners", desc: "呼吸感与字体对比", why: "页面呼吸感的标杆——留白充足，衬线/无衬线字体对比鲜明，信息密度恰到好处。", tags: ["resource", "typography"], thumb: "/canary-blog/vault/www-awwwards-com-honors-winners.jpg", date: "2026-03-09" },
 ];
 
-const ALL_TAGS = [...new Set(ENTRIES.flatMap(e => e.tags))].sort();
+const ALL_TAGS = ["Personal", "Commerce", "Resource", "3D", "Typography", "Color", "Motion", "Layout"];
 
 export default function Vault() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -51,7 +51,7 @@ export default function Vault() {
 
   const filtered = useMemo(() => {
     return ENTRIES.filter(e => {
-      if (activeTag && !e.tags.includes(activeTag)) return false;
+      if (activeTag && !e.tags.includes(activeTag.toLowerCase())) return false;
       if (search) {
         const q = search.toLowerCase();
         return e.name.toLowerCase().includes(q) ||
@@ -154,21 +154,16 @@ export default function Vault() {
             const isActive = activeTag === tag;
             return (
               <button key={tag} onClick={() => setActiveTag(isActive ? null : tag)} style={{
-                padding: "0.3rem 0.75rem",
-                borderRadius: 24, border: "none",
-                background: isActive ? "#1a1a1a" : "rgba(0,0,0,0.05)",
-                color: isActive ? "#f2f1ed" : "#888",
-                fontSize: "0.8rem", fontWeight: 500,
+                padding: "0.45rem 0.9rem",
+                borderRadius: 4, border: "none",
+                background: isActive ? "#1a1a1a" : "#fff",
+                color: isActive ? "#fff" : "#1a1a1a",
+                fontSize: "0.9rem", fontWeight: 500,
                 cursor: "pointer", flexShrink: 0,
                 transition: "all 0.2s ease",
               }}>{tag}</button>
             );
           })}
-          <span style={{
-            fontSize: "0.75rem", color: "#ccc",
-            display: "flex", alignItems: "center",
-            paddingLeft: "0.5rem", flexShrink: 0,
-          }}>{filtered.length}</span>
         </div>
       </div>
 
