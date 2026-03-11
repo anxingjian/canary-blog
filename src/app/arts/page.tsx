@@ -59,22 +59,22 @@ function Piece007() {
         float v = combined * 0.5 + breath;
         v = smoothstep(0.1, 0.9, v);
 
-        // Deep ocean colors — brighter palette
-        vec3 deep = vec3(0.03, 0.06, 0.12);
-        vec3 mid = vec3(0.08, 0.18, 0.28);
-        vec3 bright = vec3(0.20, 0.35, 0.45);
-        vec3 accent = vec3(0.45, 0.35, 0.18);
+        // Near-monochrome: black to cold grey, no color hue
+        vec3 deep = vec3(0.01, 0.01, 0.02);
+        vec3 mid = vec3(0.06, 0.06, 0.07);
+        vec3 bright = vec3(0.14, 0.13, 0.12);
+        vec3 accent = vec3(0.22, 0.20, 0.17);
 
         vec3 col = mix(deep, mid, smoothstep(0.2, 0.5, v));
         col = mix(col, bright, smoothstep(0.5, 0.75, v));
 
-        // Rare bright crests
+        // Rare bright crests — barely warm
         float crest = smoothstep(0.78, 0.85, v);
-        col = mix(col, accent, crest * 0.7);
+        col = mix(col, accent, crest * 0.5);
 
-        // Subtle foam-like highlights on peaks
-        float foam = smoothstep(0.80, 0.86, v + wave(p * 3.0, t * 1.2, 12.0, 0.8) * 0.1);
-        col += vec3(0.15, 0.13, 0.08) * foam;
+        // Minimal foam — just a whisper
+        float foam = smoothstep(0.84, 0.90, v + wave(p * 3.0, t * 1.2, 12.0, 0.8) * 0.1);
+        col += vec3(0.06, 0.05, 0.04) * foam;
 
         // Vignette
         float vig = 1.0 - dot(uv - 0.5, uv - 0.5) * 1.5;
