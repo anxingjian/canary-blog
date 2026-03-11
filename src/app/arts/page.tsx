@@ -33,52 +33,44 @@ function Piece007() {
       uniform float u_time;
       uniform vec2 u_resolution;
 
-      float wave(vec2 p, float t, float freq, float speed) {
-        return sin(p.x * freq + t * speed) * cos(p.y * freq * 0.7 + t * speed * 0.8);
-      }
-
       void main() {
         vec2 uv = gl_FragCoord.xy / u_resolution;
         vec2 p = uv * 2.0 - 1.0;
         p.x *= u_resolution.x / u_resolution.y;
 
-        float t = u_time;
+        float t = u_time * 0.15;
 
-        // Layered waves at different scales
-        float w1 = wave(p, t, 3.0, 0.4) * 0.5;
-        float w2 = wave(p + vec2(1.7, 3.2), t, 5.0, 0.6) * 0.3;
-        float w3 = wave(p + vec2(4.1, 1.8), t, 8.0, 0.3) * 0.2;
-        float w4 = wave(p * 1.5 + vec2(0.5), t, 2.0, 0.15) * 0.4;
+        // Layered sine ridges — sharp, not blurry
+        float ridge = 0.0;
+        for (float i = 1.0; i <= 5.0; i += 1.0) {
+          float freq = i * 1.8;
+          float amp = 0.4 / i;
+          float phase = t * (0.5 + i * 0.1) + i * 1.3;
+          float wave = sin(p.x * freq + phase + sin(p.y * freq * 0.5 + phase * 0.7) * 0.8);
+          ridge += wave * amp;
+        }
 
-        float combined = w1 + w2 + w3 + w4;
+        // Horizontal flow lines
+        float flow = sin(p.y * 12.0 + t * 2.0 + ridge * 3.0) * 0.5 + 0.5;
+        flow = pow(flow, 8.0); // Sharp bright lines
 
-        // Slow breathing pulse
-        float breath = sin(t * 0.2) * 0.15 + 0.5;
+        // Base luminance from ridges
+        float lum = ridge * 0.5 + 0.5;
+        lum = smoothstep(0.25, 0.75, lum);
 
-        // Map to dark palette with subtle warm accent
-        float v = combined * 0.5 + breath;
-        v = smoothstep(0.1, 0.9, v);
+        // Combine: dark base + ridge structure + flow lines
+        float final_lum = lum * 0.12 + flow * 0.08;
 
-        // Near-monochrome: black to cold grey, no color hue
-        vec3 deep = vec3(0.01, 0.01, 0.02);
-        vec3 mid = vec3(0.06, 0.06, 0.07);
-        vec3 bright = vec3(0.14, 0.13, 0.12);
-        vec3 accent = vec3(0.22, 0.20, 0.17);
+        // Cool monochrome — slight blue shift
+        vec3 col = vec3(final_lum * 0.9, final_lum * 0.92, final_lum * 1.0);
 
-        vec3 col = mix(deep, mid, smoothstep(0.2, 0.5, v));
-        col = mix(col, bright, smoothstep(0.5, 0.75, v));
-
-        // Rare bright crests — barely warm
-        float crest = smoothstep(0.78, 0.85, v);
-        col = mix(col, accent, crest * 0.5);
-
-        // Minimal foam — just a whisper
-        float foam = smoothstep(0.84, 0.90, v + wave(p * 3.0, t * 1.2, 12.0, 0.8) * 0.1);
-        col += vec3(0.06, 0.05, 0.04) * foam;
+        // Brighten ridge peaks
+        float peak = smoothstep(0.65, 0.8, lum);
+        col += vec3(0.08, 0.09, 0.10) * peak;
 
         // Vignette
-        float vig = 1.0 - dot(uv - 0.5, uv - 0.5) * 1.5;
-        col *= vig;
+        float vig = 1.0 - dot(uv - 0.5, uv - 0.5) * 1.8;
+        col *= max(vig, 0.0);
 
         gl_FragColor = vec4(col, 1.0);
       }
