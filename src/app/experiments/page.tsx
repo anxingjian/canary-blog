@@ -58,8 +58,28 @@ export default function Experiments() {
         alignItems: "center",
         justifyContent: "center",
         padding: "6rem 2rem",
+        position: "relative",
       }}
     >
+      {/* Back — top left */}
+      <Link
+        href="/canary-blog/"
+        style={{
+          position: "absolute",
+          top: "2.5rem",
+          left: "2.5rem",
+          fontFamily: "'Space Mono', monospace",
+          fontSize: "0.5625rem",
+          color: "#444",
+          textDecoration: "none",
+          letterSpacing: "0.1em",
+          transition: "color 0.3s",
+          zIndex: 10,
+        }}
+      >
+        ← back
+      </Link>
+
       {/* Header */}
       <div style={{ marginBottom: "4rem", textAlign: "center" }}>
         <h1
@@ -72,7 +92,7 @@ export default function Experiments() {
             margin: 0,
           }}
         >
-          Rooms
+          Lab
         </h1>
         <p
           style={{
@@ -83,7 +103,7 @@ export default function Experiments() {
             marginTop: "0.75rem",
           }}
         >
-          放東西的地方
+          實驗室
         </p>
       </div>
 
@@ -222,21 +242,6 @@ export default function Experiments() {
         })}
       </div>
 
-      {/* Back */}
-      <Link
-        href="/canary-blog/"
-        style={{
-          fontFamily: "'Space Mono', monospace",
-          fontSize: "0.5625rem",
-          color: "#333",
-          marginTop: "5rem",
-          textDecoration: "none",
-          letterSpacing: "0.1em",
-          transition: "color 0.3s",
-        }}
-      >
-        ← back
-      </Link>
     </div>
   );
 }
