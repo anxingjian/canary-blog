@@ -29,17 +29,17 @@ function Piece008() {
     }
 
     const agents: Agent[] = [];
-    const BLUE_COUNT = 60;
-    const ORANGE_COUNT = 35; // Goethe area rule: less warm accent
-    const TRAIL_LEN = 40;
+    const BLUE_COUNT = 80;
+    const ORANGE_COUNT = 45; // Goethe area rule: less warm accent
+    const TRAIL_LEN = 50;
 
     for (let i = 0; i < BLUE_COUNT + ORANGE_COUNT; i++) {
       const isOrange = i >= BLUE_COUNT;
       const angle = Math.random() * Math.PI * 2;
       const speed = 0.3 + Math.random() * 0.5;
       agents.push({
-        x: W * 0.2 + Math.random() * W * 0.6,
-        y: H * 0.2 + Math.random() * H * 0.6,
+        x: W * 0.1 + Math.random() * W * 0.8,
+        y: H * 0.1 + Math.random() * H * 0.8,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         color: isOrange ? 1 : 0,
@@ -142,8 +142,8 @@ function Piece008() {
         for (let i = 1; i < trail.length; i++) {
           ctx!.lineTo(trail[i].x, trail[i].y);
         }
-        ctx!.strokeStyle = hsl(col, 0.15);
-        ctx!.lineWidth = 0.8;
+        ctx!.strokeStyle = hsl(col, 0.18);
+        ctx!.lineWidth = 1.2;
         ctx!.stroke();
       }
 
@@ -155,13 +155,13 @@ function Piece008() {
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 100 && dist > 20) {
-            const alpha = (1 - dist / 100) * 0.12;
+          if (dist < 150 && dist > 15) {
+            const alpha = (1 - dist / 150) * 0.15;
             ctx!.beginPath();
             ctx!.moveTo(a.x, a.y);
             ctx!.lineTo(b.x, b.y);
             ctx!.strokeStyle = `rgba(180, 175, 165, ${alpha})`;
-            ctx!.lineWidth = 0.3;
+            ctx!.lineWidth = 0.5;
             ctx!.stroke();
           }
         }
@@ -171,8 +171,8 @@ function Piece008() {
       for (const a of agents) {
         const col = a.color === 0 ? BLUE : ORANGE;
         ctx!.beginPath();
-        ctx!.arc(a.x, a.y, 1.5, 0, Math.PI * 2);
-        ctx!.fillStyle = hsl(col, 0.6);
+        ctx!.arc(a.x, a.y, 2.5, 0, Math.PI * 2);
+        ctx!.fillStyle = hsl(col, 0.7);
         ctx!.fill();
       }
 
