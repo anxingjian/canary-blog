@@ -142,8 +142,8 @@ function Piece008() {
         for (let i = 1; i < trail.length; i++) {
           ctx!.lineTo(trail[i].x, trail[i].y);
         }
-        ctx!.strokeStyle = hsl(col, 0.22);
-        ctx!.lineWidth = 1.8;
+        ctx!.strokeStyle = hsl(col, 0.15);
+        ctx!.lineWidth = 0.8;
         ctx!.stroke();
       }
 
