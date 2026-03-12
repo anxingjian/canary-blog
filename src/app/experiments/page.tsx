@@ -63,13 +63,13 @@ export default function Experiments() {
     >
       {/* Back — top left */}
       <Link
-        href="/canary-blog/"
+        href="/"
         style={{
           position: "absolute",
           top: "2.5rem",
           left: "2.5rem",
           fontFamily: "'Space Mono', monospace",
-          fontSize: "0.5625rem",
+          fontSize: "0.75rem",
           color: "#444",
           textDecoration: "none",
           letterSpacing: "0.1em",
