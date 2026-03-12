@@ -142,8 +142,8 @@ function Piece008() {
         for (let i = 1; i < trail.length; i++) {
           ctx!.lineTo(trail[i].x, trail[i].y);
         }
-        ctx!.strokeStyle = hsl(col, 0.18);
-        ctx!.lineWidth = 1.2;
+        ctx!.strokeStyle = hsl(col, 0.22);
+        ctx!.lineWidth = 1.8;
         ctx!.stroke();
       }
 
@@ -171,8 +171,14 @@ function Piece008() {
       for (const a of agents) {
         const col = a.color === 0 ? BLUE : ORANGE;
         ctx!.beginPath();
-        ctx!.arc(a.x, a.y, 2.5, 0, Math.PI * 2);
-        ctx!.fillStyle = hsl(col, 0.7);
+        ctx!.arc(a.x, a.y, 4, 0, Math.PI * 2);
+        ctx!.fillStyle = hsl(col, 0.8);
+        ctx!.fill();
+
+        // Glow
+        ctx!.beginPath();
+        ctx!.arc(a.x, a.y, 10, 0, Math.PI * 2);
+        ctx!.fillStyle = hsl(col, 0.08);
         ctx!.fill();
       }
 
