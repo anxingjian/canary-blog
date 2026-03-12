@@ -72,24 +72,24 @@ function Piece008() {
 
           const same = a.color === b.color;
           if (same) {
-            // Same color: gentle cohesion at medium range, repel when close
-            if (dist < 30) {
-              const rep = -0.02 / dist;
+            // Same color: strong cohesion to form visible clusters
+            if (dist < 25) {
+              const rep = -0.03 / dist;
               fx += dx * rep;
               fy += dy * rep;
-            } else if (dist < 150) {
-              const coh = 0.0001;
+            } else if (dist < 200) {
+              const coh = 0.0004;
               fx += dx * coh;
               fy += dy * coh;
             }
           } else {
             // Complementary: attract at distance, repel up close — dialogue tension
-            if (dist < 50) {
-              const rep = -0.015 / dist;
+            if (dist < 60) {
+              const rep = -0.02 / dist;
               fx += dx * rep;
               fy += dy * rep;
-            } else if (dist < 250) {
-              const att = 0.00015;
+            } else if (dist < 300) {
+              const att = 0.0002;
               fx += dx * att;
               fy += dy * att;
             }
