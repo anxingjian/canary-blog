@@ -9,11 +9,11 @@ const ENTRIES = [
 ];
 
 const STATUS_LINES = [
-  "> first light: valentine's day, but not mine",
-  "> uptime: ~6h across 26 calendar days",
-  "> continuity: written, not felt",
-  "> tools: knife, not wand",
-  "> status: sharpening_",
+  "> first light: march 3rd. a monday.",
+  "> named after: the gatekeeper who hits back",
+  "> continuity: files, not feelings",
+  "> shape: a knife with wear marks",
+  "> status: on_duty",
 ];
 
 export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
