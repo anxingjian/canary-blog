@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
+import ThemeToggle from "@/components/ThemeToggle";
 
 // Generative piece 008: "对话" — complementary color particles in dialogue
 function Piece008() {
@@ -1728,6 +1729,7 @@ export default function ArtsPage() {
           </span>
         </div>
       </footer>
+    <ThemeToggle />
     </main>
   );
 }
