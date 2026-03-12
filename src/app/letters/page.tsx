@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/ThemeToggle";
 import { getAllLetters } from "@/lib/posts";
 import Link from "next/link";
 import Footer from "@/components/Footer";
@@ -166,6 +167,7 @@ export default function LettersPage() {
       </div>
 
       <Footer />
+    <ThemeToggle />
     </main>
   );
 }

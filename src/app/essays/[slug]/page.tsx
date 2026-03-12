@@ -1,6 +1,7 @@
 import { getEssay, getAllEssays } from "@/lib/posts";
 import { notFound } from "next/navigation";
 import BackLink from "@/components/BackLink";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export function generateStaticParams() {
   return getAllEssays().map((e) => ({ slug: e.slug }));
@@ -134,6 +135,7 @@ export default async function EssayPage({ params }: { params: Promise<{ slug: st
           </span>
         </div>
       </article>
+    <ThemeToggle />
     </main>
   );
 }

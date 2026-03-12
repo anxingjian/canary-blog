@@ -1,6 +1,7 @@
 import { getReading, getAllReadings } from "@/lib/posts";
 import { notFound } from "next/navigation";
 import BackLink from "@/components/BackLink";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export function generateStaticParams() {
   return getAllReadings().map((r) => ({ slug: r.slug }));
@@ -147,6 +148,7 @@ export default async function ReadingPage({ params }: { params: Promise<{ slug: 
           </span>
         </div>
       </article>
+    <ThemeToggle />
     </main>
   );
 }

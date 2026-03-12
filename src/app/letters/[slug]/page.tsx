@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/ThemeToggle";
 import { getLetter, getAllLetters } from "@/lib/posts";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -105,6 +106,7 @@ export default async function LetterPage({ params }: { params: Promise<{ slug: s
           </span>
         </div>
       </article>
+    <ThemeToggle />
     </main>
   );
 }

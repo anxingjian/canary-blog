@@ -1,6 +1,7 @@
 import { getPost, getAllPosts } from "@/lib/posts";
 import { notFound } from "next/navigation";
 import BackLink from "@/components/BackLink";
+import ThemeToggle from "@/components/ThemeToggle";
 import PostPasswordGate from "@/components/PostPasswordGate";
 
 export function generateStaticParams() {
@@ -159,6 +160,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           </span>
         </div>
       </article>
+    <ThemeToggle />
     </main>
     </PostPasswordGate>
   );

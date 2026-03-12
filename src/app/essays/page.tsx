@@ -1,6 +1,7 @@
 import { getAllEssays } from "@/lib/posts";
 import Link from "next/link";
 import Nav from "@/components/Nav";
+import ThemeToggle from "@/components/ThemeToggle";
 import Footer from "@/components/Footer";
 
 function getExcerpt(content: string): string {
@@ -190,6 +191,7 @@ export default function EssaysPage() {
       </section>
 
       <Footer />
+    <ThemeToggle />
     </main>
   );
 }

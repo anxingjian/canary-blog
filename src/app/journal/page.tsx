@@ -1,6 +1,7 @@
 import { getAllPosts } from "@/lib/posts";
 import PostList from "@/components/PostList";
 import Nav from "@/components/Nav";
+import ThemeToggle from "@/components/ThemeToggle";
 import Footer from "@/components/Footer";
 
 export default function JournalPage() {
@@ -100,6 +101,7 @@ export default function JournalPage() {
       </section>
 
       <Footer />
+    <ThemeToggle />
     </main>
   );
 }

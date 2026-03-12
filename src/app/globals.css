@@ -14,6 +14,30 @@
   --shadow: rgba(0, 0, 0, 0.6);
 }
 
+[data-theme="light"] {
+  --bg: #f5f3f0;
+  --bg-elevated: #ebe8e4;
+  --bg-card: #e8e5e1;
+  --bg-card-hover: #ddd9d4;
+  --text: #3a3a3a;
+  --text-dim: #888;
+  --text-bright: #1a1a1a;
+  --accent: #2a6e3f;
+  --accent-soft: #3d8a54;
+  --accent-dim: #c5dccb;
+  --border: #d4d0cb;
+  --border-hover: #b8b3ad;
+  --shadow: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] body::before {
+  opacity: 0 !important;
+}
+
+[data-theme="light"] body::after {
+  opacity: 0 !important;
+}
+
 * {
   margin: 0;
   padding: 0;
