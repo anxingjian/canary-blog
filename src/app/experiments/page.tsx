@@ -1,169 +1,238 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 const experiments = [
   {
     id: "afterimage",
     title: "余像",
-    subtitle: "AFTERIMAGE",
+    subtitle: "Afterimage",
     desc: "十幅名画，一条长廊，GLSL shader 动画背景",
-    thumb: "/canary-blog/arts/afterimage.png",
+    href: "/experiments/afterimage",
+    image: "/canary-blog/arts/afterimage.png",
+    tone: "warm",
   },
   {
     id: "vault",
     title: "灵感金库",
-    subtitle: "VAULT",
+    subtitle: "Vault",
     desc: "好设计的收藏夹。标签检索，一键直达。",
-    thumbText: "◆",
+    href: "/experiments/vault",
+    image: null,
+    tone: "cool",
   },
   {
     id: "font-compare",
     title: "字体对比",
-    subtitle: "FONT COMPARISON",
+    subtitle: "Font Comparison",
     desc: "Sans-serif 与 serif 字体的真实渲染对比",
-    external: true,
-    thumbText: "Aa",
+    href: "/font-compare.html",
+    image: null,
+    tone: "neutral",
   },
 ];
 
-function Thumbnail({ thumb, thumbText }: { thumb?: string; thumbText?: string }) {
-  if (thumb) {
-    return (
-      <div
-        style={{
-          width: 80,
-          height: 80,
-          minWidth: 80,
-          borderRadius: 4,
-          overflow: "hidden",
-          background: "#111",
-        }}
-      >
-        <img
-          src={thumb}
-          alt=""
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
-      </div>
-    );
-  }
-  return (
-    <div
-      style={{
-        width: 80,
-        height: 80,
-        minWidth: 80,
-        borderRadius: 4,
-        background: "linear-gradient(135deg, #111 0%, #1a1a1a 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "'Instrument Serif', serif",
-        fontSize: "2rem",
-        color: "rgba(255, 250, 240, 0.25)",
-        letterSpacing: "-0.03em",
-      }}
-    >
-      {thumbText || "?"}
-    </div>
-  );
-}
+const CARD_GRADIENTS: Record<string, string> = {
+  warm: "linear-gradient(145deg, #1a1410 0%, #0d0b08 100%)",
+  cool: "linear-gradient(145deg, #0c1018 0%, #080a0d 100%)",
+  neutral: "linear-gradient(145deg, #121212 0%, #0a0a0a 100%)",
+};
+
+const ACCENT_COLORS: Record<string, string> = {
+  warm: "rgba(196, 160, 100, 0.15)",
+  cool: "rgba(100, 140, 196, 0.15)",
+  neutral: "rgba(160, 160, 160, 0.1)",
+};
 
 export default function Experiments() {
+  const [hovered, setHovered] = useState<string | null>(null);
+
   return (
     <div
       style={{
         minHeight: "100vh",
-        background: "#050508",
+        background: "#050505",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
+        justifyContent: "center",
         padding: "6rem 2rem",
       }}
     >
-      <p
-        style={{
-          fontFamily: "'Space Mono', monospace",
-          fontSize: "0.7rem",
-          color: "rgba(255, 250, 240, 0.2)",
-          letterSpacing: "0.2em",
-          marginBottom: "4rem",
-        }}
-      >
-        EXPERIMENTS
-      </p>
+      {/* Header */}
+      <div style={{ marginBottom: "4rem", textAlign: "center" }}>
+        <h1
+          style={{
+            fontFamily: "'Instrument Serif', Georgia, serif",
+            fontSize: "clamp(2.5rem, 6vw, 4rem)",
+            fontWeight: 400,
+            color: "#e8e8e8",
+            letterSpacing: "-0.03em",
+            margin: 0,
+          }}
+        >
+          Rooms
+        </h1>
+        <p
+          style={{
+            fontFamily: "'Space Mono', monospace",
+            fontSize: "0.5625rem",
+            color: "#444",
+            letterSpacing: "0.15em",
+            marginTop: "0.75rem",
+          }}
+        >
+          放東西的地方
+        </p>
+      </div>
 
+      {/* Cards */}
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
-          gap: "2.5rem",
-          width: "min(90vw, 500px)",
+          gap: "clamp(1rem, 2vw, 2rem)",
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          maxWidth: "1000px",
         }}
       >
-        {experiments.map((exp) => (
-          <Link
-            key={exp.id}
-            href={(exp as any).external ? `/font-compare.html` : `/experiments/${exp.id}`}
-            style={{
-              textDecoration: "none",
-              borderBottom: "1px solid rgba(255, 250, 240, 0.06)",
-              paddingBottom: "2rem",
-              display: "flex",
-              gap: "1.25rem",
-              alignItems: "flex-start",
-            }}
-          >
-            <Thumbnail thumb={(exp as any).thumb} thumbText={(exp as any).thumbText} />
-            <div>
-              <p
+        {experiments.map((exp, i) => {
+          const isHovered = hovered === exp.id;
+          const offsets = [0, 40, 20]; // stagger
+          return (
+            <Link
+              key={exp.id}
+              href={exp.href}
+              onMouseEnter={() => setHovered(exp.id)}
+              onMouseLeave={() => setHovered(null)}
+              style={{
+                textDecoration: "none",
+                display: "block",
+                width: "clamp(240px, 28vw, 300px)",
+                marginTop: offsets[i],
+                transform: isHovered ? "translateY(-4px)" : "translateY(0)",
+                transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+            >
+              {/* Image area */}
+              <div
                 style={{
-                  fontFamily: "'Noto Serif SC', serif",
-                  fontWeight: 300,
-                  fontSize: "0.9rem",
-                  color: "rgba(255, 250, 240, 0.5)",
-                  letterSpacing: "0.1em",
-                  marginBottom: "0.3rem",
+                  width: "100%",
+                  height: "clamp(160px, 20vw, 220px)",
+                  borderRadius: "6px 6px 0 0",
+                  overflow: "hidden",
+                  background: CARD_GRADIENTS[exp.tone],
+                  position: "relative",
                 }}
               >
-                {exp.title}
-              </p>
-              <p
+                {exp.image ? (
+                  <img
+                    src={exp.image}
+                    alt=""
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      opacity: isHovered ? 0.9 : 0.6,
+                      transition: "opacity 0.4s ease",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "60%",
+                        height: "60%",
+                        borderRadius: "4px",
+                        background: ACCENT_COLORS[exp.tone],
+                        border: `1px solid ${isHovered ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.03)"}`,
+                        transition: "border-color 0.4s ease",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontFamily: "'Instrument Serif', serif",
+                        fontSize: "2rem",
+                        color: "rgba(255,255,255,0.12)",
+                      }}
+                    >
+                      {exp.id === "vault" ? "◆" : "Aa"}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Text area */}
+              <div
                 style={{
-                  fontFamily: "'Space Mono', monospace",
-                  fontSize: "0.6rem",
-                  color: "rgba(255, 250, 240, 0.15)",
-                  letterSpacing: "0.1em",
-                  marginBottom: "0.8rem",
+                  padding: "1.25rem 1rem 1.5rem",
+                  background: isHovered
+                    ? "rgba(255,255,255,0.03)"
+                    : "transparent",
+                  borderRadius: "0 0 6px 6px",
+                  transition: "background 0.3s ease",
                 }}
               >
-                {exp.subtitle}
-              </p>
-              <p
-                style={{
-                  fontFamily: "'Noto Serif SC', serif",
-                  fontWeight: 300,
-                  fontSize: "0.75rem",
-                  color: "rgba(255, 250, 240, 0.25)",
-                  lineHeight: 1.6,
-                }}
-              >
-                {exp.desc}
-              </p>
-            </div>
-          </Link>
-        ))}
+                <div
+                  style={{
+                    fontFamily: "'Instrument Serif', Georgia, serif",
+                    fontSize: "1.25rem",
+                    fontWeight: 400,
+                    color: isHovered ? "#e8e8e8" : "#999",
+                    letterSpacing: "-0.01em",
+                    marginBottom: "0.25rem",
+                    transition: "color 0.3s ease",
+                  }}
+                >
+                  {exp.subtitle}
+                </div>
+                <div
+                  style={{
+                    fontFamily: "'Space Mono', monospace",
+                    fontSize: "0.5625rem",
+                    color: "#444",
+                    letterSpacing: "0.08em",
+                    marginBottom: "0.75rem",
+                  }}
+                >
+                  {exp.title}
+                </div>
+                <div
+                  style={{
+                    fontFamily: "'Space Mono', monospace",
+                    fontSize: "0.6875rem",
+                    color: "#555",
+                    lineHeight: 1.7,
+                  }}
+                >
+                  {exp.desc}
+                </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
 
+      {/* Back */}
       <Link
         href="/canary-blog/"
         style={{
           fontFamily: "'Space Mono', monospace",
-          fontSize: "0.6rem",
-          color: "rgba(255, 250, 240, 0.12)",
-          marginTop: "4rem",
+          fontSize: "0.5625rem",
+          color: "#333",
+          marginTop: "5rem",
           textDecoration: "none",
+          letterSpacing: "0.1em",
+          transition: "color 0.3s",
         }}
       >
         ← back
