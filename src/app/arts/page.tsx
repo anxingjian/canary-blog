@@ -3,6 +3,202 @@
 import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
 
+// Generative piece 008: "对话" — complementary color particles in dialogue
+function Piece008() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const W = 800, H = 800;
+    canvas.width = W;
+    canvas.height = H;
+
+    // Complementary colors: steel blue + warm clay, low saturation
+    const BLUE = { h: 210, s: 25, l: 55 };
+    const ORANGE = { h: 30, s: 35, l: 55 };
+
+    interface Agent {
+      x: number; y: number;
+      vx: number; vy: number;
+      color: 0 | 1; // 0=blue, 1=orange
+      trail: { x: number; y: number }[];
+    }
+
+    const agents: Agent[] = [];
+    const BLUE_COUNT = 60;
+    const ORANGE_COUNT = 35; // Goethe area rule: less warm accent
+    const TRAIL_LEN = 40;
+
+    for (let i = 0; i < BLUE_COUNT + ORANGE_COUNT; i++) {
+      const isOrange = i >= BLUE_COUNT;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.3 + Math.random() * 0.5;
+      agents.push({
+        x: W * 0.2 + Math.random() * W * 0.6,
+        y: H * 0.2 + Math.random() * H * 0.6,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: isOrange ? 1 : 0,
+        trail: [],
+      });
+    }
+
+    let raf: number;
+
+    function hsl(c: typeof BLUE, alpha: number) {
+      return `hsla(${c.h}, ${c.s}%, ${c.l}%, ${alpha})`;
+    }
+
+    function animate() {
+      // Fade background
+      ctx!.fillStyle = "rgba(5, 5, 5, 0.08)";
+      ctx!.fillRect(0, 0, W, H);
+
+      // Update agents
+      for (const a of agents) {
+        // Forces from other agents
+        let fx = 0, fy = 0;
+        for (const b of agents) {
+          if (a === b) continue;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+
+          if (dist > 300) continue;
+
+          const same = a.color === b.color;
+          if (same) {
+            // Same color: gentle cohesion at medium range, repel when close
+            if (dist < 30) {
+              const rep = -0.02 / dist;
+              fx += dx * rep;
+              fy += dy * rep;
+            } else if (dist < 150) {
+              const coh = 0.0001;
+              fx += dx * coh;
+              fy += dy * coh;
+            }
+          } else {
+            // Complementary: attract at distance, repel up close — dialogue tension
+            if (dist < 50) {
+              const rep = -0.015 / dist;
+              fx += dx * rep;
+              fy += dy * rep;
+            } else if (dist < 250) {
+              const att = 0.00015;
+              fx += dx * att;
+              fy += dy * att;
+            }
+          }
+        }
+
+        a.vx += fx;
+        a.vy += fy;
+
+        // Gentle drift towards center
+        const cx = W / 2 - a.x;
+        const cy = H / 2 - a.y;
+        a.vx += cx * 0.00003;
+        a.vy += cy * 0.00003;
+
+        // Damping
+        a.vx *= 0.995;
+        a.vy *= 0.995;
+
+        // Speed limit
+        const spd = Math.sqrt(a.vx * a.vx + a.vy * a.vy);
+        if (spd > 2) {
+          a.vx = (a.vx / spd) * 2;
+          a.vy = (a.vy / spd) * 2;
+        }
+
+        a.x += a.vx;
+        a.y += a.vy;
+
+        // Soft boundary
+        const margin = 40;
+        if (a.x < margin) a.vx += 0.1;
+        if (a.x > W - margin) a.vx -= 0.1;
+        if (a.y < margin) a.vy += 0.1;
+        if (a.y > H - margin) a.vy -= 0.1;
+
+        // Trail
+        a.trail.push({ x: a.x, y: a.y });
+        if (a.trail.length > TRAIL_LEN) a.trail.shift();
+      }
+
+      // Draw trails
+      for (const a of agents) {
+        const col = a.color === 0 ? BLUE : ORANGE;
+        const trail = a.trail;
+        if (trail.length < 2) continue;
+
+        ctx!.beginPath();
+        ctx!.moveTo(trail[0].x, trail[0].y);
+        for (let i = 1; i < trail.length; i++) {
+          ctx!.lineTo(trail[i].x, trail[i].y);
+        }
+        ctx!.strokeStyle = hsl(col, 0.15);
+        ctx!.lineWidth = 0.8;
+        ctx!.stroke();
+      }
+
+      // Draw connection lines between close complementary pairs
+      for (let i = 0; i < agents.length; i++) {
+        for (let j = i + 1; j < agents.length; j++) {
+          const a = agents[i], b = agents[j];
+          if (a.color === b.color) continue;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 100 && dist > 20) {
+            const alpha = (1 - dist / 100) * 0.12;
+            ctx!.beginPath();
+            ctx!.moveTo(a.x, a.y);
+            ctx!.lineTo(b.x, b.y);
+            ctx!.strokeStyle = `rgba(180, 175, 165, ${alpha})`;
+            ctx!.lineWidth = 0.3;
+            ctx!.stroke();
+          }
+        }
+      }
+
+      // Draw agent dots
+      for (const a of agents) {
+        const col = a.color === 0 ? BLUE : ORANGE;
+        ctx!.beginPath();
+        ctx!.arc(a.x, a.y, 1.5, 0, Math.PI * 2);
+        ctx!.fillStyle = hsl(col, 0.6);
+        ctx!.fill();
+      }
+
+      raf = requestAnimationFrame(animate);
+    }
+
+    // Initial clear
+    ctx.fillStyle = "#050505";
+    ctx.fillRect(0, 0, W, H);
+    raf = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <div style={{ width: "100%", aspectRatio: "1/1", background: "#050505", borderRadius: 6, overflow: "hidden" }}>
+      <canvas
+        ref={canvasRef}
+        width={800}
+        height={800}
+        style={{ display: "block", width: "100%", height: "100%" }}
+      />
+    </div>
+  );
+}
+
 // Generative piece 007: "潮汐" — rhythmic wave lines driven by noise (Pts.js)
 function Piece007() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1037,6 +1233,15 @@ function StaticImage({ src, alt }: { src: string; alt: string }) {
 }
 
 const PIECES = [
+  {
+    id: "dialogue",
+    title: "对话",
+    subtitle: "Dialogue",
+    description: "互补色之间永远在谈判。蓝往后退，橙往前冲，但谁也离不开谁。吸引和排斥不是矛盾——是同一件事的两面。",
+    medium: "Canvas API · Generative",
+    date: "2026.03.12",
+    Component: Piece008,
+  },
   {
     id: "tides",
     title: "潮汐",
