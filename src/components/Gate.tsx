@@ -269,7 +269,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   color: hoveredEntry === i
                     ? "rgba(196,255,0,0.95)"
                     : `rgba(30,30,30,0.95)`,
-                  letterSpacing: "0.15em",
+                  letterSpacing: "0.02em",
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                   textAlign: "center",
