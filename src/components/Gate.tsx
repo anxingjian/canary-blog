@@ -87,10 +87,11 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         Canary · 守門人記錄
       </div>
 
-      {/* About trigger — bottom left */}
+      {/* About trigger — bottom left (hidden on mobile) */}
       <div
         onClick={(e) => { e.stopPropagation(); setShowAbout(!showAbout); }}
         style={{
+          display: isMobile ? "none" : "block",
           position: "absolute",
           bottom: "calc(1.2rem + env(safe-area-inset-bottom, 0px))",
           left: "calc(1.5rem + env(safe-area-inset-left, 0px))",
@@ -108,8 +109,9 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         {showAbout ? "×  close" : "?  about"}
       </div>
 
-      {/* About panel */}
+      {/* About panel (hidden on mobile) */}
       <div style={{
+        display: isMobile ? "none" : "block",
         position: "absolute",
         bottom: "calc(3rem + env(safe-area-inset-bottom, 0px))",
         left: "calc(1.5rem + env(safe-area-inset-left, 0px))",
