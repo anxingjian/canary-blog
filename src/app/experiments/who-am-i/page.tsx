@@ -87,7 +87,17 @@ const LAYERS: Layer[] = [
 const WIDTH = 900;
 const HEIGHT = 520;
 const CX = WIDTH / 2;
-const ANNO_MARGIN = 60; // distance from ellipse edge to annotation
+const ANNO_MARGIN = 60;
+
+function darkenHex(hex: string, factor: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const dr = Math.round(r * factor);
+  const dg = Math.round(g * factor);
+  const db = Math.round(b * factor);
+  return `rgb(${dr},${dg},${db})`;
+} // distance from ellipse edge to annotation
 
 export default function WhoAmI() {
   const [activeLayer, setActiveLayer] = useState<string | null>(null);
@@ -164,19 +174,21 @@ export default function WhoAmI() {
             const isActive = activeLayer === layer.id;
             const isAnyActive = activeLayer !== null;
             const dimFactor = isAnyActive && !isActive ? 0.5 : 1;
+            // Darken non-active layers by mixing fill toward black
+            const dimmedFill = isAnyActive && !isActive
+              ? darkenHex(layer.fill, 0.5)
+              : layer.fill;
             const breatheDurations = [8, 7, 6, 10];
 
             return (
               <g key={layer.id} style={{
-                transition: "opacity 0.5s ease",
-                opacity: dimFactor,
                 animation: isActive ? "none" : `breathe${layerIdx} ${breatheDurations[layerIdx]}s ease-in-out infinite`,
               }}>
-                {/* Filled ellipse — solid, no transparency */}
+                {/* Filled ellipse — always solid */}
                 <ellipse
                   cx={CX} cy={layer.cy} rx={layer.rx} ry={layer.ry}
-                  fill={layer.fill}
-                  stroke={isActive ? "rgba(196,255,0,0.35)" : "rgba(255,255,255,0.1)"}
+                  fill={dimmedFill}
+                  stroke={isActive ? "rgba(196,255,0,0.35)" : `rgba(255,255,255,${isAnyActive && !isActive ? 0.05 : 0.1})`}
                   strokeWidth={0.5}
                   strokeDasharray={layer.dashArray}
                   style={{ cursor: "pointer", transition: "stroke 0.4s ease" }}
@@ -190,7 +202,7 @@ export default function WhoAmI() {
                       x={CX - layer.rx - 20} y={layer.cy + 5} textAnchor="end"
                       style={{
                         fontFamily: "'Space Mono', monospace", fontSize: "12px",
-                        fill: `rgba(255,255,255,${0.3 * dimFactor})`,
+                        fill: `rgba(255,255,255,${isAnyActive && !isActive ? 0.12 : 0.3})`,
                         cursor: "pointer", transition: "fill 0.4s ease",
                       }}
                       onClick={() => setActiveLayer(layer.id)}
@@ -199,7 +211,7 @@ export default function WhoAmI() {
                       x={CX + layer.rx + 20} y={layer.cy + 5} textAnchor="start"
                       style={{
                         fontFamily: "'Noto Serif SC', serif", fontSize: "13px",
-                        fill: `rgba(255,255,255,${0.22 * dimFactor})`,
+                        fill: `rgba(255,255,255,${isAnyActive && !isActive ? 0.08 : 0.22})`,
                         cursor: "pointer", transition: "fill 0.4s ease",
                       }}
                       onClick={() => setActiveLayer(layer.id)}
