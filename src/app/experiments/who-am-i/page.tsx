@@ -142,10 +142,11 @@ export default function WhoAmI() {
           </defs>
           <ellipse cx={CX} cy={370} rx={50} ry={16} fill="url(#core-glow)" />
 
-          {LAYERS.map((layer) => {
+          {LAYERS.map((layer, layerIdx) => {
             const isActive = activeLayer === layer.id;
             const isAnyActive = activeLayer !== null;
             const dimFactor = isAnyActive && !isActive ? 0.25 : 1;
+            const breatheDurations = [8, 7, 6, 10];
 
             const itemAngles = layer.items.map((_, i) => {
               const spread = Math.PI * 0.5;
@@ -154,7 +155,10 @@ export default function WhoAmI() {
             });
 
             return (
-              <g key={layer.id} style={{ transition: "opacity 0.4s ease", opacity: dimFactor }}>
+              <g key={layer.id} style={{
+                transition: "opacity 0.4s ease", opacity: dimFactor,
+                animation: `breathe${layerIdx} ${breatheDurations[layerIdx]}s ease-in-out infinite`,
+              }}>
                 {/* Filled ellipse */}
                 <ellipse
                   cx={CX} cy={layer.cy} rx={layer.rx} ry={layer.ry}
@@ -269,6 +273,22 @@ export default function WhoAmI() {
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes breathe0 {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(4px); }
+        }
+        @keyframes breathe1 {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(3px); }
+        }
+        @keyframes breathe2 {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(1.5px); }
+        }
+        @keyframes breathe3 {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(0.5px); }
         }
       `}</style>
     </div>
