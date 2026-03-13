@@ -31,6 +31,15 @@ const experiments = [
     image: null,
     tone: "neutral",
   },
+  {
+    id: "memory-map",
+    title: "记忆地图",
+    subtitle: "Memory Map",
+    desc: "Canary 的记忆体系可视化 — 神经星图",
+    href: "/experiments/memory-map",
+    image: null,
+    tone: "cool",
+  },
 ];
 
 const CARD_GRADIENTS: Record<string, string> = {
@@ -120,7 +129,7 @@ export default function Experiments() {
       >
         {experiments.map((exp, i) => {
           const isHovered = hovered === exp.id;
-          const offsets = [0, 40, 20]; // stagger
+          const offsets = [0, 40, 20, 50]; // stagger
           return (
             <Link
               key={exp.id}
