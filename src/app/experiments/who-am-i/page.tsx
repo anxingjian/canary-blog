@@ -120,13 +120,12 @@ export default function WhoAmI() {
 
   const activeLayerData = LAYERS.find((l) => l.id === activeLayer);
 
-  // Compute floating position for an item
+  // Compute position for an item (static, no orbit)
   const getItemPos = useCallback((layer: Layer, item: LayerItem) => {
-    const a = item.angle + time * item.speed;
-    const x = CX + layer.rx * item.radius * Math.cos(a);
-    const y = layer.cy + layer.ry * item.radius * Math.sin(a);
+    const x = CX + layer.rx * item.radius * Math.cos(item.angle);
+    const y = layer.cy + layer.ry * item.radius * Math.sin(item.angle);
     return { x, y };
-  }, [time]);
+  }, []);
 
   return (
     <div style={{
@@ -162,8 +161,8 @@ export default function WhoAmI() {
             </radialGradient>
             {/* Breathing dot gradient */}
             <radialGradient id="dot-glow">
-              <stop offset="0%" stopColor="rgba(196,255,0,0.9)" />
-              <stop offset="50%" stopColor="rgba(196,255,0,0.4)" />
+              <stop offset="0%" stopColor="rgba(196,255,0,0.5)" />
+              <stop offset="40%" stopColor="rgba(196,255,0,0.15)" />
               <stop offset="100%" stopColor="rgba(196,255,0,0)" />
             </radialGradient>
           </defs>
@@ -226,7 +225,7 @@ export default function WhoAmI() {
                     ? CX - layer.rx - ANNO_MARGIN
                     : CX + layer.rx + ANNO_MARGIN;
                   // Breathing scale for dots
-                  const breatheScale = 1 + 0.15 * Math.sin(time * 1.5 + i * 2);
+                  const breatheScale = 1 + 0.08 * Math.sin(time * 1.2 + i * 2);
 
                   return (
                     <g key={item.id} style={{ animation: `itemFadeIn 0.6s ease ${i * 0.15}s both` }}>
@@ -237,8 +236,8 @@ export default function WhoAmI() {
                         style={{ pointerEvents: "none" }}
                       />
                       <circle
-                        cx={pos.x} cy={pos.y} r={3}
-                        fill="rgba(196,255,0,0.95)"
+                        cx={pos.x} cy={pos.y} r={2.5}
+                        fill="rgba(196,255,0,0.7)"
                       />
 
                       {/* Item name next to dot */}
