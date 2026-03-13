@@ -4,6 +4,247 @@ import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
 import ThemeToggle from "@/components/ThemeToggle";
 
+// Generative piece 009: "光源" — a wandering light illuminates geometric shards, casting real-time shadows
+// Light & Shadow series #1
+function Piece009() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const W = 800, H = 800;
+    canvas.width = W;
+    canvas.height = H;
+
+    // Warm light color — low saturation amber
+    const LIGHT_COLOR = { r: 255, g: 235, b: 200 };
+    const SHADOW_LENGTH = 2.5;
+
+    // Generate scattered geometric shards
+    interface Shard {
+      x: number; y: number;
+      vertices: { dx: number; dy: number }[];
+      rotation: number;
+      rotSpeed: number;
+      brightness: number;
+    }
+
+    const shards: Shard[] = [];
+    const SHARD_COUNT = 55;
+
+    for (let i = 0; i < SHARD_COUNT; i++) {
+      const sides = 3 + Math.floor(Math.random() * 3); // triangles to pentagons
+      const size = 8 + Math.random() * 22;
+      const vertices: { dx: number; dy: number }[] = [];
+      for (let s = 0; s < sides; s++) {
+        const angle = (s / sides) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+        const r = size * (0.6 + Math.random() * 0.4);
+        vertices.push({ dx: Math.cos(angle) * r, dy: Math.sin(angle) * r });
+      }
+      shards.push({
+        x: 80 + Math.random() * (W - 160),
+        y: 80 + Math.random() * (H - 160),
+        vertices,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.003,
+        brightness: 0,
+      });
+    }
+
+    // Light position — slow natural orbit
+    let lightX = W / 2, lightY = H / 2;
+    let mouseActive = false;
+    let mouseX = W / 2, mouseY = H / 2;
+
+    const onMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = ((e.clientX - rect.left) / rect.width) * W;
+      mouseY = ((e.clientY - rect.top) / rect.height) * H;
+    };
+    const onEnter = () => { mouseActive = true; };
+    const onLeave = () => { mouseActive = false; };
+    canvas.addEventListener("mousemove", onMouseMove);
+    canvas.addEventListener("mouseenter", onEnter);
+    canvas.addEventListener("mouseleave", onLeave);
+
+    let raf: number;
+    let time = 0;
+
+    function animate() {
+      time += 0.008;
+      ctx!.fillStyle = "#080808";
+      ctx!.fillRect(0, 0, W, H);
+
+      // Light position: natural lissajous drift or follow mouse gently
+      const naturalX = W / 2 + Math.sin(time * 0.37) * W * 0.25 + Math.cos(time * 0.23) * W * 0.1;
+      const naturalY = H / 2 + Math.cos(time * 0.29) * H * 0.2 + Math.sin(time * 0.41) * H * 0.08;
+
+      if (mouseActive) {
+        lightX += (mouseX - lightX) * 0.04;
+        lightY += (mouseY - lightY) * 0.04;
+      } else {
+        lightX += (naturalX - lightX) * 0.02;
+        lightY += (naturalY - lightY) * 0.02;
+      }
+
+      // Draw ambient light glow
+      const glowRadius = W * 0.45;
+      const glow = ctx!.createRadialGradient(lightX, lightY, 0, lightX, lightY, glowRadius);
+      glow.addColorStop(0, `rgba(${LIGHT_COLOR.r}, ${LIGHT_COLOR.g}, ${LIGHT_COLOR.b}, 0.06)`);
+      glow.addColorStop(0.3, `rgba(${LIGHT_COLOR.r}, ${LIGHT_COLOR.g}, ${LIGHT_COLOR.b}, 0.025)`);
+      glow.addColorStop(1, "transparent");
+      ctx!.fillStyle = glow;
+      ctx!.fillRect(0, 0, W, H);
+
+      // Draw shadows first (behind shards)
+      for (const shard of shards) {
+        const dx = shard.x - lightX;
+        const dy = shard.y - lightY;
+        const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+        const angle = Math.atan2(dy, dx);
+
+        // Shadow intensity: closer to light = darker shadow
+        const shadowAlpha = Math.max(0, Math.min(0.35, 200 / dist));
+        // Shadow length: farther shards cast longer shadows (perspective)
+        const shadowLen = Math.min(dist * SHADOW_LENGTH * 0.15, 120);
+
+        const cosR = Math.cos(shard.rotation);
+        const sinR = Math.sin(shard.rotation);
+
+        // Project each vertex away from light
+        ctx!.beginPath();
+        for (let v = 0; v < shard.vertices.length; v++) {
+          const vert = shard.vertices[v];
+          const rx = vert.dx * cosR - vert.dy * sinR;
+          const ry = vert.dx * sinR + vert.dy * cosR;
+          const vx = shard.x + rx;
+          const vy = shard.y + ry;
+          const svx = vx + Math.cos(angle) * shadowLen;
+          const svy = vy + Math.sin(angle) * shadowLen;
+
+          if (v === 0) ctx!.moveTo(svx, svy);
+          else ctx!.lineTo(svx, svy);
+        }
+        ctx!.closePath();
+        ctx!.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`;
+        ctx!.fill();
+
+        // Connecting shadow trapezoid for each edge
+        for (let v = 0; v < shard.vertices.length; v++) {
+          const v1 = shard.vertices[v];
+          const v2 = shard.vertices[(v + 1) % shard.vertices.length];
+          const rx1 = v1.dx * cosR - v1.dy * sinR;
+          const ry1 = v1.dx * sinR + v1.dy * cosR;
+          const rx2 = v2.dx * cosR - v2.dy * sinR;
+          const ry2 = v2.dx * sinR + v2.dy * cosR;
+
+          const px1 = shard.x + rx1;
+          const py1 = shard.y + ry1;
+          const px2 = shard.x + rx2;
+          const py2 = shard.y + ry2;
+          const sx1 = px1 + Math.cos(angle) * shadowLen;
+          const sy1 = py1 + Math.sin(angle) * shadowLen;
+          const sx2 = px2 + Math.cos(angle) * shadowLen;
+          const sy2 = py2 + Math.sin(angle) * shadowLen;
+
+          ctx!.beginPath();
+          ctx!.moveTo(px1, py1);
+          ctx!.lineTo(px2, py2);
+          ctx!.lineTo(sx2, sy2);
+          ctx!.lineTo(sx1, sy1);
+          ctx!.closePath();
+          ctx!.fillStyle = `rgba(0, 0, 0, ${shadowAlpha * 0.7})`;
+          ctx!.fill();
+        }
+      }
+
+      // Draw shards
+      for (const shard of shards) {
+        const dx = shard.x - lightX;
+        const dy = shard.y - lightY;
+        const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+
+        // Inverse-square falloff for illumination
+        const illumination = Math.min(1, 15000 / (dist * dist));
+        shard.brightness += (illumination - shard.brightness) * 0.1;
+        shard.rotation += shard.rotSpeed;
+
+        const cosR = Math.cos(shard.rotation);
+        const sinR = Math.sin(shard.rotation);
+
+        // Shard face
+        ctx!.beginPath();
+        for (let v = 0; v < shard.vertices.length; v++) {
+          const vert = shard.vertices[v];
+          const rx = vert.dx * cosR - vert.dy * sinR;
+          const ry = vert.dx * sinR + vert.dy * cosR;
+          if (v === 0) ctx!.moveTo(shard.x + rx, shard.y + ry);
+          else ctx!.lineTo(shard.x + rx, shard.y + ry);
+        }
+        ctx!.closePath();
+
+        // Color: warm when close to light, cool grey when far
+        const warmR = Math.floor(40 + shard.brightness * 200);
+        const warmG = Math.floor(38 + shard.brightness * 180);
+        const warmB = Math.floor(35 + shard.brightness * 140);
+        ctx!.fillStyle = `rgb(${warmR}, ${warmG}, ${warmB})`;
+        ctx!.fill();
+
+        // Edge highlight on lit side
+        if (shard.brightness > 0.15) {
+          ctx!.strokeStyle = `rgba(${LIGHT_COLOR.r}, ${LIGHT_COLOR.g}, ${LIGHT_COLOR.b}, ${shard.brightness * 0.3})`;
+          ctx!.lineWidth = 0.5;
+          ctx!.stroke();
+        }
+      }
+
+      // Draw the light source itself — small bright core
+      const corePulse = 0.8 + Math.sin(time * 2) * 0.2;
+      const coreGlow = ctx!.createRadialGradient(lightX, lightY, 0, lightX, lightY, 25);
+      coreGlow.addColorStop(0, `rgba(255, 248, 230, ${0.9 * corePulse})`);
+      coreGlow.addColorStop(0.3, `rgba(255, 240, 210, ${0.3 * corePulse})`);
+      coreGlow.addColorStop(1, "transparent");
+      ctx!.fillStyle = coreGlow;
+      ctx!.beginPath();
+      ctx!.arc(lightX, lightY, 25, 0, Math.PI * 2);
+      ctx!.fill();
+
+      // Tiny bright dot at center
+      ctx!.beginPath();
+      ctx!.arc(lightX, lightY, 2, 0, Math.PI * 2);
+      ctx!.fillStyle = `rgba(255, 252, 245, ${corePulse})`;
+      ctx!.fill();
+
+      raf = requestAnimationFrame(animate);
+    }
+
+    ctx.fillStyle = "#080808";
+    ctx.fillRect(0, 0, W, H);
+    raf = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      canvas.removeEventListener("mousemove", onMouseMove);
+      canvas.removeEventListener("mouseenter", onEnter);
+      canvas.removeEventListener("mouseleave", onLeave);
+    };
+  }, []);
+
+  return (
+    <div style={{ width: "100%", aspectRatio: "1/1", background: "#080808", borderRadius: 6, overflow: "hidden", cursor: "crosshair" }}>
+      <canvas
+        ref={canvasRef}
+        width={800}
+        height={800}
+        style={{ display: "block", width: "100%", height: "100%" }}
+      />
+    </div>
+  );
+}
+
 // Generative piece 008: "对话" — complementary color particles in dialogue
 function Piece008() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1240,6 +1481,15 @@ function StaticImage({ src, alt }: { src: string; alt: string }) {
 }
 
 const PIECES = [
+  {
+    id: "source",
+    title: "光源",
+    subtitle: "Source",
+    description: "一个暖色光点在暗场中游移，照亮散落的几何碎片。每块碎片的亮度遵循平方反比衰减——离光近的温暖发亮，远的沉入黑暗。影子跟着光走，拉长、旋转、缩短。不是光照亮了什么，是光定义了黑暗的形状。",
+    medium: "Canvas API · Generative · Interactive",
+    date: "2026.03.13",
+    Component: Piece009,
+  },
   {
     id: "dialogue",
     title: "对话",
