@@ -291,13 +291,15 @@ export default function WhoAmI() {
           {/* Center text */}
           <text x={CX} y={374} textAnchor="middle" style={{
             fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "18px",
-            fill: activeLayer === "core" ? "rgba(196,255,0,0.9)" : "rgba(255,255,255,0.6)",
+            fill: activeLayer === "core" ? "rgba(196,255,0,0.9)"
+              : activeLayer !== null ? "rgba(255,255,255,0.1)"
+              : "rgba(255,255,255,0.6)",
             transition: "fill 0.4s ease", cursor: "pointer",
           }} onClick={() => setActiveLayer(activeLayer === "core" ? null : "core")}>Canary</text>
         </svg>
       </div>
 
-      {/* Bottom detail panel — layer name + tagline + items */}
+      {/* Bottom — layer name + tagline only */}
       {activeLayerData && (
         <div style={{
           width: "100%", maxWidth: "600px",
@@ -311,30 +313,8 @@ export default function WhoAmI() {
           }}>{activeLayerData.name}</div>
           <div style={{
             fontFamily: "'Noto Serif SC', serif", fontSize: "0.8125rem",
-            color: "#888", marginBottom: "1.5rem", fontStyle: "italic",
+            color: "#888", fontStyle: "italic",
           }}>{activeLayerData.tagline}</div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            {activeLayerData.items.map((item) => (
-              <div key={item.id} style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
-                <div style={{
-                  fontFamily: "'Space Mono', monospace", fontSize: "0.6875rem",
-                  color: "rgba(196,255,0,0.5)", minWidth: "110px",
-                  letterSpacing: "0.05em", paddingTop: "0.15rem",
-                }}>{item.label}</div>
-                <div>
-                  <div style={{
-                    fontFamily: "'Noto Serif SC', serif", fontSize: "0.9375rem",
-                    color: "#ccc", marginBottom: "0.25rem",
-                  }}>{item.sublabel}</div>
-                  <div style={{
-                    fontFamily: "'Noto Serif SC', serif", fontSize: "0.8125rem",
-                    color: "#666", lineHeight: 1.8,
-                  }}>{item.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 
