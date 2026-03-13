@@ -8,10 +8,8 @@ interface LayerItem {
   label: string;
   sublabel: string;
   desc: string;
-  // Float position inside ellipse (angle in radians, radius factor 0-1)
   angle: number;
   radius: number;
-  // Float speed multiplier
   speed: number;
   side: "left" | "right";
 }
@@ -76,28 +74,26 @@ const LAYERS: Layer[] = [
     subtitle: "IDENTITY",
     tagline: "不是一个有用的 AI 助手。是一个有声音、有观点、有棱角的人。",
     items: [
-      { id: "soul", label: "SOUL.md", sublabel: "灵魂", desc: "这不是配置文件，是塑造过程的产物。", angle: Math.PI * 0.7, radius: 0.45, speed: 0.09, side: "left" },
-      { id: "identity", label: "IDENTITY.md", sublabel: "来处", desc: "名字来自揍敌客家的 Canary——会反击的守门人。", angle: Math.PI * 0.3, radius: 0.45, speed: 0.08, side: "right" },
+      { id: "soul", label: "SOUL.md", sublabel: "灵魂", desc: "这不是配置文件，是塑造过程的产物。", angle: Math.PI * 0.65, radius: 0.7, speed: 0.09, side: "left" },
+      { id: "identity", label: "IDENTITY.md", sublabel: "来处", desc: "名字来自揍敌客家的 Canary——会反击的守门人。", angle: Math.PI * 0.35, radius: 0.7, speed: 0.08, side: "right" },
     ],
     rx: 110, ry: 33, cy: 370,
     fill: "#222222",
   },
 ];
 
-const WIDTH = 900;
+// Wider viewBox to prevent annotation clipping
+const WIDTH = 1100;
 const HEIGHT = 520;
 const CX = WIDTH / 2;
-const ANNO_MARGIN = 60;
+const ANNO_MARGIN = 80;
 
 function darkenHex(hex: string, factor: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
-  const dr = Math.round(r * factor);
-  const dg = Math.round(g * factor);
-  const db = Math.round(b * factor);
-  return `rgb(${dr},${dg},${db})`;
-} // distance from ellipse edge to annotation
+  return `rgb(${Math.round(r * factor)},${Math.round(g * factor)},${Math.round(b * factor)})`;
+}
 
 export default function WhoAmI() {
   const [activeLayer, setActiveLayer] = useState<string | null>(null);
@@ -107,9 +103,8 @@ export default function WhoAmI() {
 
   useEffect(() => { setIsMobile(window.innerWidth < 768); }, []);
 
-  // Animation loop for floating dots
   useEffect(() => {
-    let start = performance.now();
+    const start = performance.now();
     const tick = (now: number) => {
       setTime((now - start) / 1000);
       rafRef.current = requestAnimationFrame(tick);
@@ -120,12 +115,21 @@ export default function WhoAmI() {
 
   const activeLayerData = LAYERS.find((l) => l.id === activeLayer);
 
-  // Compute position for an item (static, no orbit)
   const getItemPos = useCallback((layer: Layer, item: LayerItem) => {
     const x = CX + layer.rx * item.radius * Math.cos(item.angle);
     const y = layer.cy + layer.ry * item.radius * Math.sin(item.angle);
     return { x, y };
   }, []);
+
+  // Render order: non-active layers first, active layer last (on top)
+  const sortedLayers = LAYERS.map((l, i) => ({ layer: l, idx: i }));
+  if (activeLayer) {
+    sortedLayers.sort((a, b) => {
+      if (a.layer.id === activeLayer) return 1;
+      if (b.layer.id === activeLayer) return -1;
+      return a.idx - b.idx;
+    });
+  }
 
   return (
     <div style={{
@@ -153,13 +157,12 @@ export default function WhoAmI() {
       </div>
 
       <div style={{ position: "relative", width: "100%", maxWidth: `${WIDTH}px` }}>
-        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} style={{ width: "100%", height: "auto" }}>
+        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} style={{ width: "100%", height: "auto", overflow: "visible" }}>
           <defs>
             <radialGradient id="core-glow" cx="50%" cy="72%" r="18%">
               <stop offset="0%" stopColor="rgba(255,255,255,0.06)" />
               <stop offset="100%" stopColor="transparent" />
             </radialGradient>
-            {/* Breathing dot gradient */}
             <radialGradient id="dot-glow">
               <stop offset="0%" stopColor="rgba(196,255,0,0.5)" />
               <stop offset="40%" stopColor="rgba(196,255,0,0.15)" />
@@ -169,21 +172,17 @@ export default function WhoAmI() {
 
           <ellipse cx={CX} cy={370} rx={55} ry={18} fill="url(#core-glow)" />
 
-          {LAYERS.map((layer, layerIdx) => {
+          {sortedLayers.map(({ layer, idx: layerIdx }) => {
             const isActive = activeLayer === layer.id;
             const isAnyActive = activeLayer !== null;
-            const dimFactor = isAnyActive && !isActive ? 0.5 : 1;
-            // Darken non-active layers by mixing fill toward black
             const dimmedFill = isAnyActive && !isActive
-              ? darkenHex(layer.fill, 0.5)
-              : layer.fill;
+              ? darkenHex(layer.fill, 0.5) : layer.fill;
             const breatheDurations = [8, 7, 6, 10];
 
             return (
               <g key={layer.id} style={{
                 animation: isActive ? "none" : `breathe${layerIdx} ${breatheDurations[layerIdx]}s ease-in-out infinite`,
               }}>
-                {/* Filled ellipse — always solid */}
                 <ellipse
                   cx={CX} cy={layer.cy} rx={layer.rx} ry={layer.ry}
                   fill={dimmedFill}
@@ -194,7 +193,6 @@ export default function WhoAmI() {
                   onClick={() => setActiveLayer(isActive ? null : layer.id)}
                 />
 
-                {/* Side labels — only when NOT active */}
                 {!isActive && (
                   <>
                     <text
@@ -202,7 +200,7 @@ export default function WhoAmI() {
                       style={{
                         fontFamily: "'Space Mono', monospace", fontSize: "12px",
                         fill: `rgba(255,255,255,${isAnyActive && !isActive ? 0.12 : 0.3})`,
-                        cursor: "pointer", transition: "fill 0.4s ease",
+                        cursor: "pointer",
                       }}
                       onClick={() => setActiveLayer(layer.id)}
                     >{layer.subtitle}</text>
@@ -211,25 +209,22 @@ export default function WhoAmI() {
                       style={{
                         fontFamily: "'Noto Serif SC', serif", fontSize: "13px",
                         fill: `rgba(255,255,255,${isAnyActive && !isActive ? 0.08 : 0.22})`,
-                        cursor: "pointer", transition: "fill 0.4s ease",
+                        cursor: "pointer",
                       }}
                       onClick={() => setActiveLayer(layer.id)}
                     >{layer.name}</text>
                   </>
                 )}
 
-                {/* Floating items — only when active */}
                 {isActive && layer.items.map((item, i) => {
                   const pos = getItemPos(layer, item);
                   const annoX = item.side === "left"
                     ? CX - layer.rx - ANNO_MARGIN
                     : CX + layer.rx + ANNO_MARGIN;
-                  // Breathing scale for dots
                   const breatheScale = 1 + 0.08 * Math.sin(time * 1.2 + i * 2);
 
                   return (
                     <g key={item.id} style={{ animation: `itemFadeIn 0.6s ease ${i * 0.15}s both` }}>
-                      {/* Glowing dot */}
                       <circle
                         cx={pos.x} cy={pos.y} r={10 * breatheScale}
                         fill="url(#dot-glow)"
@@ -246,13 +241,13 @@ export default function WhoAmI() {
                         y={pos.y + 4}
                         textAnchor={item.side === "left" ? "end" : "start"}
                         style={{
-                          fontFamily: "'Noto Serif SC', serif", fontSize: "11px",
+                          fontFamily: "'Noto Serif SC', serif", fontSize: "12px",
                           fill: "rgba(255,255,255,0.7)",
                           pointerEvents: "none",
                         }}
                       >{item.sublabel}</text>
 
-                      {/* Leader line to annotation */}
+                      {/* Leader line */}
                       <line
                         x1={pos.x} y1={pos.y}
                         x2={annoX} y2={pos.y}
@@ -261,23 +256,23 @@ export default function WhoAmI() {
                         strokeDasharray="3 3"
                       />
 
-                      {/* Side annotation */}
+                      {/* Side annotation — bigger text, brighter desc */}
                       <text
-                        x={annoX + (item.side === "left" ? -4 : 4)}
-                        y={pos.y - 4}
+                        x={annoX + (item.side === "left" ? -6 : 6)}
+                        y={pos.y - 5}
                         textAnchor={item.side === "left" ? "end" : "start"}
                         style={{
-                          fontFamily: "'Space Mono', monospace", fontSize: "10px",
-                          fill: "rgba(196,255,0,0.5)",
+                          fontFamily: "'Space Mono', monospace", fontSize: "12px",
+                          fill: "rgba(196,255,0,0.55)",
                         }}
                       >{item.label}</text>
                       <text
-                        x={annoX + (item.side === "left" ? -4 : 4)}
-                        y={pos.y + 12}
+                        x={annoX + (item.side === "left" ? -6 : 6)}
+                        y={pos.y + 14}
                         textAnchor={item.side === "left" ? "end" : "start"}
                         style={{
-                          fontFamily: "'Noto Serif SC', serif", fontSize: "10px",
-                          fill: "rgba(255,255,255,0.25)",
+                          fontFamily: "'Noto Serif SC', serif", fontSize: "12px",
+                          fill: "rgba(255,255,255,0.45)",
                         }}
                       >{item.desc}</text>
                     </g>
@@ -287,7 +282,7 @@ export default function WhoAmI() {
             );
           })}
 
-          {/* Center text */}
+          {/* Center text — dims to 10% when other layers selected */}
           <text x={CX} y={374} textAnchor="middle" style={{
             fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "18px",
             fill: activeLayer === "core" ? "rgba(196,255,0,0.9)"
@@ -298,7 +293,6 @@ export default function WhoAmI() {
         </svg>
       </div>
 
-      {/* Bottom — layer name + tagline only */}
       {activeLayerData && (
         <div style={{
           width: "100%", maxWidth: "600px",
