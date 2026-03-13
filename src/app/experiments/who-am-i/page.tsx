@@ -305,6 +305,7 @@ export default function WhoAmI() {
           marginTop: "1rem", padding: "2rem 1.5rem",
           borderTop: "1px solid rgba(196,255,0,0.12)",
           animation: "fadeIn 0.4s ease",
+          textAlign: "center",
         }}>
           <div style={{
             fontFamily: "'Instrument Serif', serif", fontSize: "1.25rem",
