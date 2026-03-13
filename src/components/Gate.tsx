@@ -92,10 +92,10 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         onClick={(e) => { e.stopPropagation(); setShowAbout(!showAbout); }}
         style={{
           position: "absolute",
-          bottom: "calc(2.5rem + env(safe-area-inset-bottom, 0px))",
-          left: "calc(2.5rem + env(safe-area-inset-left, 0px))",
+          bottom: "calc(1.2rem + env(safe-area-inset-bottom, 0px))",
+          left: "calc(1.5rem + env(safe-area-inset-left, 0px))",
           fontFamily: "'Space Mono', monospace",
-          fontSize: "0.5rem",
+          fontSize: "0.625rem",
           letterSpacing: "0.2em",
           color: showAbout ? "var(--accent)" : "#444",
           cursor: "pointer",
@@ -111,8 +111,8 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
       {/* About panel */}
       <div style={{
         position: "absolute",
-        bottom: "calc(4.5rem + env(safe-area-inset-bottom, 0px))",
-        left: "calc(2.5rem + env(safe-area-inset-left, 0px))",
+        bottom: "calc(3rem + env(safe-area-inset-bottom, 0px))",
+        left: "calc(1.5rem + env(safe-area-inset-left, 0px))",
         fontFamily: "'Space Mono', monospace",
         fontSize: "0.5625rem",
         lineHeight: 2.2,

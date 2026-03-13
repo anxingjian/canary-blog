@@ -26,10 +26,10 @@ export default function ThemeToggle() {
       aria-label="Toggle theme"
       style={{
         position: "fixed",
-        bottom: "calc(2rem + env(safe-area-inset-bottom, 0px))",
-        right: "calc(2rem + env(safe-area-inset-right, 0px))",
-        width: "36px",
-        height: "36px",
+        bottom: "calc(1.2rem + env(safe-area-inset-bottom, 0px))",
+        right: "calc(1.5rem + env(safe-area-inset-right, 0px))",
+        width: "32px",
+        height: "32px",
         borderRadius: "50%",
         border: "1px solid var(--border-hover)",
         background: theme === "dark" ? "#1a1a1a" : "#f0f0f0",
