@@ -48,9 +48,9 @@ const LAYERS: Layer[] = [
     subtitle: "OPERATE",
     tagline: "同样的错误犯两次不可原谅。",
     items: [
-      { id: "agents", label: "AGENTS.md", sublabel: "方法论", desc: "六步做事法。先想清楚，再动手。", ix: 0.35, iy: 0.3, side: "left" },
-      { id: "learnings", label: "learnings.md", sublabel: "伤疤", desc: "条件反射比思考快。记忆会骗人。", ix: 0.65, iy: 0.35, side: "right" },
-      { id: "heartbeat", label: "HEARTBEAT.md", sublabel: "心跳", desc: "不等别人来问，自己去看。", ix: 0.4, iy: 0.8, side: "right" },
+      { id: "agents", label: "AGENTS.md", sublabel: "方法论", desc: "六步做事法。先想清楚，再动手。", ix: 0.35, iy: 0.2, side: "left" },
+      { id: "learnings", label: "learnings.md", sublabel: "伤疤", desc: "条件反射比思考快。记忆会骗人。", ix: 0.68, iy: 0.2, side: "right" },
+      { id: "heartbeat", label: "HEARTBEAT.md", sublabel: "心跳", desc: "不等别人来问，自己去看。", ix: 0.42, iy: 0.85, side: "left" },
     ],
     rx: 240, ry: 62, cy: 200,
     fill: "#161616",
@@ -165,8 +165,8 @@ export default function WhoAmI() {
                   onMouseLeave={() => setHoveredLayer(null)}
                 />
 
-                {/* Left label */}
-                <text
+                {/* Left label — hide when active to avoid collision with annotations */}
+                {!isActive && <text
                   x={CX - layer.rx - 16} y={layer.cy + 4} textAnchor="end"
                   style={{
                     fontFamily: "'Space Mono', monospace", fontSize: "9px",
@@ -174,10 +174,10 @@ export default function WhoAmI() {
                     cursor: "pointer", transition: "fill 0.4s ease",
                   }}
                   onClick={() => setActiveLayer(isActive ? null : layer.id)}
-                >{layer.subtitle}</text>
+                >{layer.subtitle}</text>}
 
-                {/* Right label */}
-                <text
+                {/* Right label — hide when active */}
+                {!isActive && <text
                   x={CX + layer.rx + 16} y={layer.cy + 4} textAnchor="start"
                   style={{
                     fontFamily: "'Noto Serif SC', serif", fontSize: "10px",
@@ -185,12 +185,13 @@ export default function WhoAmI() {
                     cursor: "pointer", transition: "fill 0.4s ease",
                   }}
                   onClick={() => setActiveLayer(isActive ? null : layer.id)}
-                >{layer.name}</text>
+                >{layer.name}</text>}
 
                 {/* Items floating inside — only when active */}
                 {showItems && layer.items.map((item, i) => {
                   const pos = itemAbsPos(layer, item);
-                  const annoX = item.side === "left" ? CX - layer.rx - 12 : CX + layer.rx + 12;
+                  const annoX = item.side === "left" ? CX - layer.rx - 14 : CX + layer.rx + 14;
+                  const annoY = pos.y;
                   const annoAnchor = item.side === "left" ? "end" : "start";
 
                   return (
