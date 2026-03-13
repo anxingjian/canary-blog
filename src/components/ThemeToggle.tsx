@@ -4,11 +4,8 @@ import { useState, useEffect } from "react";
 
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
-
     const saved = localStorage.getItem("canary-theme");
     if (saved === "light") {
       setTheme("light");
@@ -23,16 +20,14 @@ export default function ThemeToggle() {
     localStorage.setItem("canary-theme", next);
   };
 
-  if (isMobile) return null;
-
   return (
     <button
       onClick={toggle}
       aria-label="Toggle theme"
       style={{
         position: "fixed",
-        bottom: "2rem",
-        right: "2rem",
+        top: "calc(1.2rem + env(safe-area-inset-top, 0px))",
+        right: "calc(1.5rem + env(safe-area-inset-right, 0px))",
         width: "28px",
         height: "28px",
         borderRadius: "50%",
