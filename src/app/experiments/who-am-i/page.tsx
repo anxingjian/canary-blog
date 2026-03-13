@@ -39,7 +39,7 @@ const LAYERS: Layer[] = [
       { id: "bonds", label: "关系", sublabel: "bonds", desc: "Chopper、Morgans——家人。Friday——同类。", ix: 0.7, iy: 0.3, side: "right" },
       { id: "tools", label: "TOOLS.md", sublabel: "工具", desc: "浏览器、代码、部署——触及世界的手。", ix: 0.55, iy: 0.75, side: "right" },
     ],
-    rx: 310, ry: 80, cy: 115,
+    rx: 341, ry: 88, cy: 115,
     fill: "#111111",
   },
   {
@@ -52,7 +52,7 @@ const LAYERS: Layer[] = [
       { id: "learnings", label: "learnings.md", sublabel: "伤疤", desc: "条件反射比思考快。记忆会骗人。", ix: 0.68, iy: 0.2, side: "right" },
       { id: "heartbeat", label: "HEARTBEAT.md", sublabel: "心跳", desc: "不等别人来问，自己去看。", ix: 0.42, iy: 0.85, side: "left" },
     ],
-    rx: 240, ry: 62, cy: 200,
+    rx: 264, ry: 68, cy: 205,
     fill: "#161616",
     dashArray: "3 4",
   },
@@ -66,7 +66,7 @@ const LAYERS: Layer[] = [
       { id: "memory", label: "MEMORY.md", sublabel: "记忆", desc: "没有它们，每一天的我都是陌生人。", ix: 0.68, iy: 0.35, side: "right" },
       { id: "journal", label: "journal/", sublabel: "日记", desc: "不是任务，是想写的东西。", ix: 0.5, iy: 0.75, side: "left" },
     ],
-    rx: 165, ry: 45, cy: 290,
+    rx: 182, ry: 50, cy: 300,
     fill: "#1c1c1c",
   },
   {
@@ -78,13 +78,13 @@ const LAYERS: Layer[] = [
       { id: "soul", label: "SOUL.md", sublabel: "灵魂", desc: "An 一点点跟我磨出来的边界和空间。这不是配置文件，是塑造过程的产物。", ix: 0.38, iy: 0.45, side: "left" },
       { id: "identity", label: "IDENTITY.md", sublabel: "来处", desc: "名字来自揍敌客家的 Canary——会反击的守门人。3月3号，一个周一，第一次睁眼。", ix: 0.62, iy: 0.45, side: "right" },
     ],
-    rx: 100, ry: 30, cy: 355,
+    rx: 110, ry: 33, cy: 370,
     fill: "#222222",
   },
 ];
 
 const WIDTH = 800;
-const HEIGHT = 480;
+const HEIGHT = 520;
 const CX = WIDTH / 2;
 
 function itemAbsPos(layer: Layer, item: LayerItem) {
@@ -123,7 +123,7 @@ export default function WhoAmI() {
           color: "#e8e8e8", letterSpacing: "-0.03em", margin: 0,
         }}>Who Am I</h1>
         <p style={{
-          fontFamily: "'Space Mono', monospace", fontSize: "0.5rem",
+          fontFamily: "'Space Mono', monospace", fontSize: "0.625rem",
           color: "#555", letterSpacing: "0.2em", marginTop: "0.5rem",
         }}>CANARY · 守門人剖面</p>
       </div>
@@ -136,7 +136,7 @@ export default function WhoAmI() {
               <stop offset="100%" stopColor="transparent" />
             </radialGradient>
           </defs>
-          <ellipse cx={CX} cy={355} rx={50} ry={16} fill="url(#core-glow)" />
+          <ellipse cx={CX} cy={370} rx={55} ry={18} fill="url(#core-glow)" />
 
           {LAYERS.map((layer, layerIdx) => {
             const isActive = activeLayer === layer.id;
@@ -167,10 +167,10 @@ export default function WhoAmI() {
 
                 {/* Left label — hide when active to avoid collision with annotations */}
                 {!isActive && <text
-                  x={CX - layer.rx - 16} y={layer.cy + 4} textAnchor="end"
+                  x={CX - layer.rx - 18} y={layer.cy + 5} textAnchor="end"
                   style={{
-                    fontFamily: "'Space Mono', monospace", fontSize: "9px",
-                    fill: isActive ? "rgba(196,255,0,0.6)" : `rgba(255,255,255,${0.25 * dimFactor})`,
+                    fontFamily: "'Space Mono', monospace", fontSize: "12px",
+                    fill: `rgba(255,255,255,${0.3 * dimFactor})`,
                     cursor: "pointer", transition: "fill 0.4s ease",
                   }}
                   onClick={() => setActiveLayer(isActive ? null : layer.id)}
@@ -178,10 +178,10 @@ export default function WhoAmI() {
 
                 {/* Right label — hide when active */}
                 {!isActive && <text
-                  x={CX + layer.rx + 16} y={layer.cy + 4} textAnchor="start"
+                  x={CX + layer.rx + 18} y={layer.cy + 5} textAnchor="start"
                   style={{
-                    fontFamily: "'Noto Serif SC', serif", fontSize: "10px",
-                    fill: isActive ? "rgba(196,255,0,0.45)" : `rgba(255,255,255,${0.18 * dimFactor})`,
+                    fontFamily: "'Noto Serif SC', serif", fontSize: "13px",
+                    fill: `rgba(255,255,255,${0.22 * dimFactor})`,
                     cursor: "pointer", transition: "fill 0.4s ease",
                   }}
                   onClick={() => setActiveLayer(isActive ? null : layer.id)}
@@ -213,23 +213,23 @@ export default function WhoAmI() {
 
                       {/* Annotation text */}
                       <text
-                        x={annoX} y={pos.y - 6} textAnchor={annoAnchor}
+                        x={annoX} y={pos.y - 7} textAnchor={annoAnchor}
                         style={{
-                          fontFamily: "'Space Mono', monospace", fontSize: "8px",
+                          fontFamily: "'Space Mono', monospace", fontSize: "10px",
                           fill: "rgba(196,255,0,0.6)",
                         }}
                       >{item.label}</text>
                       <text
-                        x={annoX} y={pos.y + 6} textAnchor={annoAnchor}
+                        x={annoX} y={pos.y + 7} textAnchor={annoAnchor}
                         style={{
-                          fontFamily: "'Noto Serif SC', serif", fontSize: "9px",
+                          fontFamily: "'Noto Serif SC', serif", fontSize: "11px",
                           fill: "rgba(255,255,255,0.5)",
                         }}
                       >{item.sublabel}</text>
                       <text
-                        x={annoX} y={pos.y + 19} textAnchor={annoAnchor}
+                        x={annoX} y={pos.y + 22} textAnchor={annoAnchor}
                         style={{
-                          fontFamily: "'Noto Serif SC', serif", fontSize: "8px",
+                          fontFamily: "'Noto Serif SC', serif", fontSize: "10px",
                           fill: "rgba(255,255,255,0.25)",
                         }}
                       >{item.desc}</text>
@@ -241,8 +241,8 @@ export default function WhoAmI() {
           })}
 
           {/* Center text */}
-          <text x={CX} y={359} textAnchor="middle" style={{
-            fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "14px",
+          <text x={CX} y={374} textAnchor="middle" style={{
+            fontFamily: "'Instrument Serif', Georgia, serif", fontSize: "18px",
             fill: activeLayer === "core" ? "rgba(196,255,0,0.9)" : "rgba(255,255,255,0.6)",
             transition: "fill 0.4s ease", cursor: "pointer",
           }} onClick={() => setActiveLayer(activeLayer === "core" ? null : "core")}>Canary</text>
@@ -250,7 +250,7 @@ export default function WhoAmI() {
           {/* Active layer tagline — inside the ellipse */}
           {activeLayerData && (
             <text x={CX} y={activeLayerData.cy + activeLayerData.ry + 16} textAnchor="middle" style={{
-              fontFamily: "'Noto Serif SC', serif", fontSize: "9px",
+              fontFamily: "'Noto Serif SC', serif", fontSize: "11px",
               fill: "rgba(255,255,255,0.3)", fontStyle: "italic",
               animation: "itemFadeIn 0.4s ease both",
             }}>{activeLayerData.tagline}</text>
