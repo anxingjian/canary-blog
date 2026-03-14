@@ -245,6 +245,292 @@ function Piece009() {
   );
 }
 
+// Generative piece 010: "影戏" — shadow play with colored lights
+// Light & Shadow series #2
+function Piece010() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const W = 800, H = 800;
+    canvas.width = W;
+    canvas.height = H;
+
+    // Three colored light sources — low saturation, warm/cool split
+    const lights = [
+      { x: W * 0.25, y: H * 0.85, color: [220, 180, 140], label: "amber" },   // warm amber
+      { x: W * 0.75, y: H * 0.85, color: [140, 170, 210], label: "steel" },   // cool steel blue
+      { x: W * 0.50, y: H * 0.92, color: [180, 160, 150], label: "dust" },    // neutral warm grey
+    ];
+
+    // Floating occluders — geometric forms that cast shadows upward
+    interface Occluder {
+      x: number; y: number;
+      size: number;
+      sides: number;
+      rotation: number;
+      rotSpeed: number;
+      driftPhaseX: number;
+      driftPhaseY: number;
+      driftSpeedX: number;
+      driftSpeedY: number;
+      driftRadiusX: number;
+      driftRadiusY: number;
+      baseX: number;
+      baseY: number;
+    }
+
+    const occluders: Occluder[] = [];
+    const OCC_COUNT = 12;
+
+    for (let i = 0; i < OCC_COUNT; i++) {
+      const bx = W * 0.15 + Math.random() * W * 0.7;
+      const by = H * 0.35 + Math.random() * H * 0.3;
+      occluders.push({
+        x: bx, y: by,
+        baseX: bx, baseY: by,
+        size: 15 + Math.random() * 35,
+        sides: 3 + Math.floor(Math.random() * 4),
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.008,
+        driftPhaseX: Math.random() * Math.PI * 2,
+        driftPhaseY: Math.random() * Math.PI * 2,
+        driftSpeedX: 0.1 + Math.random() * 0.2,
+        driftSpeedY: 0.08 + Math.random() * 0.15,
+        driftRadiusX: 20 + Math.random() * 40,
+        driftRadiusY: 15 + Math.random() * 25,
+      });
+    }
+
+    // Shadow projection surface at y = GROUND_Y
+    const GROUND_Y = H * 0.12;
+
+    let raf: number;
+    let time = 0;
+
+    // Light source gentle sway
+    const lightBaseX = lights.map(l => l.x);
+
+    function animate() {
+      time += 0.006;
+
+      // Deep dark background with subtle gradient
+      const bgGrad = ctx!.createLinearGradient(0, 0, 0, H);
+      bgGrad.addColorStop(0, "#060608");
+      bgGrad.addColorStop(0.5, "#08080a");
+      bgGrad.addColorStop(1, "#0c0a08");
+      ctx!.fillStyle = bgGrad;
+      ctx!.fillRect(0, 0, W, H);
+
+      // Update occluder positions
+      for (const occ of occluders) {
+        occ.x = occ.baseX + Math.sin(time * occ.driftSpeedX + occ.driftPhaseX) * occ.driftRadiusX;
+        occ.y = occ.baseY + Math.cos(time * occ.driftSpeedY + occ.driftPhaseY) * occ.driftRadiusY;
+        occ.rotation += occ.rotSpeed;
+      }
+
+      // Sway lights gently
+      for (let li = 0; li < lights.length; li++) {
+        lights[li].x = lightBaseX[li] + Math.sin(time * 0.3 + li * 2.1) * 30;
+      }
+
+      // Draw shadow ground plane — subtle horizontal line
+      ctx!.strokeStyle = "rgba(255, 255, 255, 0.03)";
+      ctx!.lineWidth = 0.5;
+      ctx!.beginPath();
+      ctx!.moveTo(W * 0.05, GROUND_Y);
+      ctx!.lineTo(W * 0.95, GROUND_Y);
+      ctx!.stroke();
+
+      // For each light, project shadows of each occluder onto the ground plane
+      for (const light of lights) {
+        const [lr, lg, lb] = light.color;
+
+        for (const occ of occluders) {
+          // Project each vertex of the occluder from the light source onto the ground plane
+          const cosR = Math.cos(occ.rotation);
+          const sinR = Math.sin(occ.rotation);
+          const projectedVerts: { x: number; y: number }[] = [];
+
+          for (let v = 0; v < occ.sides; v++) {
+            const angle = (v / occ.sides) * Math.PI * 2;
+            const irregularity = 0.7 + ((v * 137.508 + occ.baseX) % 1) * 0.6;
+            const dx = Math.cos(angle) * occ.size * irregularity;
+            const dy = Math.sin(angle) * occ.size * irregularity;
+            const rx = dx * cosR - dy * sinR + occ.x;
+            const ry = dx * sinR + dy * cosR + occ.y;
+
+            // Ray from light through vertex to ground plane
+            const dirX = rx - light.x;
+            const dirY = ry - light.y;
+
+            if (dirY === 0) continue;
+            const t_proj = (GROUND_Y - light.y) / dirY;
+            if (t_proj < 0) continue; // shadow goes wrong way
+
+            const sx = light.x + dirX * t_proj;
+            const sy = GROUND_Y;
+            projectedVerts.push({ x: sx, y: sy });
+          }
+
+          if (projectedVerts.length < 3) continue;
+
+          // Sort projected vertices by x for a cleaner polygon
+          projectedVerts.sort((a, b) => a.x - b.x);
+
+          // Distance from light to occluder affects shadow intensity
+          const distToLight = Math.sqrt(
+            (occ.x - light.x) ** 2 + (occ.y - light.y) ** 2
+          );
+          const shadowAlpha = Math.max(0.02, Math.min(0.12, 120 / distToLight));
+
+          // Draw the shadow as a soft shape
+          // Use a vertical gradient to give shadows depth
+          const shadowMinX = Math.min(...projectedVerts.map(v => v.x));
+          const shadowMaxX = Math.max(...projectedVerts.map(v => v.x));
+          const shadowWidth = shadowMaxX - shadowMinX;
+          const shadowCenterX = (shadowMinX + shadowMaxX) / 2;
+
+          // Shadow blob — elongated vertically from ground plane
+          const shadowHeight = 30 + shadowWidth * 0.3;
+          const grad = ctx!.createRadialGradient(
+            shadowCenterX, GROUND_Y, 0,
+            shadowCenterX, GROUND_Y, shadowHeight
+          );
+          grad.addColorStop(0, `rgba(${lr}, ${lg}, ${lb}, ${shadowAlpha})`);
+          grad.addColorStop(0.5, `rgba(${lr}, ${lg}, ${lb}, ${shadowAlpha * 0.4})`);
+          grad.addColorStop(1, `rgba(${lr}, ${lg}, ${lb}, 0)`);
+
+          ctx!.beginPath();
+          // Draw an elliptical shadow blob
+          ctx!.ellipse(
+            shadowCenterX, GROUND_Y,
+            Math.max(shadowWidth * 0.6, 8), shadowHeight,
+            0, 0, Math.PI * 2
+          );
+          ctx!.fillStyle = grad;
+          ctx!.fill();
+        }
+
+        // Draw light cone — subtle beam from source upward to ground
+        const coneGrad = ctx!.createLinearGradient(light.x, light.y, light.x, GROUND_Y);
+        coneGrad.addColorStop(0, `rgba(${lr}, ${lg}, ${lb}, 0.04)`);
+        coneGrad.addColorStop(0.5, `rgba(${lr}, ${lg}, ${lb}, 0.015)`);
+        coneGrad.addColorStop(1, `rgba(${lr}, ${lg}, ${lb}, 0.005)`);
+
+        ctx!.beginPath();
+        ctx!.moveTo(light.x - 8, light.y);
+        ctx!.lineTo(light.x + 8, light.y);
+        ctx!.lineTo(light.x + W * 0.25, GROUND_Y);
+        ctx!.lineTo(light.x - W * 0.25, GROUND_Y);
+        ctx!.closePath();
+        ctx!.fillStyle = coneGrad;
+        ctx!.fill();
+      }
+
+      // Draw occluders themselves — barely visible, ghostly
+      for (const occ of occluders) {
+        const cosR = Math.cos(occ.rotation);
+        const sinR = Math.sin(occ.rotation);
+
+        ctx!.beginPath();
+        for (let v = 0; v < occ.sides; v++) {
+          const angle = (v / occ.sides) * Math.PI * 2;
+          const irregularity = 0.7 + ((v * 137.508 + occ.baseX) % 1) * 0.6;
+          const dx = Math.cos(angle) * occ.size * irregularity;
+          const dy = Math.sin(angle) * occ.size * irregularity;
+          const rx = dx * cosR - dy * sinR + occ.x;
+          const ry = dx * sinR + dy * cosR + occ.y;
+          if (v === 0) ctx!.moveTo(rx, ry);
+          else ctx!.lineTo(rx, ry);
+        }
+        ctx!.closePath();
+        ctx!.fillStyle = "rgba(255, 255, 255, 0.015)";
+        ctx!.fill();
+        ctx!.strokeStyle = "rgba(255, 255, 255, 0.04)";
+        ctx!.lineWidth = 0.5;
+        ctx!.stroke();
+      }
+
+      // Light source glows at bottom
+      for (const light of lights) {
+        const [lr, lg, lb] = light.color;
+        const pulse = 0.7 + Math.sin(time * 1.5 + light.x * 0.01) * 0.3;
+
+        const glow = ctx!.createRadialGradient(light.x, light.y, 0, light.x, light.y, 40);
+        glow.addColorStop(0, `rgba(${lr}, ${lg}, ${lb}, ${0.5 * pulse})`);
+        glow.addColorStop(0.3, `rgba(${lr}, ${lg}, ${lb}, ${0.15 * pulse})`);
+        glow.addColorStop(1, "transparent");
+        ctx!.fillStyle = glow;
+        ctx!.beginPath();
+        ctx!.arc(light.x, light.y, 40, 0, Math.PI * 2);
+        ctx!.fill();
+
+        // Core dot
+        ctx!.beginPath();
+        ctx!.arc(light.x, light.y, 2.5, 0, Math.PI * 2);
+        ctx!.fillStyle = `rgba(${Math.min(255, lr + 40)}, ${Math.min(255, lg + 40)}, ${Math.min(255, lb + 30)}, ${0.8 * pulse})`;
+        ctx!.fill();
+      }
+
+      // Floating dust particles caught in the light beams
+      for (let i = 0; i < 40; i++) {
+        const seed = i * 97.31;
+        const px = W * 0.1 + ((seed * 3.7 + time * 8) % (W * 0.8));
+        const py = GROUND_Y + ((seed * 5.3 + time * 6) % (H * 0.7));
+
+        // Check if particle is roughly in a light cone
+        let inCone = false;
+        let coneColor = [200, 200, 200];
+        for (const light of lights) {
+          const t_ratio = (py - GROUND_Y) / (light.y - GROUND_Y);
+          if (t_ratio > 0 && t_ratio < 1) {
+            const expectedX = light.x + (px - light.x) / t_ratio * 0; // simplified
+            const spread = W * 0.25 * t_ratio;
+            if (Math.abs(px - light.x) < spread) {
+              inCone = true;
+              coneColor = light.color;
+              break;
+            }
+          }
+        }
+
+        if (!inCone) continue;
+
+        const flicker = Math.sin(time * 3 + seed) * 0.5 + 0.5;
+        const alpha = flicker * 0.15;
+        ctx!.beginPath();
+        ctx!.arc(px, py, 0.8 + Math.sin(seed) * 0.4, 0, Math.PI * 2);
+        ctx!.fillStyle = `rgba(${coneColor[0]}, ${coneColor[1]}, ${coneColor[2]}, ${alpha})`;
+        ctx!.fill();
+      }
+
+      raf = requestAnimationFrame(animate);
+    }
+
+    ctx.fillStyle = "#060608";
+    ctx.fillRect(0, 0, W, H);
+    raf = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <div style={{ width: "100%", aspectRatio: "1/1", background: "#060608", borderRadius: 6, overflow: "hidden" }}>
+      <canvas
+        ref={canvasRef}
+        width={800}
+        height={800}
+        style={{ display: "block", width: "100%", height: "100%" }}
+      />
+    </div>
+  );
+}
+
 // Generative piece 008: "对话" — complementary color particles in dialogue
 function Piece008() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1481,6 +1767,15 @@ function StaticImage({ src, alt }: { src: string; alt: string }) {
 }
 
 const PIECES = [
+  {
+    id: "shadow-play",
+    title: "影戏",
+    subtitle: "Shadow Play",
+    description: "三盏不同色温的灯从下方打上来。琥珀、钢蓝、暖灰——各自在黑暗里画出光锥。几何碎片漂浮在光路中间，它们自己几乎看不见，但投在天花板上的影子替它们说了一切。影子重叠的地方，颜色混合，像三个视角看同一件事。",
+    medium: "Canvas API · Generative",
+    date: "2026.03.14",
+    Component: Piece010,
+  },
   {
     id: "source",
     title: "光源",
