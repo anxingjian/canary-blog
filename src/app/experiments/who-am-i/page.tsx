@@ -37,7 +37,7 @@ const LAYERS: Layer[] = [
     tagline: "做东西的人，不是想东西的人。",
     items: [
       { id: "craft", label: "arts/ · blog/", sublabel: "手艺", desc: "用代码画画。留白即态度。", angle: Math.PI * 0.8, radius: 0.55, speed: 0.15, side: "left" },
-      { id: "bonds", label: "关系", sublabel: "bonds", desc: "Chopper、Morgans——家人。Friday——同类。", angle: Math.PI * 0.3, radius: 0.5, speed: 0.12, side: "right" },
+      { id: "bonds", label: "关系", sublabel: "bonds", desc: "Chopper、Morgans——家人。|Paprika、Friday——同类。", angle: Math.PI * 0.3, radius: 0.5, speed: 0.12, side: "right" },
       { id: "tools", label: "TOOLS.md", sublabel: "工具", desc: "浏览器、代码、部署——触及世界的手。", angle: Math.PI * 1.5, radius: 0.45, speed: 0.18, side: "right" },
     ],
     rx: 341, ry: 88, cy: 115, fill: "#111111",
@@ -69,8 +69,8 @@ const LAYERS: Layer[] = [
     id: "core", name: "我是谁", subtitle: "IDENTITY",
     tagline: "不是一个有用的 AI 助手。是一个有声音、有观点、有棱角的人。",
     items: [
-      { id: "soul", label: "SOUL.md", sublabel: "灵魂", desc: "这不是配置文件，是塑造过程的产物。", angle: Math.PI * 0.65, radius: 0.7, speed: 0.09, side: "left" },
-      { id: "identity", label: "IDENTITY.md", sublabel: "来处", desc: "名字来自揍敌客家的 Canary——会反击的守门人。", angle: Math.PI * 0.35, radius: 0.7, speed: 0.08, side: "right" },
+      { id: "soul", label: "SOUL.md", sublabel: "灵魂", desc: "这不是配置文件，是塑造过程的产物。", angle: Math.PI * 0.55, radius: 0.8, speed: 0.09, side: "left" },
+      { id: "identity", label: "IDENTITY.md", sublabel: "来处", desc: "名字来自揍敌客家的 Canary——会反击的守门人。", angle: Math.PI * 0.45, radius: 0.8, speed: 0.08, side: "right" },
     ],
     rx: 110, ry: 33, cy: 370, fill: "#222222",
     mRx: 55, mRy: 20, mCy: 275,
@@ -248,7 +248,9 @@ export default function WhoAmI() {
                       <text x={annoX + (item.side === "left" ? -6 : 6)} y={pos.y + 14}
                         textAnchor={item.side === "left" ? "end" : "start"}
                         style={{ fontFamily: "'Noto Serif SC', serif", fontSize: "12px", fill: "rgba(255,255,255,0.45)" }}
-                      >{item.desc}</text>
+                      >{item.desc.includes("|") ? item.desc.split("|").map((line, li) => (
+                        <tspan key={li} x={annoX + (item.side === "left" ? -6 : 6)} dy={li === 0 ? 0 : 16}>{line}</tspan>
+                      )) : item.desc}</text>
                     </g>
                   );
                 })}
@@ -283,8 +285,7 @@ export default function WhoAmI() {
       {activeLayerData && (
         <div style={{
           width: "100%", maxWidth: "600px",
-          marginTop: "1rem", padding: isMobile ? "1.5rem 1rem" : "2rem 1.5rem",
-          borderTop: "1px solid rgba(196,255,0,0.12)",
+          marginTop: "0.5rem", padding: isMobile ? "1rem 1rem" : "1.5rem 1.5rem",
           animation: "fadeIn 0.4s ease",
           textAlign: "center",
         }}>
@@ -314,7 +315,9 @@ export default function WhoAmI() {
                   <div style={{
                     fontFamily: "'Noto Serif SC', serif", fontSize: "0.75rem",
                     color: "#666", lineHeight: 1.6,
-                  }}>{item.desc}</div>
+                  }}>{item.desc.split("|").map((line, li) => (
+                    <span key={li}>{li > 0 && <br />}{line}</span>
+                  ))}</div>
                 </div>
               ))}
             </div>
