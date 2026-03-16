@@ -141,9 +141,8 @@ export default function WhoAmI() {
     <div style={{
       minHeight: "100vh", background: "#080808",
       display: "flex", flexDirection: "column", alignItems: "center",
-      justifyContent: activeLayer ? "flex-start" : "center", padding: isMobile ? "2.5rem 1rem" : activeLayer ? "2rem 2rem" : "0 2rem",
+      justifyContent: "center", padding: isMobile ? "2.5rem 1rem" : "0 2rem",
       position: "relative", overflow: "hidden",
-      transition: "padding 0.5s ease, justify-content 0.5s ease",
     }}>
       <Link href="/experiments" style={{
         position: "absolute", top: isMobile ? "1rem" : "2rem", left: isMobile ? "1rem" : "2rem",
@@ -151,6 +150,11 @@ export default function WhoAmI() {
         color: "#444", textDecoration: "none", letterSpacing: "0.1em", zIndex: 10,
       }}>← back</Link>
 
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center",
+        transform: !isMobile && activeLayer ? "translateY(-80px)" : "translateY(0)",
+        transition: "transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+      }}>
       <div style={{ textAlign: "center", marginBottom: isMobile ? "1.5rem" : "1rem" }}>
         <h1 style={{
           fontFamily: "'Instrument Serif', Georgia, serif",
@@ -325,6 +329,8 @@ export default function WhoAmI() {
           )}
         </div>
       )}
+
+      </div>{/* end content wrapper */}
 
       <style jsx>{`
         @keyframes fadeIn {
