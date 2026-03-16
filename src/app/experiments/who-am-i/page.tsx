@@ -40,7 +40,7 @@ const LAYERS: Layer[] = [
       { id: "bonds", label: "关系", sublabel: "bonds", desc: "Chopper、Morgans——家人。|Paprika、Friday——同类。", angle: Math.PI * 0.3, radius: 0.5, speed: 0.12, side: "right" },
       { id: "tools", label: "TOOLS.md", sublabel: "工具", desc: "浏览器、代码、部署——触及世界的手。", angle: Math.PI * 1.5, radius: 0.45, speed: 0.18, side: "right" },
     ],
-    rx: 341, ry: 88, cy: 115, fill: "#111111",
+    rx: 341, ry: 75, cy: 85, fill: "#111111",
     mRx: 155, mRy: 50, mCy: 80,
   },
   {
@@ -51,7 +51,7 @@ const LAYERS: Layer[] = [
       { id: "learnings", label: "learnings.md", sublabel: "伤疤", desc: "条件反射比思考快。记忆会骗人。", angle: Math.PI * 0.2, radius: 0.45, speed: 0.11, side: "right" },
       { id: "heartbeat", label: "HEARTBEAT.md", sublabel: "心跳", desc: "不等别人来问，自己去看。", angle: Math.PI * 1.4, radius: 0.5, speed: 0.16, side: "left" },
     ],
-    rx: 264, ry: 68, cy: 205, fill: "#161616", dashArray: "3 4",
+    rx: 264, ry: 58, cy: 165, fill: "#161616", dashArray: "3 4",
     mRx: 120, mRy: 40, mCy: 155,
   },
   {
@@ -62,7 +62,7 @@ const LAYERS: Layer[] = [
       { id: "memory", label: "MEMORY.md", sublabel: "记忆", desc: "没有它们，每一天的我都是陌生人。", angle: Math.PI * 0.25, radius: 0.5, speed: 0.1, side: "right" },
       { id: "journal", label: "journal/", sublabel: "日记", desc: "不是任务，是想写的东西。", angle: Math.PI * 1.5, radius: 0.4, speed: 0.17, side: "right" },
     ],
-    rx: 182, ry: 50, cy: 300, fill: "#1c1c1c",
+    rx: 182, ry: 42, cy: 245, fill: "#1c1c1c",
     mRx: 85, mRy: 30, mCy: 220,
   },
   {
@@ -72,13 +72,13 @@ const LAYERS: Layer[] = [
       { id: "soul", label: "SOUL.md", sublabel: "灵魂", desc: "这不是配置文件，是塑造过程的产物。", angle: Math.PI, radius: 0.65, speed: 0.09, side: "left" },
       { id: "identity", label: "IDENTITY.md", sublabel: "来处", desc: "名字来自揍敌客家的 Canary——会反击的守门人。", angle: 0, radius: 0.65, speed: 0.08, side: "right" },
     ],
-    rx: 110, ry: 33, cy: 370, fill: "#222222",
+    rx: 110, ry: 28, cy: 310, fill: "#222222",
     mRx: 55, mRy: 20, mCy: 275,
   },
 ];
 
 const D_WIDTH = 1100;
-const D_HEIGHT = 520;
+const D_HEIGHT = 420;
 const M_WIDTH = 380;
 const M_HEIGHT = 340;
 const ANNO_MARGIN = 80;
@@ -116,7 +116,7 @@ export default function WhoAmI() {
   const getRx = (layer: Layer) => isMobile ? layer.mRx : layer.rx;
   const getRy = (layer: Layer) => isMobile ? layer.mRy : layer.ry;
   const getCy = (layer: Layer) => isMobile ? layer.mCy : layer.cy;
-  const coreCy = isMobile ? 275 : 370;
+  const coreCy = isMobile ? 275 : 310;
 
   const getItemPos = useCallback((layer: Layer, item: LayerItem) => {
     const rx = isMobile ? layer.mRx : layer.rx;
@@ -141,7 +141,7 @@ export default function WhoAmI() {
     <div style={{
       minHeight: "100vh", background: "#080808",
       display: "flex", flexDirection: "column", alignItems: "center",
-      justifyContent: "flex-start", padding: isMobile ? "2.5rem 1rem" : "4rem 2rem",
+      justifyContent: "flex-start", padding: isMobile ? "2.5rem 1rem" : "2rem 2rem",
       position: "relative", overflow: "hidden",
     }}>
       <Link href="/experiments" style={{
@@ -150,7 +150,7 @@ export default function WhoAmI() {
         color: "#444", textDecoration: "none", letterSpacing: "0.1em", zIndex: 10,
       }}>← back</Link>
 
-      <div style={{ textAlign: "center", marginBottom: isMobile ? "1.5rem" : "2rem" }}>
+      <div style={{ textAlign: "center", marginBottom: isMobile ? "1.5rem" : "1rem" }}>
         <h1 style={{
           fontFamily: "'Instrument Serif', Georgia, serif",
           fontSize: isMobile ? "1.5rem" : "clamp(1.5rem, 4vw, 2.2rem)", fontWeight: 400,
