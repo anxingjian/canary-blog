@@ -141,8 +141,9 @@ export default function WhoAmI() {
     <div style={{
       minHeight: "100vh", background: "#080808",
       display: "flex", flexDirection: "column", alignItems: "center",
-      justifyContent: "flex-start", padding: isMobile ? "2.5rem 1rem" : "2rem 2rem",
+      justifyContent: activeLayer ? "flex-start" : "center", padding: isMobile ? "2.5rem 1rem" : activeLayer ? "2rem 2rem" : "0 2rem",
       position: "relative", overflow: "hidden",
+      transition: "padding 0.5s ease, justify-content 0.5s ease",
     }}>
       <Link href="/experiments" style={{
         position: "absolute", top: isMobile ? "1rem" : "2rem", left: isMobile ? "1rem" : "2rem",
