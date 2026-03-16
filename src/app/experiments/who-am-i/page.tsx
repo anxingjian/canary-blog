@@ -154,10 +154,10 @@ export default function WhoAmI() {
       <div style={{
         display: "flex", flexDirection: "column", alignItems: "center",
       }}>
-      <div style={{ textAlign: "center", marginBottom: isMobile ? "1.5rem" : "2.5rem" }}>
+      <div style={{ textAlign: "center", marginBottom: isMobile ? "1.5rem" : "3rem" }}>
         <h1 style={{
           fontFamily: "'Instrument Serif', Georgia, serif",
-          fontSize: isMobile ? "1.5rem" : "clamp(1.5rem, 4vw, 2.2rem)", fontWeight: 400,
+          fontSize: isMobile ? "1.5rem" : activeLayerData ? "clamp(1rem, 2.5vw, 1.5rem)" : "clamp(1.5rem, 4vw, 2.2rem)", fontWeight: 400,
           color: "#e8e8e8", letterSpacing: "-0.03em", margin: 0,
           transition: "opacity 0.4s ease",
         }}>{activeLayerData ? activeLayerData.name : "Who Am I"}</h1>
@@ -167,7 +167,7 @@ export default function WhoAmI() {
           color: activeLayerData ? "#888" : "#555",
           letterSpacing: activeLayerData ? "0" : "0.2em",
           marginTop: "0.5rem",
-          fontStyle: activeLayerData ? "italic" : "normal",
+          fontStyle: "normal",
           transition: "all 0.4s ease",
         }}>{activeLayerData ? activeLayerData.tagline : "CANARY · 守門人剖面"}</p>
       </div>
