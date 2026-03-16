@@ -153,19 +153,23 @@ export default function WhoAmI() {
 
       <div style={{
         display: "flex", flexDirection: "column", alignItems: "center",
-        transform: !isMobile && activeLayer ? "translateY(-80px)" : "translateY(0)",
-        transition: "transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
       }}>
       <div style={{ textAlign: "center", marginBottom: isMobile ? "1.5rem" : "1rem" }}>
         <h1 style={{
           fontFamily: "'Instrument Serif', Georgia, serif",
           fontSize: isMobile ? "1.5rem" : "clamp(1.5rem, 4vw, 2.2rem)", fontWeight: 400,
           color: "#e8e8e8", letterSpacing: "-0.03em", margin: 0,
-        }}>Who Am I</h1>
+          transition: "opacity 0.4s ease",
+        }}>{activeLayerData ? activeLayerData.name : "Who Am I"}</h1>
         <p style={{
-          fontFamily: "'Space Mono', monospace", fontSize: "0.625rem",
-          color: "#555", letterSpacing: "0.2em", marginTop: "0.5rem",
-        }}>CANARY · 守門人剖面</p>
+          fontFamily: activeLayerData ? "'Noto Serif SC', serif" : "'Space Mono', monospace",
+          fontSize: activeLayerData ? "0.75rem" : "0.625rem",
+          color: activeLayerData ? "#888" : "#555",
+          letterSpacing: activeLayerData ? "0" : "0.2em",
+          marginTop: "0.5rem",
+          fontStyle: activeLayerData ? "italic" : "normal",
+          transition: "all 0.4s ease",
+        }}>{activeLayerData ? activeLayerData.tagline : "CANARY · 守門人剖面"}</p>
       </div>
 
       <div style={{ position: "relative", width: "100%", display: "flex", justifyContent: "center" }}>
@@ -288,25 +292,13 @@ export default function WhoAmI() {
       </div>
 
       {/* Bottom panel — layer info + items on mobile */}
-      {activeLayerData && (
+      {/* Mobile: show items in bottom panel */}
+      {isMobile && activeLayerData && (
         <div style={{
           width: "100%", maxWidth: "600px",
-          marginTop: "0.5rem", padding: isMobile ? "1rem 1rem" : "1.5rem 1.5rem",
+          marginTop: "0.5rem", padding: "1rem",
           animation: "fadeIn 0.4s ease",
-          textAlign: "center",
         }}>
-          <div style={{
-            fontFamily: "'Instrument Serif', serif", fontSize: isMobile ? "1.1rem" : "1.25rem",
-            color: "#e8e8e8", marginBottom: "0.25rem",
-          }}>{activeLayerData.name}</div>
-          <div style={{
-            fontFamily: "'Noto Serif SC', serif", fontSize: isMobile ? "0.75rem" : "0.8125rem",
-            color: "#888", fontStyle: "italic",
-            marginBottom: isMobile ? "1.25rem" : 0,
-          }}>{activeLayerData.tagline}</div>
-
-          {/* Mobile: show items in bottom panel */}
-          {isMobile && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem", textAlign: "left" }}>
               {activeLayerData.items.map((item) => (
                 <div key={item.id} style={{ borderLeft: "1px solid rgba(196,255,0,0.2)", paddingLeft: "0.75rem" }}>
@@ -327,7 +319,6 @@ export default function WhoAmI() {
                 </div>
               ))}
             </div>
-          )}
         </div>
       )}
 
