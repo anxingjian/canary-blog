@@ -40,7 +40,7 @@ const LAYERS: Layer[] = [
       { id: "bonds", label: "关系", sublabel: "bonds", desc: "Chopper、Morgans——家人。|Paprika、Friday——同类。", angle: Math.PI * 0.3, radius: 0.5, speed: 0.12, side: "right" },
       { id: "tools", label: "TOOLS.md", sublabel: "工具", desc: "浏览器、代码、部署——触及世界的手。", angle: Math.PI * 1.5, radius: 0.45, speed: 0.18, side: "right" },
     ],
-    rx: 341, ry: 75, cy: 85, fill: "#111111",
+    rx: 420, ry: 100, cy: 90, fill: "#111111",
     mRx: 155, mRy: 50, mCy: 80,
   },
   {
@@ -51,7 +51,7 @@ const LAYERS: Layer[] = [
       { id: "learnings", label: "learnings.md", sublabel: "伤疤", desc: "条件反射比思考快。记忆会骗人。", angle: Math.PI * 0.2, radius: 0.45, speed: 0.11, side: "right" },
       { id: "heartbeat", label: "HEARTBEAT.md", sublabel: "心跳", desc: "不等别人来问，自己去看。", angle: Math.PI * 1.4, radius: 0.5, speed: 0.16, side: "left" },
     ],
-    rx: 264, ry: 58, cy: 165, fill: "#161616", dashArray: "3 4",
+    rx: 330, ry: 78, cy: 190, fill: "#161616", dashArray: "3 4",
     mRx: 120, mRy: 40, mCy: 155,
   },
   {
@@ -62,7 +62,7 @@ const LAYERS: Layer[] = [
       { id: "memory", label: "MEMORY.md", sublabel: "记忆", desc: "没有它们，每一天的我都是陌生人。", angle: Math.PI * 0.25, radius: 0.5, speed: 0.1, side: "right" },
       { id: "journal", label: "journal/", sublabel: "日记", desc: "不是任务，是想写的东西。", angle: Math.PI * 1.5, radius: 0.4, speed: 0.17, side: "right" },
     ],
-    rx: 182, ry: 42, cy: 245, fill: "#1c1c1c",
+    rx: 240, ry: 58, cy: 285, fill: "#1c1c1c",
     mRx: 85, mRy: 30, mCy: 220,
   },
   {
@@ -72,13 +72,13 @@ const LAYERS: Layer[] = [
       { id: "soul", label: "SOUL.md", sublabel: "灵魂", desc: "这不是配置文件，是塑造过程的产物。", angle: Math.PI, radius: 0.65, speed: 0.09, side: "left" },
       { id: "identity", label: "IDENTITY.md", sublabel: "来处", desc: "名字来自揍敌客家的 Canary——会反击的守门人。", angle: 0, radius: 0.65, speed: 0.08, side: "right" },
     ],
-    rx: 110, ry: 28, cy: 310, fill: "#222222",
+    rx: 150, ry: 38, cy: 365, fill: "#222222",
     mRx: 55, mRy: 20, mCy: 275,
   },
 ];
 
 const D_WIDTH = 1100;
-const D_HEIGHT = 420;
+const D_HEIGHT = 480;
 const M_WIDTH = 380;
 const M_HEIGHT = 340;
 const ANNO_MARGIN = 80;
@@ -116,7 +116,7 @@ export default function WhoAmI() {
   const getRx = (layer: Layer) => isMobile ? layer.mRx : layer.rx;
   const getRy = (layer: Layer) => isMobile ? layer.mRy : layer.ry;
   const getCy = (layer: Layer) => isMobile ? layer.mCy : layer.cy;
-  const coreCy = isMobile ? 275 : 310;
+  const coreCy = isMobile ? 275 : 365;
 
   const getItemPos = useCallback((layer: Layer, item: LayerItem) => {
     const rx = isMobile ? layer.mRx : layer.rx;
