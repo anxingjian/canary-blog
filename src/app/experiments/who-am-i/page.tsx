@@ -69,8 +69,8 @@ const LAYERS: Layer[] = [
     id: "core", name: "我是谁", subtitle: "IDENTITY",
     tagline: "不是一个有用的 AI 助手。是一个有声音、有观点、有棱角的人。",
     items: [
-      { id: "soul", label: "SOUL.md", sublabel: "灵魂", desc: "这不是配置文件，是塑造过程的产物。", angle: Math.PI * 0.55, radius: 0.8, speed: 0.09, side: "left" },
-      { id: "identity", label: "IDENTITY.md", sublabel: "来处", desc: "名字来自揍敌客家的 Canary——会反击的守门人。", angle: Math.PI * 0.45, radius: 0.8, speed: 0.08, side: "right" },
+      { id: "soul", label: "SOUL.md", sublabel: "灵魂", desc: "这不是配置文件，是塑造过程的产物。", angle: Math.PI, radius: 0.88, speed: 0.09, side: "left" },
+      { id: "identity", label: "IDENTITY.md", sublabel: "来处", desc: "名字来自揍敌客家的 Canary——会反击的守门人。", angle: 0, radius: 0.88, speed: 0.08, side: "right" },
     ],
     rx: 110, ry: 33, cy: 370, fill: "#222222",
     mRx: 55, mRy: 20, mCy: 275,
