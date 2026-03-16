@@ -120,16 +120,17 @@ export default function Experiments() {
       <div
         style={{
           display: "flex",
-          gap: "clamp(1rem, 2vw, 2rem)",
+          gap: "clamp(1.5rem, 3vw, 2.5rem)",
           alignItems: "flex-start",
-          flexWrap: "wrap",
+          flexWrap: "nowrap",
           justifyContent: "center",
-          maxWidth: "1000px",
+          maxWidth: "1200px",
+          width: "100%",
         }}
       >
         {experiments.map((exp, i) => {
           const isHovered = hovered === exp.id;
-          const offsets = [0, 40, 20, 50]; // stagger
+          const offsets = [0, 24, 8, 32]; // subtle stagger even in one row
           return (
             <Link
               key={exp.id}
@@ -139,7 +140,9 @@ export default function Experiments() {
               style={{
                 textDecoration: "none",
                 display: "block",
-                width: "clamp(240px, 28vw, 300px)",
+                flex: "1 1 0",
+                minWidth: 0,
+                maxWidth: "260px",
                 marginTop: offsets[i],
                 transform: isHovered ? "translateY(-4px)" : "translateY(0)",
                 transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
