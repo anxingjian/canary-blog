@@ -143,6 +143,7 @@ export default function WhoAmI() {
       display: "flex", flexDirection: "column", alignItems: "center",
       justifyContent: "center", padding: isMobile ? "2.5rem 1rem" : "0 2rem",
       position: "relative", overflow: "hidden",
+      height: "100vh",
     }}>
       <Link href="/experiments" style={{
         position: "absolute", top: isMobile ? "1rem" : "2rem", left: isMobile ? "1rem" : "2rem",
@@ -168,7 +169,7 @@ export default function WhoAmI() {
       </div>
 
       <div style={{ position: "relative", width: "100%", maxWidth: `${W}px` }}>
-        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", overflow: "visible" }}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: isMobile ? "auto" : "60vh", overflow: "visible" }}>
           <defs>
             <radialGradient id="core-glow" cx="50%" cy="72%" r="18%">
               <stop offset="0%" stopColor="rgba(255,255,255,0.06)" />
