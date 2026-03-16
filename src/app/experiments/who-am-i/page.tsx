@@ -81,7 +81,7 @@ const D_WIDTH = 1100;
 const D_HEIGHT = 480;
 const M_WIDTH = 380;
 const M_HEIGHT = 340;
-const ANNO_MARGIN = 80;
+const ANNO_MARGIN = 40;
 
 function darkenHex(hex: string, factor: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -250,7 +250,7 @@ export default function WhoAmI() {
                         style={{ fontFamily: "'Noto Serif SC', serif", fontSize: "12px", fill: "rgba(255,255,255,0.7)", pointerEvents: "none" }}
                       >{item.sublabel}</text>
                       <line x1={pos.x} y1={pos.y} x2={annoX} y2={pos.y}
-                        stroke="rgba(196,255,0,0.12)" strokeWidth={0.5} strokeDasharray="3 3" />
+                        stroke="rgba(196,255,0,0.3)" strokeWidth={0.5} strokeDasharray="3 3" />
                       <text x={annoX + (item.side === "left" ? -6 : 6)} y={pos.y - 5}
                         textAnchor={item.side === "left" ? "end" : "start"}
                         style={{ fontFamily: "'Space Mono', monospace", fontSize: "12px", fill: "rgba(196,255,0,0.55)" }}
