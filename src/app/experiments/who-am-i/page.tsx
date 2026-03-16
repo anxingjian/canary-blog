@@ -168,8 +168,8 @@ export default function WhoAmI() {
         }}>CANARY · 守門人剖面</p>
       </div>
 
-      <div style={{ position: "relative", width: "100%", maxWidth: `${W}px` }}>
-        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: isMobile ? "auto" : "60vh", overflow: "visible" }}>
+      <div style={{ position: "relative", width: "100%", display: "flex", justifyContent: "center" }}>
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{ width: "100%", maxWidth: `${W}px`, height: isMobile ? "auto" : "60vh", overflow: "visible" }}>
           <defs>
             <radialGradient id="core-glow" cx="50%" cy="72%" r="18%">
               <stop offset="0%" stopColor="rgba(255,255,255,0.06)" />
