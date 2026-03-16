@@ -2,10 +2,6 @@
 
 import { useEffect, useRef } from "react";
 
-// warm-wave · 暖浪 · after Hokusai
-// Color exercise: reinterpret a cold-palette masterpiece in warm tones
-// The Great Wave off Kanagawa — amber, sienna, brick, warm gold
-
 export default function WarmWavePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -24,35 +20,35 @@ export default function WarmWavePage() {
     canvas.style.height = H + "px";
     ctx.scale(dpr, dpr);
 
-    // --- Palette ---
-    const AMBER = [212, 160, 74];    // #d4a04a
-    const SIENNA = [160, 82, 45];    // #a0522d
-    const BRICK = [196, 83, 60];     // #c4533c
-    const WARM_GOLD = [196, 160, 74]; // #c4a04a
-    const CREAM = [240, 228, 200];   // foam/spray
+    // --- Palette (warm only) ---
+    const AMBER = [212, 160, 74];
+    const SIENNA = [160, 82, 45];
+    const BRICK = [196, 83, 60];
+    const WARM_GOLD = [196, 160, 74];
+    const DEEP_AMBER = [140, 90, 40];
+    const CREAM = [240, 228, 200];
     const WARM_WHITE = [235, 225, 210];
-    const WARM_DARK = [45, 30, 20];  // deep shadow
+    const WARM_DARK = [50, 32, 20];
+    const DEEP_BROWN = [70, 40, 25];
     const FUJI_BASE = [180, 150, 120];
-    const SKY = [60, 48, 38];
 
-    const WAVE_COLORS = [AMBER, SIENNA, BRICK, WARM_GOLD, WARM_DARK];
+    const WAVE_COLORS = [AMBER, SIENNA, BRICK, WARM_GOLD, DEEP_AMBER, DEEP_BROWN];
 
-    // --- Simplex-like noise (layered sine approximation) ---
+    // --- Noise ---
     function noise2d(x: number, y: number, t: number): number {
-      const n1 = Math.sin(x * 0.8 + y * 0.6 + t) * 0.5;
-      const n2 = Math.sin(x * 1.7 - y * 1.3 + t * 0.7 + 3.1) * 0.25;
-      const n3 = Math.sin(x * 3.1 + y * 2.7 + t * 1.3 + 7.7) * 0.125;
-      const n4 = Math.sin(x * 5.3 - y * 4.1 + t * 0.5 + 11.3) * 0.0625;
-      return n1 + n2 + n3 + n4;
+      return Math.sin(x * 0.8 + y * 0.6 + t) * 0.5
+        + Math.sin(x * 1.7 - y * 1.3 + t * 0.7 + 3.1) * 0.25
+        + Math.sin(x * 3.1 + y * 2.7 + t * 1.3 + 7.7) * 0.125
+        + Math.sin(x * 5.3 - y * 4.1 + t * 0.5 + 11.3) * 0.0625;
     }
 
     function noise1d(x: number, t: number): number {
-      return Math.sin(x * 1.0 + t) * 0.5 +
-        Math.sin(x * 2.3 + t * 1.4 + 2.1) * 0.25 +
-        Math.sin(x * 4.7 + t * 0.6 + 5.3) * 0.125;
+      return Math.sin(x * 1.0 + t) * 0.5
+        + Math.sin(x * 2.3 + t * 1.4 + 2.1) * 0.25
+        + Math.sin(x * 4.7 + t * 0.6 + 5.3) * 0.125;
     }
 
-    // --- Particles for wave spray / foam ---
+    // --- Spray particles ---
     interface SprayParticle {
       x: number; y: number;
       vx: number; vy: number;
@@ -60,28 +56,26 @@ export default function WarmWavePage() {
       size: number;
       color: number[];
     }
-
     const sprayParticles: SprayParticle[] = [];
-    const MAX_SPRAY = 600;
 
     function emitSpray(x: number, y: number, count: number) {
-      for (let i = 0; i < count && sprayParticles.length < MAX_SPRAY; i++) {
-        const angle = -Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 0.8;
-        const speed = 0.5 + Math.random() * 2.5;
+      for (let i = 0; i < count && sprayParticles.length < 1500; i++) {
+        const angle = -Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 0.9;
+        const speed = 1 + Math.random() * 3;
         sprayParticles.push({
-          x: x + (Math.random() - 0.5) * 20,
-          y: y + (Math.random() - 0.5) * 10,
-          vx: Math.cos(angle) * speed + (Math.random() - 0.5) * 0.5,
-          vy: Math.sin(angle) * speed - Math.random() * 1.5,
+          x: x + (Math.random() - 0.5) * 30,
+          y: y + (Math.random() - 0.5) * 15,
+          vx: Math.cos(angle) * speed + (Math.random() - 0.5),
+          vy: Math.sin(angle) * speed - Math.random() * 2,
           life: 1,
-          maxLife: 60 + Math.random() * 120,
-          size: 1 + Math.random() * 3,
-          color: Math.random() > 0.3 ? CREAM : WARM_WHITE,
+          maxLife: 80 + Math.random() * 150,
+          size: 1.5 + Math.random() * 4,
+          color: Math.random() > 0.4 ? CREAM : WARM_WHITE,
         });
       }
     }
 
-    // --- Flow field particles for wave body ---
+    // --- Flow particles (MUCH denser) ---
     interface FlowParticle {
       x: number; y: number;
       prevX: number; prevY: number;
@@ -89,69 +83,81 @@ export default function WarmWavePage() {
       life: number;
       maxLife: number;
       colorIdx: number;
-      layer: number; // 0=deep, 1=mid, 2=surface
+      width: number;
     }
 
     const flowParticles: FlowParticle[] = [];
-    const FLOW_COUNT = 2000;
+    const FLOW_COUNT = 8000;
 
     function spawnFlowParticle(): FlowParticle {
-      const layer = Math.random() < 0.3 ? 0 : Math.random() < 0.6 ? 1 : 2;
-      // Spawn weighted towards wave region (upper 60% of canvas)
-      const x = Math.random() * W;
-      const y = H * 0.15 + Math.random() * H * 0.55;
+      // Concentrate particles in the wave region
+      const inWave = Math.random() < 0.75;
+      let x: number, y: number;
+      if (inWave) {
+        // Wave zone: upper-center area
+        x = W * 0.1 + Math.random() * W * 0.8;
+        y = H * 0.08 + Math.random() * H * 0.5;
+      } else {
+        // Ocean zone
+        x = Math.random() * W;
+        y = H * 0.5 + Math.random() * H * 0.45;
+      }
       return {
         x, y, prevX: x, prevY: y,
-        speed: 0.5 + Math.random() * 1.5,
+        speed: 0.4 + Math.random() * 2,
         life: 0,
-        maxLife: 100 + Math.random() * 200,
+        maxLife: 80 + Math.random() * 250,
         colorIdx: Math.floor(Math.random() * WAVE_COLORS.length),
-        layer,
+        width: 0.5 + Math.random() * 2.5,
       };
     }
 
     for (let i = 0; i < FLOW_COUNT; i++) {
       const p = spawnFlowParticle();
-      p.life = Math.random() * p.maxLife; // stagger
+      p.life = Math.random() * p.maxLife;
       flowParticles.push(p);
     }
 
-    // --- The Great Wave flow field ---
-    // Creates a curling wave pattern: main wave crest at ~30% from top,
-    // curling forward (right to left), with secondary wave behind
+    // --- Wave flow field ---
+    // The Great Wave: massive curl from upper-right sweeping left and down
     function waveFlowAngle(x: number, y: number, t: number): number {
       const nx = x / W;
       const ny = y / H;
 
-      // Main curl: large circular flow centered around the crest
-      // Crest position shifts slightly with time
-      const crestX = W * 0.55;
-      const crestY = H * 0.28;
+      // Main wave crest — large curl center
+      const crestX = W * 0.52;
+      const crestY = H * 0.25;
       const dx = x - crestX;
       const dy = y - crestY;
       const distToCrest = Math.sqrt(dx * dx + dy * dy);
-      const crestRadius = W * 0.35;
-
-      // Curl influence — stronger near the crest
+      const crestRadius = W * 0.4;
       const curlStrength = Math.max(0, 1 - distToCrest / crestRadius);
-      const curlAngle = Math.atan2(dy, dx) + Math.PI * 0.5; // perpendicular = circular
+      const curlAngle = Math.atan2(dy, dx) + Math.PI * 0.55;
 
-      // General rightward-and-down flow for the base ocean
-      const baseAngle = Math.PI * 0.15 + noise2d(nx * 3, ny * 3, t * 0.3) * 0.5;
+      // Secondary wave (smaller, behind the main one)
+      const crest2X = W * 0.2;
+      const crest2Y = H * 0.35;
+      const dx2 = x - crest2X;
+      const dy2 = y - crest2Y;
+      const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+      const radius2 = W * 0.2;
+      const curl2 = Math.max(0, 1 - dist2 / radius2) * 0.5;
+      const curl2Angle = Math.atan2(dy2, dx2) + Math.PI * 0.5;
 
-      // Secondary smaller curl (the "claw" tips)
-      const claw1X = W * 0.4, claw1Y = H * 0.22;
-      const claw2X = W * 0.65, claw2Y = H * 0.35;
+      // Claw tips at wave crest
+      const claws = [
+        [W * 0.38, H * 0.15, W * 0.1],
+        [W * 0.58, H * 0.18, W * 0.08],
+        [W * 0.68, H * 0.28, W * 0.07],
+      ];
       let clawInfluence = 0;
       let clawAngle = 0;
-
-      for (const [cx, cy] of [[claw1X, claw1Y], [claw2X, claw2Y]]) {
+      for (const [cx, cy, cr] of claws) {
         const cdx = x - cx;
         const cdy = y - cy;
         const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
-        const cradius = W * 0.12;
-        if (cdist < cradius) {
-          const s = Math.max(0, 1 - cdist / cradius);
+        if (cdist < cr) {
+          const s = (1 - cdist / cr) * 0.7;
           if (s > clawInfluence) {
             clawInfluence = s;
             clawAngle = Math.atan2(cdy, cdx) + Math.PI * 0.5;
@@ -159,139 +165,163 @@ export default function WarmWavePage() {
         }
       }
 
-      // Blend
-      let angle = baseAngle;
-      angle = angle * (1 - curlStrength * 0.8) + curlAngle * curlStrength * 0.8;
-      angle = angle * (1 - clawInfluence * 0.6) + clawAngle * clawInfluence * 0.6;
+      // Ocean: horizontal flow below wave
+      const oceanBase = ny > 0.55 ? (ny - 0.55) / 0.45 : 0;
+      const oceanAngle = Math.PI * 0.05 + noise2d(nx * 2, ny * 2, t * 0.2) * 0.3;
 
-      // Add noise turbulence
-      angle += noise2d(nx * 6, ny * 6, t * 0.5) * 0.4;
+      // Blend everything
+      let angle = oceanAngle;
+      const mainWeight = curlStrength * 0.85 * (1 - oceanBase);
+      angle = angle * (1 - mainWeight) + curlAngle * mainWeight;
+      angle = angle * (1 - curl2 * (1 - oceanBase)) + curl2Angle * curl2 * (1 - oceanBase);
+      angle = angle * (1 - clawInfluence) + clawAngle * clawInfluence;
+
+      // Turbulence
+      angle += noise2d(nx * 5, ny * 5, t * 0.4) * 0.5;
 
       return angle;
     }
 
+    // --- Wave shape for filled regions ---
+    function getWaveY(frac: number, t: number): number {
+      let y: number;
+      if (frac < 0.15) {
+        y = H * 0.55 - frac / 0.15 * H * 0.15;
+      } else if (frac < 0.35) {
+        const p = (frac - 0.15) / 0.2;
+        y = H * 0.4 - Math.sin(p * Math.PI) * H * 0.2;
+      } else if (frac < 0.55) {
+        const p = (frac - 0.35) / 0.2;
+        y = H * 0.4 - Math.sin((1 - p) * Math.PI * 0.7) * H * 0.18;
+      } else if (frac < 0.75) {
+        const p = (frac - 0.55) / 0.2;
+        y = H * 0.35 + p * H * 0.2;
+      } else {
+        const p = (frac - 0.75) / 0.25;
+        y = H * 0.55 + p * H * 0.05;
+      }
+      y += noise1d(frac * 10, t * 0.3) * H * 0.025;
+      return y;
+    }
+
     let time = 0;
     let raf: number;
+    let frameCount = 0;
 
-    function drawFuji(t: number) {
-      // Small Mt. Fuji in the background, between the waves
-      const fujiCx = W * 0.48;
-      const fujiTop = H * 0.42;
-      const fujiBase = H * 0.58;
-      const fujiHalfW = W * 0.06;
+    function drawFuji() {
+      const cx = W * 0.48;
+      const top = H * 0.4;
+      const base = H * 0.58;
+      const hw = W * 0.07;
 
-      // Mountain body
       ctx!.beginPath();
-      ctx!.moveTo(fujiCx - fujiHalfW, fujiBase);
-      ctx!.lineTo(fujiCx - fujiHalfW * 0.15, fujiTop);
-      ctx!.lineTo(fujiCx + fujiHalfW * 0.15, fujiTop);
-      ctx!.lineTo(fujiCx + fujiHalfW, fujiBase);
+      ctx!.moveTo(cx - hw, base);
+      ctx!.lineTo(cx - hw * 0.12, top);
+      ctx!.lineTo(cx + hw * 0.12, top);
+      ctx!.lineTo(cx + hw, base);
       ctx!.closePath();
 
-      const grad = ctx!.createLinearGradient(fujiCx, fujiTop, fujiCx, fujiBase);
-      grad.addColorStop(0, `rgba(${FUJI_BASE[0]}, ${FUJI_BASE[1]}, ${FUJI_BASE[2]}, 0.5)`);
-      grad.addColorStop(0.3, `rgba(${SIENNA[0]}, ${SIENNA[1]}, ${SIENNA[2]}, 0.35)`);
+      const grad = ctx!.createLinearGradient(cx, top, cx, base);
+      grad.addColorStop(0, `rgba(${FUJI_BASE[0]}, ${FUJI_BASE[1]}, ${FUJI_BASE[2]}, 0.6)`);
+      grad.addColorStop(0.4, `rgba(${SIENNA[0]}, ${SIENNA[1]}, ${SIENNA[2]}, 0.4)`);
       grad.addColorStop(1, `rgba(${WARM_DARK[0]}, ${WARM_DARK[1]}, ${WARM_DARK[2]}, 0.2)`);
       ctx!.fillStyle = grad;
       ctx!.fill();
 
-      // Snow cap — warm cream
+      // Snow cap
       ctx!.beginPath();
-      ctx!.moveTo(fujiCx - fujiHalfW * 0.25, fujiTop + (fujiBase - fujiTop) * 0.15);
-      ctx!.lineTo(fujiCx - fujiHalfW * 0.12, fujiTop);
-      ctx!.lineTo(fujiCx + fujiHalfW * 0.12, fujiTop);
-      ctx!.lineTo(fujiCx + fujiHalfW * 0.25, fujiTop + (fujiBase - fujiTop) * 0.15);
-      // Jagged snow line
-      const segments = 6;
-      for (let i = segments; i >= 0; i--) {
-        const sx = fujiCx - fujiHalfW * 0.25 + (fujiHalfW * 0.5 / segments) * i;
-        const sy = fujiTop + (fujiBase - fujiTop) * (0.12 + Math.sin(i * 2.3 + t) * 0.03);
-        ctx!.lineTo(sx, sy);
-      }
+      ctx!.moveTo(cx - hw * 0.2, top + (base - top) * 0.15);
+      ctx!.lineTo(cx - hw * 0.1, top);
+      ctx!.lineTo(cx + hw * 0.1, top);
+      ctx!.lineTo(cx + hw * 0.2, top + (base - top) * 0.15);
       ctx!.closePath();
-      ctx!.fillStyle = `rgba(${CREAM[0]}, ${CREAM[1]}, ${CREAM[2]}, 0.4)`;
+      ctx!.fillStyle = `rgba(${CREAM[0]}, ${CREAM[1]}, ${CREAM[2]}, 0.5)`;
       ctx!.fill();
     }
 
-    function drawWaveCrestLine(t: number) {
-      // Draw the main wave crest as a series of curves
+    // --- Draw filled wave body (beneath particles) ---
+    function drawWaveBody(t: number) {
+      // Main wave as a filled shape
       ctx!.beginPath();
-      const startX = W * 0.15;
-      const endX = W * 0.85;
-      const segments = 80;
+      const startX = W * 0.05;
+      const endX = W * 0.95;
+      const steps = 100;
 
-      for (let i = 0; i <= segments; i++) {
-        const frac = i / segments;
+      // Top edge (wave crest)
+      for (let i = 0; i <= steps; i++) {
+        const frac = i / steps;
         const x = startX + frac * (endX - startX);
-
-        // Main wave shape: rises to peak around 40-60%, then curls down
-        let y: number;
-        if (frac < 0.2) {
-          // Rising from left
-          y = H * 0.5 - frac * H * 0.8;
-        } else if (frac < 0.5) {
-          // Main crest peak
-          const peak = (frac - 0.2) / 0.3;
-          y = H * 0.34 - Math.sin(peak * Math.PI) * H * 0.12;
-        } else if (frac < 0.7) {
-          // Curling over
-          const curl = (frac - 0.5) / 0.2;
-          y = H * 0.34 + curl * H * 0.15;
-        } else {
-          // Trailing off
-          const trail = (frac - 0.7) / 0.3;
-          y = H * 0.49 + trail * H * 0.05;
-        }
-
-        // Add wave noise
-        y += noise1d(frac * 8, t * 0.4) * H * 0.03;
-
+        const y = getWaveY(frac, t);
         if (i === 0) ctx!.moveTo(x, y);
         else ctx!.lineTo(x, y);
+      }
 
-        // Emit spray at the crest
-        if (frac > 0.25 && frac < 0.55 && Math.random() < 0.03) {
-          emitSpray(x, y, 1);
+      // Bottom edge (ocean base)
+      ctx!.lineTo(endX, H * 0.7);
+      ctx!.lineTo(startX, H * 0.7);
+      ctx!.closePath();
+
+      const grad = ctx!.createLinearGradient(0, H * 0.2, 0, H * 0.7);
+      grad.addColorStop(0, `rgba(${BRICK[0]}, ${BRICK[1]}, ${BRICK[2]}, 0.12)`);
+      grad.addColorStop(0.3, `rgba(${SIENNA[0]}, ${SIENNA[1]}, ${SIENNA[2]}, 0.1)`);
+      grad.addColorStop(0.6, `rgba(${DEEP_AMBER[0]}, ${DEEP_AMBER[1]}, ${DEEP_AMBER[2]}, 0.08)`);
+      grad.addColorStop(1, `rgba(${WARM_DARK[0]}, ${WARM_DARK[1]}, ${WARM_DARK[2]}, 0.06)`);
+      ctx!.fillStyle = grad;
+      ctx!.fill();
+
+      // Emit spray along crest
+      for (let i = 0; i <= steps; i++) {
+        const frac = i / steps;
+        if (frac > 0.2 && frac < 0.6 && Math.random() < 0.08) {
+          const x = startX + frac * (endX - startX);
+          const y = getWaveY(frac, t);
+          emitSpray(x, y, 2);
         }
       }
 
-      ctx!.strokeStyle = `rgba(${AMBER[0]}, ${AMBER[1]}, ${AMBER[2]}, 0.15)`;
-      ctx!.lineWidth = 2;
-      ctx!.stroke();
+      // Draw multiple crest lines for thickness
+      for (let offset = 0; offset < 5; offset++) {
+        ctx!.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const frac = i / steps;
+          const x = startX + frac * (endX - startX);
+          const y = getWaveY(frac, t) + offset * 3 + noise1d(frac * 12 + offset, t * 0.5) * 5;
+          if (i === 0) ctx!.moveTo(x, y);
+          else ctx!.lineTo(x, y);
+        }
+        const col = WAVE_COLORS[offset % WAVE_COLORS.length];
+        ctx!.strokeStyle = `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${0.3 - offset * 0.04})`;
+        ctx!.lineWidth = 2 - offset * 0.3;
+        ctx!.stroke();
+      }
     }
 
     function animate() {
-      time += 0.008;
+      time += 0.006;
+      frameCount++;
 
-      // Semi-transparent overlay for trail effect
-      ctx!.fillStyle = "rgba(10, 10, 10, 0.06)";
+      // Trail effect — slower fade = more accumulation = denser look
+      ctx!.fillStyle = "rgba(10, 10, 10, 0.03)";
       ctx!.fillRect(0, 0, W, H);
 
-      // Every ~200 frames, do a deeper clear to prevent buildup
-      if (Math.floor(time * 125) % 200 === 0) {
-        ctx!.fillStyle = "rgba(10, 10, 10, 0.15)";
+      // Periodic deeper clear
+      if (frameCount % 300 === 0) {
+        ctx!.fillStyle = "rgba(10, 10, 10, 0.1)";
         ctx!.fillRect(0, 0, W, H);
       }
 
-      // Draw Fuji (faintly, in background)
-      drawFuji(time);
+      // Background Fuji
+      if (frameCount % 3 === 0) drawFuji();
 
-      // Draw wave crest guide lines (subtle)
-      drawWaveCrestLine(time);
+      // Wave body (filled shape for volume)
+      if (frameCount % 2 === 0) drawWaveBody(time);
 
-      // Secondary wave crest
-      ctx!.save();
-      ctx!.translate(W * 0.15, H * 0.12);
-      ctx!.scale(0.5, 0.5);
-      drawWaveCrestLine(time + 1.5);
-      ctx!.restore();
-
-      // --- Update and draw flow particles ---
+      // --- Flow particles ---
       for (let i = 0; i < flowParticles.length; i++) {
         const p = flowParticles[i];
         p.life++;
 
-        if (p.life > p.maxLife || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) {
+        if (p.life > p.maxLife || p.x < -30 || p.x > W + 30 || p.y < -30 || p.y > H + 30) {
           flowParticles[i] = spawnFlowParticle();
           continue;
         }
@@ -303,32 +333,30 @@ export default function WarmWavePage() {
         p.x += Math.cos(angle) * p.speed;
         p.y += Math.sin(angle) * p.speed;
 
-        // Fade in/out
         const lifeFrac = p.life / p.maxLife;
-        const alpha = lifeFrac < 0.1
-          ? lifeFrac / 0.1
-          : lifeFrac > 0.8
-            ? (1 - lifeFrac) / 0.2
+        const alpha = lifeFrac < 0.08
+          ? lifeFrac / 0.08
+          : lifeFrac > 0.75
+            ? (1 - lifeFrac) / 0.25
             : 1;
 
         const col = WAVE_COLORS[p.colorIdx];
-        const layerAlpha = p.layer === 0 ? 0.12 : p.layer === 1 ? 0.2 : 0.35;
 
         ctx!.beginPath();
         ctx!.moveTo(p.prevX, p.prevY);
         ctx!.lineTo(p.x, p.y);
-        ctx!.strokeStyle = `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${alpha * layerAlpha})`;
-        ctx!.lineWidth = p.layer === 2 ? 1.5 : p.layer === 1 ? 1 : 0.5;
+        ctx!.strokeStyle = `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${alpha * 0.4})`;
+        ctx!.lineWidth = p.width;
         ctx!.stroke();
       }
 
-      // --- Update and draw spray particles ---
+      // --- Spray particles ---
       for (let i = sprayParticles.length - 1; i >= 0; i--) {
         const p = sprayParticles[i];
         p.life -= 1 / p.maxLife;
-        p.vy += 0.01; // gravity
-        p.vx *= 0.99;
-        p.vy *= 0.99;
+        p.vy += 0.015;
+        p.vx *= 0.995;
+        p.vy *= 0.995;
         p.x += p.vx;
         p.y += p.vy;
 
@@ -337,40 +365,34 @@ export default function WarmWavePage() {
           continue;
         }
 
-        const alpha = p.life * 0.5;
         ctx!.beginPath();
         ctx!.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-        ctx!.fillStyle = `rgba(${p.color[0]}, ${p.color[1]}, ${p.color[2]}, ${alpha})`;
+        ctx!.fillStyle = `rgba(${p.color[0]}, ${p.color[1]}, ${p.color[2]}, ${p.life * 0.7})`;
         ctx!.fill();
       }
 
-      // --- Ocean surface below waves (horizontal flow lines) ---
-      const oceanTop = H * 0.55;
-      for (let i = 0; i < 15; i++) {
-        const y = oceanTop + i * (H - oceanTop) / 15;
-        ctx!.beginPath();
-        for (let j = 0; j <= 60; j++) {
-          const x = (j / 60) * W;
-          const ny = y + noise1d(j * 0.15 + i * 0.5, time * 0.3) * 8;
-          if (j === 0) ctx!.moveTo(x, ny);
-          else ctx!.lineTo(x, ny);
+      // --- Ocean surface lines ---
+      if (frameCount % 4 === 0) {
+        const oceanTop = H * 0.58;
+        for (let i = 0; i < 20; i++) {
+          const y = oceanTop + i * (H - oceanTop - 20) / 20;
+          ctx!.beginPath();
+          for (let j = 0; j <= 80; j++) {
+            const x = (j / 80) * W;
+            const ny2 = y + noise1d(j * 0.12 + i * 0.4, time * 0.25) * 6;
+            if (j === 0) ctx!.moveTo(x, ny2);
+            else ctx!.lineTo(x, ny2);
+          }
+          const depth = i / 20;
+          const col = depth < 0.3 ? AMBER : depth < 0.5 ? WARM_GOLD : depth < 0.7 ? SIENNA : DEEP_AMBER;
+          ctx!.strokeStyle = `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${0.06 + (1 - depth) * 0.08})`;
+          ctx!.lineWidth = 0.8;
+          ctx!.stroke();
         }
-        const depth = (y - oceanTop) / (H - oceanTop);
-        const col = depth < 0.3 ? AMBER : depth < 0.6 ? SIENNA : WARM_DARK;
-        ctx!.strokeStyle = `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${0.04 + (1 - depth) * 0.06})`;
-        ctx!.lineWidth = 0.5;
-        ctx!.stroke();
       }
 
-      // --- Sky gradient (very subtle, top area) ---
-      const skyGrad = ctx!.createLinearGradient(0, 0, 0, H * 0.3);
-      skyGrad.addColorStop(0, `rgba(${SKY[0]}, ${SKY[1]}, ${SKY[2]}, 0.03)`);
-      skyGrad.addColorStop(1, "transparent");
-      ctx!.fillStyle = skyGrad;
-      ctx!.fillRect(0, 0, W, H * 0.3);
-
       // --- Label ---
-      ctx!.fillStyle = `rgba(${WARM_WHITE[0]}, ${WARM_WHITE[1]}, ${WARM_WHITE[2]}, 0.25)`;
+      ctx!.fillStyle = `rgba(${WARM_WHITE[0]}, ${WARM_WHITE[1]}, ${WARM_WHITE[2]}, 0.2)`;
       ctx!.font = "11px 'Space Mono', monospace";
       ctx!.textAlign = "right";
       ctx!.fillText("warm-wave · 暖浪 · after Hokusai", W - 24, H - 24);
@@ -378,10 +400,8 @@ export default function WarmWavePage() {
       raf = requestAnimationFrame(animate);
     }
 
-    // Initial background
     ctx.fillStyle = "#0a0a0a";
     ctx.fillRect(0, 0, W, H);
-
     raf = requestAnimationFrame(animate);
 
     const onResize = () => {
@@ -406,10 +426,7 @@ export default function WarmWavePage() {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#0a0a0a", overflow: "hidden" }}>
-      <canvas
-        ref={canvasRef}
-        style={{ display: "block" }}
-      />
+      <canvas ref={canvasRef} style={{ display: "block" }} />
     </div>
   );
 }
