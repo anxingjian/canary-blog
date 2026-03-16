@@ -154,7 +154,7 @@ export default function WhoAmI() {
       <div style={{
         display: "flex", flexDirection: "column", alignItems: "center",
       }}>
-      <div style={{ textAlign: "center", marginBottom: isMobile ? "1.5rem" : "3rem" }}>
+      <div style={{ textAlign: "center", marginBottom: isMobile ? "1.5rem" : "3rem", minHeight: isMobile ? "auto" : "4.5rem" }}>
         <h1 style={{
           fontFamily: "'Instrument Serif', Georgia, serif",
           fontSize: isMobile ? "1.5rem" : activeLayerData ? "clamp(1rem, 2.5vw, 1.5rem)" : "clamp(1.5rem, 4vw, 2.2rem)", fontWeight: 400,
