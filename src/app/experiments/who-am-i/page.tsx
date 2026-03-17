@@ -92,6 +92,7 @@ function darkenHex(hex: string, factor: number): string {
 
 export default function WhoAmI() {
   const [activeLayer, setActiveLayer] = useState<string | null>(null);
+  const [hoveredLayer, setHoveredLayer] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [time, setTime] = useState(0);
   const rafRef = useRef<number>(0);
@@ -204,11 +205,14 @@ export default function WhoAmI() {
                 <ellipse
                   cx={cx} cy={lCy} rx={lRx} ry={lRy}
                   fill={dimmedFill}
-                  stroke={isActive ? "rgba(196,255,0,0.35)" : `rgba(255,255,255,${isAnyActive && !isActive ? 0.05 : 0.1})`}
-                  strokeWidth={0.5}
+                  stroke={isActive ? "rgba(196,255,0,0.35)" : hoveredLayer === layer.id ? "rgba(196,255,0,0.25)" : `rgba(255,255,255,${isAnyActive && !isActive ? 0.05 : 0.1})`}
+                  strokeWidth={isActive ? 0.5 : hoveredLayer === layer.id ? 1 : 0.5}
                   strokeDasharray={layer.dashArray}
-                  style={{ cursor: "pointer", transition: "stroke 0.4s ease" }}
+                  filter={hoveredLayer === layer.id && !isActive ? "drop-shadow(0 0 8px rgba(196,255,0,0.15))" : "none"}
+                  style={{ cursor: "pointer", transition: "stroke 0.3s ease, stroke-width 0.3s ease, filter 0.3s ease" }}
                   onClick={() => setActiveLayer(isActive ? null : layer.id)}
+                  onMouseEnter={() => setHoveredLayer(layer.id)}
+                  onMouseLeave={() => setHoveredLayer(null)}
                 />
 
                 {/* Side labels — desktop only, hidden when active */}
@@ -288,6 +292,15 @@ export default function WhoAmI() {
               : "rgba(255,255,255,0.6)",
             transition: "fill 0.4s ease", cursor: "pointer",
           }} onClick={() => setActiveLayer(activeLayer === "core" ? null : "core")}>Canary</text>
+
+          {/* Hint text when no layer is active */}
+          {!activeLayer && (
+            <text x={cx} y={H - (isMobile ? 5 : 10)} textAnchor="middle" style={{
+              fontFamily: "'Space Mono', monospace", fontSize: isMobile ? "9px" : "10px",
+              fill: "rgba(255,255,255,0.2)", letterSpacing: "0.15em",
+              animation: "hintPulse 3s ease-in-out infinite",
+            }}>click to explore</text>
+          )}
         </svg>
       </div>
 
@@ -348,6 +361,10 @@ export default function WhoAmI() {
         @keyframes itemFadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+        @keyframes hintPulse {
+          0%, 100% { opacity: 0.2; }
+          50% { opacity: 0.45; }
         }
       `}</style>
     </div>
