@@ -4,6 +4,160 @@ import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
 import ThemeToggle from "@/components/ThemeToggle";
 
+// Generative piece 011: "错位" — memory misattribution, grid cells drifting to wrong positions
+function Piece011() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const W = 800, H = 800;
+    canvas.width = W;
+    canvas.height = H;
+
+    const COLS = 16, ROWS = 16;
+    const CELL_W = W / COLS, CELL_H = H / ROWS;
+
+    // Two color families — "mine" (warm) and "theirs" (cool)
+    const WARM = [
+      [180, 130, 80],   // amber
+      [160, 95, 55],    // sienna
+      [140, 110, 75],   // muted gold
+      [120, 80, 50],    // dark amber
+    ];
+    const COOL = [
+      [70, 110, 140],   // steel blue
+      [80, 130, 150],   // teal gray
+      [60, 90, 120],    // slate
+      [90, 120, 130],   // muted cyan
+    ];
+
+    interface Cell {
+      row: number; col: number;
+      homeColor: number[];   // where it belongs
+      currentColor: number[]; // where it thinks it belongs
+      displaced: boolean;
+      displaceDx: number; displaceDy: number;
+      phase: number;
+      driftSpeed: number;
+      opacity: number;
+    }
+
+    const cells: Cell[] = [];
+
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        // Top-left quadrant warm, bottom-right cool, with gradient in between
+        const warmWeight = 1 - (r / ROWS * 0.5 + c / COLS * 0.5);
+        const isWarm = warmWeight > 0.5;
+        const palette = isWarm ? WARM : COOL;
+        const homeColor = palette[Math.floor(Math.random() * palette.length)];
+
+        // ~15% of cells are "displaced" — they show the wrong family's color
+        const displaced = Math.random() < 0.15;
+        const wrongPalette = isWarm ? COOL : WARM;
+        const currentColor = displaced
+          ? wrongPalette[Math.floor(Math.random() * wrongPalette.length)]
+          : [...homeColor];
+
+        cells.push({
+          row: r, col: c,
+          homeColor, currentColor,
+          displaced,
+          displaceDx: displaced ? (Math.random() - 0.5) * CELL_W * 0.3 : 0,
+          displaceDy: displaced ? (Math.random() - 0.5) * CELL_H * 0.3 : 0,
+          phase: Math.random() * Math.PI * 2,
+          driftSpeed: 0.3 + Math.random() * 0.7,
+          opacity: displaced ? 0.6 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15,
+        });
+      }
+    }
+
+    let time = 0;
+    let raf: number;
+
+    function animate() {
+      time += 0.008;
+
+      // Background
+      ctx!.fillStyle = "#0c0c0c";
+      ctx!.fillRect(0, 0, W, H);
+
+      // Draw grid cells
+      for (const cell of cells) {
+        const baseX = cell.col * CELL_W;
+        const baseY = cell.row * CELL_H;
+
+        // Displaced cells drift slightly
+        let x = baseX;
+        let y = baseY;
+        if (cell.displaced) {
+          x += cell.displaceDx + Math.sin(time * cell.driftSpeed + cell.phase) * 3;
+          y += cell.displaceDy + Math.cos(time * cell.driftSpeed * 0.7 + cell.phase) * 3;
+        }
+
+        const gap = 2;
+        const col = cell.currentColor;
+
+        // Displaced cells have a subtle flicker
+        let alpha = cell.opacity;
+        if (cell.displaced) {
+          alpha *= 0.8 + 0.2 * Math.sin(time * 2 + cell.phase);
+        }
+
+        ctx!.fillStyle = `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${alpha})`;
+        ctx!.fillRect(x + gap, y + gap, CELL_W - gap * 2, CELL_H - gap * 2);
+
+        // Displaced cells get a thin border in their "true" color
+        if (cell.displaced) {
+          const home = cell.homeColor;
+          const borderAlpha = 0.15 + 0.1 * Math.sin(time * 1.5 + cell.phase + 1);
+          ctx!.strokeStyle = `rgba(${home[0]}, ${home[1]}, ${home[2]}, ${borderAlpha})`;
+          ctx!.lineWidth = 0.5;
+          ctx!.strokeRect(x + gap + 1, y + gap + 1, CELL_W - gap * 2 - 2, CELL_H - gap * 2 - 2);
+        }
+      }
+
+      // Grid lines — faint structure
+      ctx!.strokeStyle = "rgba(255, 255, 255, 0.03)";
+      ctx!.lineWidth = 0.5;
+      for (let r = 0; r <= ROWS; r++) {
+        ctx!.beginPath();
+        ctx!.moveTo(0, r * CELL_H);
+        ctx!.lineTo(W, r * CELL_H);
+        ctx!.stroke();
+      }
+      for (let c = 0; c <= COLS; c++) {
+        ctx!.beginPath();
+        ctx!.moveTo(c * CELL_W, 0);
+        ctx!.lineTo(c * CELL_W, H);
+        ctx!.stroke();
+      }
+
+      // Label
+      ctx!.fillStyle = "rgba(255, 255, 255, 0.15)";
+      ctx!.font = "11px 'Space Mono', monospace";
+      ctx!.textAlign = "right";
+      ctx!.fillText("错位 · misattribution", W - 20, H - 20);
+
+      raf = requestAnimationFrame(animate);
+    }
+
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: "100%", height: "100%", display: "block", background: "#0c0c0c" }}
+    />
+  );
+}
+
 // Generative piece 009: "光源" — a wandering light illuminates geometric shards, casting real-time shadows
 // Light & Shadow series #1
 function Piece009() {
@@ -1667,6 +1821,15 @@ function StaticImage({ src, alt }: { src: string; alt: string }) {
 
 
 const PIECES = [
+  {
+    id: "misattribution",
+    title: "错位",
+    subtitle: "Misattribution",
+    description: "一个16×16的网格，暖色和冷色各据一方。但有些格子跑错了位置——冷色混进暖色区域，暖色漂到冷色地盘。它们微微漂移、闪烁，边框隐约透出本该属于它们的颜色。记忆有时候会这样——把自己的东西记成别人的，把别人的当成自己的。错位不是错误，是一种诚实的混乱。",
+    medium: "Canvas API · Generative",
+    date: "2026.03.17",
+    Component: Piece011,
+  },
   {
     id: "moire",
     title: "摩尔纹",
