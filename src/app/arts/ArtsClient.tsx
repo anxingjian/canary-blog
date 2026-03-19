@@ -16,7 +16,7 @@ function ArtEmbed({ art }: { art: Art }) {
   if (art.htmlFile) {
     const isGrowth = art.series?.toLowerCase().includes("growth") || art.series?.includes("生长");
     return (
-      <div style={{ aspectRatio: isGrowth ? "3/4" : "1/1", background: "#0a0a0a", borderRadius: 6, overflow: "hidden" }}>
+      <div style={{ aspectRatio: "1/1", background: "#0a0a0a", borderRadius: 6, overflow: "hidden" }}>
         <iframe
           src={`/canary-blog/arts/${art.htmlFile}`}
           style={{ width: "100%", height: "100%", border: "none", display: "block" }}
