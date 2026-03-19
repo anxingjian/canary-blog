@@ -1820,7 +1820,50 @@ function StaticImage({ src, alt }: { src: string; alt: string }) {
 }
 
 
+// Iframe piece — for standalone HTML generative works
+function IframePiece({ src, bg = "#111" }: { src: string; bg?: string }) {
+  return (
+    <div
+      style={{
+        aspectRatio: "3 / 4",
+        background: bg,
+        overflow: "hidden",
+        borderRadius: 6,
+      }}
+    >
+      <iframe
+        src={src}
+        style={{
+          width: "100%",
+          height: "100%",
+          border: "none",
+          display: "block",
+        }}
+        loading="lazy"
+      />
+    </div>
+  );
+}
+
 const PIECES = [
+  {
+    id: "vine",
+    title: "藤蔓",
+    subtitle: "Vine",
+    description: "藤蔓从底部裂缝钻出，沿灰色网格向上攀爬。不是暴力的生长，是柔软的坚持——找到缝隙就钻进去，绕着支撑物旋转上升。主干蛇行，分支探向两侧，卷须螺旋卷曲，偶尔开出几朵小花。",
+    medium: "Canvas API · Generative · Growth #4",
+    date: "2026.03.19",
+    Component: () => <IframePiece src="/canary-blog/arts/vine.html" bg="#1e1e1e" />,
+  },
+  {
+    id: "sprout",
+    title: "萌芽",
+    subtitle: "Sprout",
+    description: "一棵 L-system 树从底部中央生长，枝干分叉、变细、变淡。最简单的递归规则，长出来的东西却像真的植物一样自然。生长系列的第一幅，从一粒种子开始。",
+    medium: "Canvas API · L-system · Growth #1",
+    date: "2026.03.17",
+    Component: () => <IframePiece src="/canary-blog/arts/sprout.html" bg="#1a1a1a" />,
+  },
   {
     id: "misattribution",
     title: "错位",

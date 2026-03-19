@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Growth #4 — 藤蔓 / Vine</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const CONFIG = {
+  width: 600,
+  height: 800,
+  bg: '#1e1e1e',
+  grid: {
+    spacing: 30,
+    color: 'rgba(80,80,80,0.35)',
+    weight: 0.5
+  },
+  vine: {
+    colors: ['#1a4a2a', '#2d5a3a', '#1f5c35', '#2a6b40'],
+    lightColors: ['#4a8c5c', '#5a9a6a', '#3d7a4e'],
+    weight: 3,
+    growSpeed: 1.8,
+    branchChance: 0.02,
+    maxVines: 30,
+    maxAge: 500
+  },
+  flower: {
+    colors: ['#c4756e', '#d4a574', '#cc8877', '#b87070'],
+    chance: 0.002
+  },
+  leaf: {
+    colors: ['#2a5a38', '#3a6b48', '#4a7a55', '#1f4d2e', '#5a8a65'],
+    chance: 0.035,
+    size: 13
+  }
+};
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+canvas.width = CONFIG.width;
+canvas.height = CONFIG.height;
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function rand(a, b) { return a + Math.random() * (b - a); }
+
+// Draw wall texture
+function drawWall() {
+  ctx.fillStyle = CONFIG.bg;
+  ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
+  
+  // Subtle noise texture
+  for (let i = 0; i < 8000; i++) {
+    const x = Math.random() * CONFIG.width;
+    const y = Math.random() * CONFIG.height;
+    const a = Math.random() * 0.08;
+    ctx.fillStyle = `rgba(${Math.random() > 0.5 ? 255 : 0},${Math.random() > 0.5 ? 255 : 0},${Math.random() > 0.5 ? 255 : 0},${a})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+  
+  // Grid
+  ctx.strokeStyle = CONFIG.grid.color;
+  ctx.lineWidth = CONFIG.grid.weight;
+  for (let x = CONFIG.grid.spacing; x < CONFIG.width; x += CONFIG.grid.spacing) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, CONFIG.height);
+    ctx.stroke();
+  }
+  for (let y = CONFIG.grid.spacing; y < CONFIG.height; y += CONFIG.grid.spacing) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(CONFIG.width, y);
+    ctx.stroke();
+  }
+  
+  // Cracks emanating from bottom
+  ctx.lineWidth = 0.8;
+  for (let i = 0; i < 8; i++) {
+    let x = CONFIG.width * 0.2 + Math.random() * CONFIG.width * 0.6;
+    let y = CONFIG.height;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.strokeStyle = `rgba(40,40,40,${0.3 + Math.random() * 0.3})`;
+    for (let j = 0; j < 15; j++) {
+      x += (Math.random() - 0.5) * 15;
+      y -= Math.random() * 20;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
+
+// Vine
+class Vine {
+  constructor(x, y, angle, gen = 0) {
+    this.x = x;
+    this.y = y;
+    this.angle = angle;
+    this.gen = gen;
+    this.pts = [{x, y}];
+    this.alive = true;
+    this.age = 0;
+    this.weight = Math.max(0.4, CONFIG.vine.weight - gen * 0.7);
+    this.color = gen === 0 ? pick(CONFIG.vine.colors) : pick(CONFIG.vine.lightColors);
+    this.decorations = []; // leaves, flowers, tendrils
+  }
+
+  grow() {
+    if (!this.alive) return false;
+    this.age++;
+    if (this.age > CONFIG.vine.maxAge - this.gen * 60) { this.alive = false; return false; }
+    if (this.x < 5 || this.x > CONFIG.width - 5 || this.y < 5) { this.alive = false; return false; }
+
+    // Direction: mostly up, attracted to grid lines
+    const s = CONFIG.grid.spacing;
+    const nearX = Math.round(this.x / s) * s;
+    const nearY = Math.round(this.y / s) * s;
+    const dxGrid = nearX - this.x;
+    const dyGrid = nearY - this.y;
+
+    // Mostly up
+    let targetAngle = -Math.PI / 2;
+    
+    // Near vertical grid line: stay vertical
+    if (Math.abs(dxGrid) < 5) {
+      targetAngle = -Math.PI / 2 + (Math.random() - 0.5) * 0.1;
+    }
+
+    this.angle += (targetAngle - this.angle) * 0.03;
+    this.angle += (Math.random() - 0.5) * 0.1;
+
+    // Sinuous sway (unique per vine via x offset)
+    this.angle += Math.sin(this.age * 0.03 + this.pts[0].x * 0.05) * 0.04;
+    
+    // Gentle center pull
+    this.angle += (CONFIG.width / 2 - this.x) * 0.00004;
+
+    this.x += Math.cos(this.angle) * CONFIG.vine.growSpeed;
+    this.y += Math.sin(this.angle) * CONFIG.vine.growSpeed;
+    this.pts.push({x: this.x, y: this.y});
+
+    // Leaf
+    if (Math.random() < CONFIG.leaf.chance && this.age > 15) {
+      const side = Math.random() > 0.5 ? 1 : -1;
+      this.decorations.push({
+        type: 'leaf',
+        x: this.x, y: this.y,
+        angle: this.angle + side * (Math.PI / 3 + rand(0, 0.5)),
+        size: CONFIG.leaf.size * rand(0.4, 1),
+        color: pick(CONFIG.leaf.colors),
+        alpha: rand(0.5, 0.85)
+      });
+    }
+
+    // Tendril (curling)
+    if (Math.random() < 0.012 && this.age > 20) {
+      const tAngle = this.angle + (Math.random() > 0.5 ? 1 : -1) * rand(0.5, 1.2);
+      const pts = [];
+      let tx = this.x, ty = this.y, ta = tAngle;
+      const len = rand(12, 25);
+      for (let i = 0; i < len; i++) {
+        ta += 0.18;
+        tx += Math.cos(ta) * 1.2;
+        ty += Math.sin(ta) * 1.2;
+        pts.push({x: tx, y: ty});
+      }
+      this.decorations.push({ type: 'tendril', pts });
+    }
+
+    // Flower (rare)
+    if (Math.random() < CONFIG.flower.chance && this.age > 40) {
+      this.decorations.push({
+        type: 'flower',
+        x: this.x, y: this.y,
+        r: rand(3, 7),
+        color: pick(CONFIG.flower.colors),
+        petals: Math.floor(rand(4, 7))
+      });
+    }
+
+    // Branch?
+    return this.gen < 3 && Math.random() < CONFIG.vine.branchChance && this.age > 25;
+  }
+}
+
+function drawVine(v) {
+  if (v.pts.length < 2) return;
+
+  // Stem
+  ctx.beginPath();
+  ctx.moveTo(v.pts[0].x, v.pts[0].y);
+  for (let i = 1; i < v.pts.length; i++) {
+    ctx.lineTo(v.pts[i].x, v.pts[i].y);
+  }
+  ctx.strokeStyle = v.color;
+  ctx.lineWidth = v.weight;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.globalAlpha = 0.85;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Decorations
+  v.decorations.forEach(d => {
+    if (d.type === 'leaf') {
+      ctx.save();
+      ctx.translate(d.x, d.y);
+      ctx.rotate(d.angle);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(d.size * 0.5, -d.size * 0.35, d.size, 0);
+      ctx.quadraticCurveTo(d.size * 0.5, d.size * 0.35, 0, 0);
+      ctx.fillStyle = d.color;
+      ctx.globalAlpha = d.alpha;
+      ctx.fill();
+      // Vein
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(d.size * 0.85, 0);
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = 0.3;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    } else if (d.type === 'tendril') {
+      if (d.pts.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(d.pts[0].x, d.pts[0].y);
+      for (let i = 1; i < d.pts.length; i++) ctx.lineTo(d.pts[i].x, d.pts[i].y);
+      ctx.strokeStyle = 'rgba(74,140,92,0.35)';
+      ctx.lineWidth = 0.6;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    } else if (d.type === 'flower') {
+      for (let p = 0; p < d.petals; p++) {
+        const a = (p / d.petals) * Math.PI * 2;
+        const px = d.x + Math.cos(a) * d.r * 0.55;
+        const py = d.y + Math.sin(a) * d.r * 0.55;
+        ctx.beginPath();
+        ctx.arc(px, py, d.r * 0.4, 0, Math.PI * 2);
+        ctx.fillStyle = d.color;
+        ctx.globalAlpha = 0.75;
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r * 0.2, 0, Math.PI * 2);
+      ctx.fillStyle = '#e8d8a0';
+      ctx.globalAlpha = 0.9;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  });
+}
+
+// Where grid lines get covered by vines, "erase" them
+function drawGridDamage(vines) {
+  vines.forEach(v => {
+    v.pts.forEach((p, i) => {
+      if (i % 3 !== 0) return;
+      // Small dark patch around vine to "break" grid
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = CONFIG.bg;
+      ctx.globalAlpha = 0.3;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+  });
+}
+
+// Main
+const vines = [];
+const startCount = 5;
+for (let i = 0; i < startCount; i++) {
+  const x = CONFIG.width * (0.1 + 0.8 * (i / (startCount - 1))) + rand(-10, 10);
+  vines.push(new Vine(x, CONFIG.height - 2, -Math.PI / 2 + rand(-0.2, 0.2)));
+}
+// Side entries
+vines.push(new Vine(8, CONFIG.height * 0.8, rand(-0.5, 0.5)));
+vines.push(new Vine(CONFIG.width - 8, CONFIG.height * 0.7, Math.PI + rand(-0.3, 0.3)));
+
+let frame = 0;
+const maxFrames = 550;
+
+function animate() {
+  drawWall();
+
+  let newVines = [];
+  vines.forEach(v => {
+    if (v.alive) {
+      const branch = v.grow();
+      if (branch && vines.length + newVines.length < CONFIG.vine.maxVines) {
+        const bAngle = v.angle + (Math.random() > 0.5 ? 1 : -1) * rand(0.4, 1.2);
+        newVines.push(new Vine(v.x, v.y, bAngle, v.gen + 1));
+      }
+    }
+  });
+  newVines.forEach(nv => vines.push(nv));
+
+  drawGridDamage(vines);
+  vines.forEach(v => drawVine(v));
+
+  frame++;
+  if (frame < maxFrames) {
+    requestAnimationFrame(animate);
+  }
+}
+
+animate();
+</script>
+</body>
+</html>
