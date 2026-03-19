@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>对话 / Dialogue</title>
+<style>body{margin:0;overflow:hidden;background:#050505}canvas{display:block;width:100vw;height:100vh}</style>
+</head><body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+const W=800,H=800;canvas.width=W;canvas.height=H;
+const BLUE={h:210,s:25,l:55},ORANGE={h:30,s:35,l:55};
+const agents=[],BLUE_COUNT=80,ORANGE_COUNT=45,TRAIL_LEN=50;
+for(let i=0;i<BLUE_COUNT+ORANGE_COUNT;i++){
+  const isO=i>=BLUE_COUNT,a=Math.random()*Math.PI*2,sp=0.3+Math.random()*0.5;
+  agents.push({x:W*0.1+Math.random()*W*0.8,y:H*0.1+Math.random()*H*0.8,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,color:isO?1:0,trail:[]});
+}
+function hsl(c,a){return`hsla(${c.h},${c.s}%,${c.l}%,${a})`;}
+ctx.fillStyle="#050505";ctx.fillRect(0,0,W,H);
+function animate(){
+  ctx.fillStyle="rgba(5,5,5,0.08)";ctx.fillRect(0,0,W,H);
+  for(const a of agents){
+    let fx=0,fy=0;
+    for(const b of agents){if(a===b)continue;const dx=b.x-a.x,dy=b.y-a.y,dist=Math.sqrt(dx*dx+dy*dy)+1;
+      if(dist>300)continue;const same=a.color===b.color;
+      if(same){if(dist<25){const r=-0.03/dist;fx+=dx*r;fy+=dy*r;}else if(dist<200){fx+=dx*0.0004;fy+=dy*0.0004;}}
+      else{if(dist<60){const r=-0.02/dist;fx+=dx*r;fy+=dy*r;}else if(dist<300){fx+=dx*0.0002;fy+=dy*0.0002;}}
+    }
+    a.vx+=fx;a.vy+=fy;a.vx+=(W/2-a.x)*0.00003;a.vy+=(H/2-a.y)*0.00003;a.vx*=0.995;a.vy*=0.995;
+    const spd=Math.sqrt(a.vx*a.vx+a.vy*a.vy);if(spd>2){a.vx=(a.vx/spd)*2;a.vy=(a.vy/spd)*2;}
+    a.x+=a.vx;a.y+=a.vy;
+    if(a.x<40)a.vx+=0.1;if(a.x>W-40)a.vx-=0.1;if(a.y<40)a.vy+=0.1;if(a.y>H-40)a.vy-=0.1;
+    a.trail.push({x:a.x,y:a.y});if(a.trail.length>TRAIL_LEN)a.trail.shift();
+  }
+  for(const a of agents){const col=a.color===0?BLUE:ORANGE,tr=a.trail;if(tr.length<2)continue;
+    ctx.beginPath();ctx.moveTo(tr[0].x,tr[0].y);for(let i=1;i<tr.length;i++)ctx.lineTo(tr[i].x,tr[i].y);
+    ctx.strokeStyle=hsl(col,0.15);ctx.lineWidth=0.8;ctx.stroke();}
+  for(let i=0;i<agents.length;i++)for(let j=i+1;j<agents.length;j++){
+    const a=agents[i],b=agents[j];if(a.color===b.color)continue;
+    const dx=b.x-a.x,dy=b.y-a.y,dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<150&&dist>15){const al=(1-dist/150)*0.15;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle=`rgba(180,175,165,${al})`;ctx.lineWidth=0.5;ctx.stroke();}
+  }
+  for(const a of agents){const col=a.color===0?BLUE:ORANGE;
+    ctx.beginPath();ctx.arc(a.x,a.y,4,0,Math.PI*2);ctx.fillStyle=hsl(col,0.8);ctx.fill();
+    ctx.beginPath();ctx.arc(a.x,a.y,10,0,Math.PI*2);ctx.fillStyle=hsl(col,0.08);ctx.fill();}
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+</script></body></html>

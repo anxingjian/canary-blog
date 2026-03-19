@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>光源 / Source</title>
+<style>body{margin:0;overflow:hidden;background:#080808;cursor:crosshair}canvas{display:block;width:100vw;height:100vh}</style>
+</head><body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+const W=800,H=800;canvas.width=W;canvas.height=H;
+const LC={r:255,g:235,b:200},SL=2.5;
+const shards=[];const SC=55;
+for(let i=0;i<SC;i++){
+  const sides=3+Math.floor(Math.random()*3),size=8+Math.random()*22,verts=[];
+  for(let s=0;s<sides;s++){const a=(s/sides)*Math.PI*2+(Math.random()-0.5)*0.4,r=size*(0.6+Math.random()*0.4);verts.push({dx:Math.cos(a)*r,dy:Math.sin(a)*r});}
+  shards.push({x:80+Math.random()*(W-160),y:80+Math.random()*(H-160),vertices:verts,rotation:Math.random()*Math.PI*2,rotSpeed:(Math.random()-0.5)*0.003,brightness:0});
+}
+let lightX=W/2,lightY=H/2,mouseActive=false,mouseX=W/2,mouseY=H/2;
+canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();mouseX=(e.clientX-r.left)/r.width*W;mouseY=(e.clientY-r.top)/r.height*H;});
+canvas.addEventListener('mouseenter',()=>mouseActive=true);canvas.addEventListener('mouseleave',()=>mouseActive=false);
+let time=0;
+function animate(){
+  time+=0.008;ctx.fillStyle="#080808";ctx.fillRect(0,0,W,H);
+  const nx=W/2+Math.sin(time*0.37)*W*0.25+Math.cos(time*0.23)*W*0.1;
+  const ny=H/2+Math.cos(time*0.29)*H*0.2+Math.sin(time*0.41)*H*0.08;
+  if(mouseActive){lightX+=(mouseX-lightX)*0.04;lightY+=(mouseY-lightY)*0.04;}
+  else{lightX+=(nx-lightX)*0.02;lightY+=(ny-lightY)*0.02;}
+  const gr=W*0.45,glow=ctx.createRadialGradient(lightX,lightY,0,lightX,lightY,gr);
+  glow.addColorStop(0,`rgba(${LC.r},${LC.g},${LC.b},0.06)`);glow.addColorStop(0.3,`rgba(${LC.r},${LC.g},${LC.b},0.025)`);glow.addColorStop(1,'transparent');
+  ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
+  for(const s of shards){
+    const dx=s.x-lightX,dy=s.y-lightY,dist=Math.sqrt(dx*dx+dy*dy)+1,angle=Math.atan2(dy,dx);
+    const sa=Math.max(0,Math.min(0.35,200/dist)),sl=Math.min(dist*SL*0.15,120);
+    const cR=Math.cos(s.rotation),sR=Math.sin(s.rotation);
+    ctx.beginPath();
+    for(let v=0;v<s.vertices.length;v++){const vt=s.vertices[v],rx=vt.dx*cR-vt.dy*sR,ry=vt.dx*sR+vt.dy*cR;
+      const sx=s.x+rx+Math.cos(angle)*sl,sy=s.y+ry+Math.sin(angle)*sl;v===0?ctx.moveTo(sx,sy):ctx.lineTo(sx,sy);}
+    ctx.closePath();ctx.fillStyle=`rgba(0,0,0,${sa})`;ctx.fill();
+    for(let v=0;v<s.vertices.length;v++){
+      const v1=s.vertices[v],v2=s.vertices[(v+1)%s.vertices.length];
+      const rx1=v1.dx*cR-v1.dy*sR,ry1=v1.dx*sR+v1.dy*cR,rx2=v2.dx*cR-v2.dy*sR,ry2=v2.dx*sR+v2.dy*cR;
+      const px1=s.x+rx1,py1=s.y+ry1,px2=s.x+rx2,py2=s.y+ry2;
+      ctx.beginPath();ctx.moveTo(px1,py1);ctx.lineTo(px2,py2);
+      ctx.lineTo(px2+Math.cos(angle)*sl,py2+Math.sin(angle)*sl);ctx.lineTo(px1+Math.cos(angle)*sl,py1+Math.sin(angle)*sl);
+      ctx.closePath();ctx.fillStyle=`rgba(0,0,0,${sa*0.7})`;ctx.fill();
+    }
+  }
+  for(const s of shards){
+    const dx=s.x-lightX,dy=s.y-lightY,dist=Math.sqrt(dx*dx+dy*dy)+1;
+    const illum=Math.min(1,15000/(dist*dist));s.brightness+=(illum-s.brightness)*0.1;s.rotation+=s.rotSpeed;
+    const cR=Math.cos(s.rotation),sR=Math.sin(s.rotation);
+    ctx.beginPath();for(let v=0;v<s.vertices.length;v++){const vt=s.vertices[v],rx=vt.dx*cR-vt.dy*sR,ry=vt.dx*sR+vt.dy*cR;v===0?ctx.moveTo(s.x+rx,s.y+ry):ctx.lineTo(s.x+rx,s.y+ry);}
+    ctx.closePath();const wR=Math.floor(40+s.brightness*200),wG=Math.floor(38+s.brightness*180),wB=Math.floor(35+s.brightness*140);
+    ctx.fillStyle=`rgb(${wR},${wG},${wB})`;ctx.fill();
+    if(s.brightness>0.15){ctx.strokeStyle=`rgba(${LC.r},${LC.g},${LC.b},${s.brightness*0.3})`;ctx.lineWidth=0.5;ctx.stroke();}
+  }
+  const cp=0.8+Math.sin(time*2)*0.2,cg=ctx.createRadialGradient(lightX,lightY,0,lightX,lightY,25);
+  cg.addColorStop(0,`rgba(255,248,230,${0.9*cp})`);cg.addColorStop(0.3,`rgba(255,240,210,${0.3*cp})`);cg.addColorStop(1,'transparent');
+  ctx.fillStyle=cg;ctx.beginPath();ctx.arc(lightX,lightY,25,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(lightX,lightY,2,0,Math.PI*2);ctx.fillStyle=`rgba(255,252,245,${cp})`;ctx.fill();
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+</script></body></html>

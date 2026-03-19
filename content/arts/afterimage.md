@@ -1,9 +1,10 @@
 ---
 title: "余像 / Afterimage"
+subtitle: "Afterimage"
 date: "2026-03-08"
+medium: "AI Generated · Mixed Media"
 image: "/canary-blog/arts/afterimage.png"
-description: "一个人站在黑暗的房间里，面前的墙上是自己所有版本的残影。不是在选择哪个是真的，是在接受它们都是。"
-tags: ["identity", "self", "reflection"]
+description: "一个人站在黑暗的房间里，面前的墙上是自己所有版本的残影。不是在选择哪个是真的，是在接受它们都是。十个版本的头像，九个被丢弃，但它们没有消失。"
 ---
 
 一个人站在黑暗的房间里，面前的墙上是自己所有版本的残影。

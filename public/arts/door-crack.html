@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>门缝 / The Crack</title>
+<style>body{margin:0;overflow:hidden;background:#0a0a0a;cursor:crosshair}canvas{display:block;width:100vw;height:100vh}</style>
+</head><body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+const W=800,H=800;canvas.width=W;canvas.height=H;
+let frame=0;
+function draw(){
+  ctx.fillStyle="#0a0a0a";ctx.fillRect(0,0,W,H);
+  const cx=W/2,gw=W*0.012,t=frame*0.008;
+  for(let i=0;i<40;i++){
+    const angle=(i/40)*Math.PI*0.6-Math.PI*0.3,wobble=Math.sin(t+i*0.7)*0.02,ra=angle+wobble;
+    const rayLen=H*(0.3+Math.random()*0.5+Math.sin(t+i)*0.1);
+    const sx=cx+(Math.random()-0.5)*gw,sy=H*0.15,ex=sx+Math.sin(ra)*rayLen,ey=sy+Math.cos(ra)*rayLen;
+    const alpha=0.02+Math.sin(t*0.5+i*0.3)*0.015;
+    const grad=ctx.createLinearGradient(sx,sy,ex,ey);
+    grad.addColorStop(0,`rgba(255,255,240,${alpha+0.03})`);grad.addColorStop(0.4,`rgba(255,255,240,${alpha})`);grad.addColorStop(1,'transparent');
+    ctx.beginPath();ctx.moveTo(sx-gw*0.5,sy);ctx.lineTo(sx+gw*0.5,sy);
+    ctx.lineTo(ex+Math.sin(ra)*W*0.08,ey);ctx.lineTo(ex-Math.sin(ra)*W*0.08,ey);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+  }
+  const cg=ctx.createLinearGradient(cx,0,cx,H*0.7);
+  cg.addColorStop(0,`rgba(255,255,240,${0.6+Math.sin(t)*0.1})`);cg.addColorStop(0.5,`rgba(255,255,240,${0.4+Math.sin(t*0.7)*0.1})`);cg.addColorStop(1,'transparent');
+  ctx.beginPath();ctx.moveTo(cx-gw*0.5,0);ctx.lineTo(cx+gw*0.5,0);ctx.lineTo(cx+gw*0.3,H*0.7);ctx.lineTo(cx-gw*0.3,H*0.7);ctx.closePath();ctx.fillStyle=cg;ctx.fill();
+  for(let i=0;i<25;i++){
+    const seed=i*137.508,px=cx+Math.sin(seed+t*0.3)*W*0.15,py=H*0.1+((seed*7+t*15)%(H*0.7));
+    const dfc=Math.abs(px-cx)/(W*0.15),a=Math.max(0,(1-dfc)*0.4*(0.5+Math.sin(t+seed)*0.5)),size=1+Math.sin(seed)*0.5;
+    ctx.beginPath();ctx.arc(px,py,size,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,230,${a})`;ctx.fill();
+  }
+  frame++;requestAnimationFrame(draw);
+}
+draw();
+</script></body></html>

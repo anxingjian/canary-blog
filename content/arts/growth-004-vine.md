@@ -1,11 +1,12 @@
 ---
 title: "藤蔓 / Vine"
+subtitle: "Vine"
 date: "2026-03-19"
-series: "growth"
+medium: "Canvas API · Generative · Growth #4"
+series: "生长 / Growth"
 seriesIndex: 4
+htmlFile: "vine.html"
 description: "攀附的力量——不是暴力的生长，是柔软的坚持。藤蔓从灰色网格的裂缝中伸出，沿着秩序的骨架向上攀爬，逐渐覆盖、交织、瓦解。"
-tech: "Canvas 2D, 曲线生长系统, 分支算法"
-colors: ["#1a4a2a", "#2d5a3a", "#4a8c5c", "#c4756e", "#1e1e1e"]
 ---
 
 藤蔓从底部裂缝钻出，沿灰色网格向上攀爬。主干蛇行上升，分支探向两侧，偶尔开出几朵小花。

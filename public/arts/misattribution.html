@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>错位 / Misattribution</title>
+<style>body{margin:0;overflow:hidden;background:#0c0c0c}canvas{display:block;width:100vw;height:100vh}</style>
+</head><body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+const W=800,H=800;canvas.width=W;canvas.height=H;
+const COLS=16,ROWS=16,CELL_W=W/COLS,CELL_H=H/ROWS;
+const WARM=[[180,130,80],[160,95,55],[140,110,75],[120,80,50]];
+const COOL=[[70,110,140],[80,130,150],[60,90,120],[90,120,130]];
+const cells=[];
+for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+  const warmWeight=1-(r/ROWS*0.5+c/COLS*0.5);const isWarm=warmWeight>0.5;
+  const palette=isWarm?WARM:COOL;const homeColor=palette[Math.floor(Math.random()*palette.length)];
+  const displaced=Math.random()<0.15;const wrongPalette=isWarm?COOL:WARM;
+  const currentColor=displaced?wrongPalette[Math.floor(Math.random()*wrongPalette.length)]:[...homeColor];
+  cells.push({row:r,col:c,homeColor,currentColor,displaced,
+    displaceDx:displaced?(Math.random()-0.5)*CELL_W*0.3:0,
+    displaceDy:displaced?(Math.random()-0.5)*CELL_H*0.3:0,
+    phase:Math.random()*Math.PI*2,driftSpeed:0.3+Math.random()*0.7,
+    opacity:displaced?0.6+Math.random()*0.3:0.85+Math.random()*0.15});
+}
+let time=0;
+function animate(){
+  time+=0.008;ctx.fillStyle="#0c0c0c";ctx.fillRect(0,0,W,H);
+  for(const cell of cells){
+    let x=cell.col*CELL_W,y=cell.row*CELL_H;
+    if(cell.displaced){x+=cell.displaceDx+Math.sin(time*cell.driftSpeed+cell.phase)*3;y+=cell.displaceDy+Math.cos(time*cell.driftSpeed*0.7+cell.phase)*3;}
+    const gap=2,col=cell.currentColor;let alpha=cell.opacity;
+    if(cell.displaced)alpha*=0.8+0.2*Math.sin(time*2+cell.phase);
+    ctx.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},${alpha})`;
+    ctx.fillRect(x+gap,y+gap,CELL_W-gap*2,CELL_H-gap*2);
+    if(cell.displaced){const home=cell.homeColor;const ba=0.15+0.1*Math.sin(time*1.5+cell.phase+1);
+      ctx.strokeStyle=`rgba(${home[0]},${home[1]},${home[2]},${ba})`;ctx.lineWidth=0.5;
+      ctx.strokeRect(x+gap+1,y+gap+1,CELL_W-gap*2-2,CELL_H-gap*2-2);}
+  }
+  ctx.strokeStyle="rgba(255,255,255,0.03)";ctx.lineWidth=0.5;
+  for(let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,r*CELL_H);ctx.lineTo(W,r*CELL_H);ctx.stroke();}
+  for(let c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(c*CELL_W,0);ctx.lineTo(c*CELL_W,H);ctx.stroke();}
+  ctx.fillStyle="rgba(255,255,255,0.15)";ctx.font="11px 'Space Mono',monospace";ctx.textAlign="right";
+  ctx.fillText("错位 · misattribution",W-20,H-20);
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+</script></body></html>

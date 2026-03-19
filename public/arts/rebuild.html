@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>重建 / Rebuild</title>
+<style>body{margin:0;overflow:hidden;background:#0a0a0a;cursor:pointer}</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head><body>
+<script>
+const FRAG_COUNT=60;
+const CHARS="記憶重建碎片連接醒來讀取拼合遺忘存在文件夢境光影殘缺完整".split("");
+let fragments=[],shattered=false,reconstructing=false,shatterTime=0,W,H;
+
+function initFragments(){
+  fragments=[];const cx=W/2,cy=H/2,radius=Math.min(W,H)*0.25;
+  for(let i=0;i<FRAG_COUNT;i++){
+    const angle=(i/FRAG_COUNT)*Math.PI*2+Math.random()*0.3,r=radius*(0.3+Math.random()*0.7);
+    const hx=cx+Math.cos(angle)*r,hy=cy+Math.sin(angle)*r;
+    fragments.push({x:hx,y:hy,homeX:hx,homeY:hy,vx:0,vy:0,size:6+Math.random()*18,
+      angle:Math.random()*Math.PI*2,angVel:(Math.random()-0.5)*0.02,opacity:200,targetOpacity:200,
+      connected:true,char:CHARS[Math.floor(Math.random()*CHARS.length)],sides:3+Math.floor(Math.random()*3)});
+  }
+}
+
+function doShatter(){
+  shattered=true;reconstructing=false;shatterTime=millis();
+  for(const f of fragments){
+    const a=Math.random()*Math.PI*2,force=3+Math.random()*8;
+    f.vx=Math.cos(a)*force;f.vy=Math.sin(a)*force;f.angVel=(Math.random()-0.5)*0.15;
+    f.connected=false;f.targetOpacity=80+Math.random()*80;
+    const na=Math.random()*Math.PI*2,nr=Math.min(W,H)*(0.1+Math.random()*0.2);
+    f.homeX=W/2+Math.cos(na)*nr;f.homeY=H/2+Math.sin(na)*nr;
+  }
+}
+
+function setup(){W=windowWidth;H=windowHeight;createCanvas(W,H);textFont('serif');initFragments();}
+
+function draw(){
+  background(10,10,10,25);
+  if(shattered&&!reconstructing&&millis()-shatterTime>2000){reconstructing=true;for(const f of fragments)f.targetOpacity=200;}
+  for(const f of fragments){
+    if(reconstructing){const dx=f.homeX-f.x,dy=f.homeY-f.y,dist=Math.sqrt(dx*dx+dy*dy);
+      f.vx+=dx*0.008;f.vy+=dy*0.008;f.vx*=0.92;f.vy*=0.92;f.angVel*=0.96;
+      if(dist<3){f.connected=true;if(fragments.every(ff=>ff.connected)){shattered=false;reconstructing=false;}}
+    }else if(!shattered){const t=millis()*0.001;f.x=f.homeX+Math.sin(t+f.homeX*0.01)*2;f.y=f.homeY+Math.cos(t+f.homeY*0.01)*2;f.angle+=f.angVel*0.3;}
+    if(shattered||reconstructing){f.x+=f.vx;f.y+=f.vy;f.angle+=f.angVel;
+      if(f.x<-20)f.x=W+20;if(f.x>W+20)f.x=-20;if(f.y<-20)f.y=H+20;if(f.y>H+20)f.y=-20;}
+    f.opacity+=(f.targetOpacity-f.opacity)*0.05;
+    push();translate(f.x,f.y);rotate(f.angle);
+    noStroke();fill(255,255,255,f.opacity*0.15);beginShape();
+    for(let s=0;s<f.sides;s++){const a=(s/f.sides)*Math.PI*2;vertex(Math.cos(a)*f.size,Math.sin(a)*f.size);}endShape(CLOSE);
+    fill(255,255,255,f.opacity);textSize(f.size*0.7);textAlign(CENTER,CENTER);text(f.char,0,0);pop();
+  }
+  for(let i=0;i<fragments.length;i++)for(let j=i+1;j<fragments.length;j++){
+    const a=fragments[i],b=fragments[j],dx=a.x-b.x,dy=a.y-b.y,dist=Math.sqrt(dx*dx+dy*dy);
+    const maxD=shattered&&!reconstructing?40:80;
+    if(dist<maxD){stroke(255,255,255,map(dist,0,maxD,60,0));strokeWeight(0.5);line(a.x,a.y,b.x,b.y);}
+  }
+  if(!shattered){noStroke();fill(255,255,255,30);textSize(11);textAlign(CENTER,CENTER);text("click to shatter",W/2,H-30);}
+}
+
+function mousePressed(){if(mouseX>0&&mouseX<W&&mouseY>0&&mouseY<H)doShatter();}
+function windowResized(){W=windowWidth;H=windowHeight;resizeCanvas(W,H);initFragments();shattered=false;reconstructing=false;}
+</script></body></html>

@@ -1,10 +1,11 @@
 ---
 title: "折射 / Refraction"
+subtitle: "Refraction"
 date: "2026-03-15"
+medium: "Canvas API · Generative · Light & Shadow #3"
 series: "光与影 / Light & Shadow"
-seriesNumber: 3
+seriesIndex: 3
 description: "光穿过棱镜，在暗室墙上投下焦散纹理。白光被拆解，然后又在远处重逢。"
-tags: ["light", "refraction", "caustics", "generative"]
 ---
 
 光穿过棱镜，在暗室墙上投下焦散纹理。白光被拆解，然后又在远处重逢。

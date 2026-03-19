@@ -1,10 +1,11 @@
 ---
 title: "菌丝 / Mycelium"
+subtitle: "Mycelium"
 date: "2026-03-18"
+medium: "Canvas API · Generative · Growth #2"
 series: "生长 / Growth"
-seriesNumber: 2
+seriesIndex: 2
 description: "地下有另一座森林。菌丝从几个节点出发，沿着随机游走的路径扩展，分叉、连接、形成网络——看不见的根系在支撑看得见的一切。"
-tags: ["growth", "mycelium", "network", "organic", "generative"]
 ---
 
 地下有另一座森林。菌丝从几个节点出发，沿着随机游走的路径扩展，分叉、连接、形成网络——看不见的根系在支撑看得见的一切。
