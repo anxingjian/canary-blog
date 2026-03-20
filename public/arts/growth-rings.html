@@ -68,6 +68,7 @@ function generateRings() {
 // === FISH ===
 // Flat illustration koi — inspired by the pond reference
 class Fish {
+  static colorIndex = 0;
   constructor() {
     this.reset();
   }
@@ -91,14 +92,13 @@ class Fish {
     this.turnTimer = 0;
     this.life = random(600, 1200);
 
-    // Each fish gets a random color scheme
-    const schemes = [
-      { body: [220, 80, 60], spots: [255, 255, 255], fin: [200, 60, 50] },   // red & white koi
-      { body: [30, 30, 30], spots: [255, 255, 255], fin: [50, 50, 50] },      // black koi
-      { body: [230, 160, 50], spots: [255, 240, 200], fin: [210, 130, 30] },  // gold koi
-      { body: [220, 100, 80], spots: [240, 200, 170], fin: [200, 70, 60] },   // warm red
+    // Fixed color schemes: first fish black&white, second gold
+    const fixedSchemes = [
+      { body: [30, 30, 30], spots: [255, 255, 255], fin: [50, 50, 50] },      // black & white
+      { body: [230, 160, 50], spots: [255, 240, 200], fin: [210, 130, 30] },  // gold
     ];
-    this.colors = random(schemes);
+    this.colors = fixedSchemes[Fish.colorIndex % 2];
+    Fish.colorIndex++;
   }
 
   update(t) {
