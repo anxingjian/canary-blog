@@ -66,6 +66,7 @@ function generateRings() {
 }
 
 // === FISH ===
+// Flat illustration koi — inspired by the pond reference
 class Fish {
   constructor() {
     this.reset();
@@ -79,28 +80,37 @@ class Fish {
 
     const outerR = rings[rings.length - 1].outerR;
     const a = random(TWO_PI);
-    const r = random(outerR * 0.15, outerR * 0.8);
+    const r = random(outerR * 0.1, outerR * 0.8);
     this.x = cx + cos(a) * r;
     this.y = cy + sin(a) * r;
 
     this.heading = random(TWO_PI);
-    this.speed = random(0.35, 0.6);
+    this.speed = random(0.3, 0.55);
     this.turnSpeed = 0;
     this.turnTarget = 0;
     this.turnTimer = 0;
-    this.life = random(500, 900);
+    this.life = random(600, 1200);
+
+    // Each fish gets a random color scheme
+    const schemes = [
+      { body: [220, 80, 60], spots: [255, 255, 255], fin: [200, 60, 50] },   // red & white koi
+      { body: [30, 30, 30], spots: [255, 255, 255], fin: [50, 50, 50] },      // black koi
+      { body: [230, 160, 50], spots: [255, 240, 200], fin: [210, 130, 30] },  // gold koi
+      { body: [220, 100, 80], spots: [240, 200, 170], fin: [200, 70, 60] },   // warm red
+    ];
+    this.colors = random(schemes);
   }
 
   update(t) {
     this.age++;
-    if (this.opacity < 180) this.opacity = min(180, this.opacity + 3);
+    if (this.opacity < 200) this.opacity = min(200, this.opacity + 2.5);
 
     this.turnTimer--;
     if (this.turnTimer <= 0) {
-      this.turnTarget = random(-0.02, 0.02);
-      this.turnTimer = floor(random(80, 200));
+      this.turnTarget = random(-0.015, 0.015);
+      this.turnTimer = floor(random(100, 250));
     }
-    this.turnSpeed = lerp(this.turnSpeed, this.turnTarget, 0.05);
+    this.turnSpeed = lerp(this.turnSpeed, this.turnTarget, 0.04);
     this.heading += this.turnSpeed;
 
     this.x += cos(this.heading) * this.speed;
@@ -114,7 +124,7 @@ class Fish {
       let diff = toCenter - this.heading;
       while (diff > PI) diff -= TWO_PI;
       while (diff < -PI) diff += TWO_PI;
-      this.heading += diff * 0.06;
+      this.heading += diff * 0.05;
     }
 
     if (this.age > this.life) {
@@ -126,49 +136,73 @@ class Fish {
   draw(t) {
     const s = this.size;
     const alpha = this.opacity;
-    const tailWag = sin(t * CONFIG.breathSpeed * 7 + this.phaseOff) * 0.35;
+    const c = this.colors;
+    const tailWag = sin(t * CONFIG.breathSpeed * 6 + this.phaseOff);
 
     push();
     translate(this.x, this.y);
     rotate(this.heading);
-
     noStroke();
 
-    // soft glow/wash around body
-    fill(220, 200, 160, alpha * 0.06);
-    ellipse(0, 0, s * 4, s * 2);
-
-    // body — simple smooth teardrop, head on right
-    fill(225, 208, 168, alpha * 0.5);
+    // === TAIL — flowing ribbon ===
+    const tailAngle = tailWag * 0.5;
+    fill(c.fin[0], c.fin[1], c.fin[2], alpha * 0.7);
+    push();
+    translate(-s * 0.7, 0);
+    rotate(tailAngle);
     beginShape();
-    vertex(s * 0.9, 0); // nose
-    bezierVertex(s * 0.5, -s * 0.38, -s * 0.2, -s * 0.42, -s * 0.6, -s * 0.12);
-    bezierVertex(-s * 0.7, 0, -s * 0.7, 0, -s * 0.6, s * 0.12);
-    bezierVertex(-s * 0.2, s * 0.42, s * 0.5, s * 0.38, s * 0.9, 0);
+    vertex(0, 0);
+    bezierVertex(-s * 0.3, -s * 0.35, -s * 0.6, -s * 0.5, -s * 0.8, -s * 0.3);
+    vertex(-s * 0.5, 0);
+    vertex(-s * 0.8, s * 0.3);
+    bezierVertex(-s * 0.6, s * 0.5, -s * 0.3, s * 0.35, 0, 0);
     endShape(CLOSE);
+    pop();
 
-    // tail — two flowing strokes
-    const tx = -s * 0.6;
-    fill(215, 195, 150, alpha * 0.4);
-    beginShape();
-    vertex(tx, 0);
-    bezierVertex(tx - s * 0.3, -s * 0.1, tx - s * 0.5, -s * (0.3 + tailWag), tx - s * 0.7, -s * (0.4 + tailWag));
-    bezierVertex(tx - s * 0.4, -s * 0.05, tx - s * 0.4, s * 0.05, tx - s * 0.7, s * (0.4 - tailWag));
-    bezierVertex(tx - s * 0.5, s * (0.3 - tailWag), tx - s * 0.3, s * 0.1, tx, 0);
-    endShape(CLOSE);
+    // === BODY — simple oval ===
+    fill(c.body[0], c.body[1], c.body[2], alpha);
+    ellipse(0, 0, s * 1.8, s * 0.9);
 
-    // dorsal fin — tiny arc
-    stroke(210, 190, 145, alpha * 0.3);
-    strokeWeight(s * 0.04);
-    noFill();
-    arc(s * 0.1, -s * 0.35, s * 0.5, s * 0.3, PI, TWO_PI);
+    // === SPOTS — random patches ===
+    fill(c.spots[0], c.spots[1], c.spots[2], alpha * 0.8);
+    ellipse(s * 0.15, -s * 0.05, s * 0.5, s * 0.35);
+    ellipse(-s * 0.25, s * 0.08, s * 0.35, s * 0.25);
 
-    // eye
-    noStroke();
-    fill(30, 22, 15, alpha * 0.85);
-    circle(s * 0.55, -s * 0.06, s * 0.14);
-    fill(255, 248, 230, alpha * 0.35);
-    circle(s * 0.57, -s * 0.08, s * 0.04);
+    // === DORSAL FIN — tiny bump ===
+    fill(c.fin[0], c.fin[1], c.fin[2], alpha * 0.5);
+    ellipse(s * 0.05, -s * 0.38, s * 0.4, s * 0.2);
+
+    // === PECTORAL FINS — small side fins ===
+    const finFlap = sin(t * CONFIG.breathSpeed * 4 + this.phaseOff) * 0.15;
+    fill(c.fin[0], c.fin[1], c.fin[2], alpha * 0.4);
+    push();
+    translate(s * 0.2, s * 0.3);
+    rotate(0.4 + finFlap);
+    ellipse(0, 0, s * 0.45, s * 0.18);
+    pop();
+    push();
+    translate(s * 0.2, -s * 0.3);
+    rotate(-0.4 - finFlap);
+    ellipse(0, 0, s * 0.45, s * 0.18);
+    pop();
+
+    // === HEAD highlight ===
+    fill(c.body[0] + 30, c.body[1] + 30, c.body[2] + 30, alpha * 0.4);
+    ellipse(s * 0.55, 0, s * 0.5, s * 0.45);
+
+    // === EYES — big round cute eyes ===
+    // white
+    fill(255, 255, 255, alpha);
+    circle(s * 0.6, -s * 0.1, s * 0.22);
+    circle(s * 0.6, s * 0.1, s * 0.22);
+    // pupil
+    fill(10, 10, 10, alpha);
+    circle(s * 0.63, -s * 0.1, s * 0.12);
+    circle(s * 0.63, s * 0.1, s * 0.12);
+    // highlight
+    fill(255, 255, 255, alpha * 0.8);
+    circle(s * 0.65, -s * 0.12, s * 0.04);
+    circle(s * 0.65, s * 0.08, s * 0.04);
 
     pop();
   }
