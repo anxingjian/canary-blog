@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>年轮 / Growth Rings</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #1a1410; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const W = canvas.width = Math.min(window.innerWidth, window.innerHeight, 900);
+const H = canvas.height = W;
+const cx = W / 2, cy = H / 2;
+
+// Warm wood palette — analogous browns, from heartwood to sapwood
+const heartwood = [28, 18, 10];    // deep dark center
+const sapwood = [210, 185, 145];   // outer light rings
+const scarColor = [45, 25, 12];    // wound/scar dark bands
+const resinColor = [160, 110, 50]; // amber resin accent
+
+// Perlin-like noise (simplex approx)
+function hash(x, y) {
+  let h = x * 374761393 + y * 668265263;
+  h = (h ^ (h >> 13)) * 1274126177;
+  return ((h ^ (h >> 16)) & 0x7fffffff) / 0x7fffffff;
+}
+
+function noise2D(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const a = hash(ix, iy), b = hash(ix + 1, iy);
+  const c = hash(ix, iy + 1), d = hash(ix + 1, iy + 1);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+
+function fbm(x, y, octaves = 4) {
+  let val = 0, amp = 0.5, freq = 1;
+  for (let i = 0; i < octaves; i++) {
+    val += amp * noise2D(x * freq, y * freq);
+    amp *= 0.5; freq *= 2;
+  }
+  return val;
+}
+
+// Generate ring data
+const totalRings = 65;
+const maxRadius = W * 0.42;
+const rings = [];
+
+// Not perfectly even — some years grow more than others
+let r = 8;
+for (let i = 0; i < totalRings && r < maxRadius; i++) {
+  const growth = 2.5 + Math.random() * 5; // variable growth years
+  const isScar = Math.random() < 0.12;     // ~12% chance of scar/stress year
+  const isWide = Math.random() < 0.15;     // good years
+  const width = isWide ? growth * 1.8 : (isScar ? growth * 0.4 : growth);
+  
+  rings.push({
+    innerR: r,
+    outerR: r + width,
+    isScar,
+    age: i / totalRings, // 0=center, 1=outer
+    noiseOffset: Math.random() * 100,
+  });
+  r += width;
+}
+
+// Animation state
+let currentRing = 0;
+let ringProgress = 0;
+const drawSpeed = 0.035;
+
+// Background
+ctx.fillStyle = '#1a1410';
+ctx.fillRect(0, 0, W, H);
+
+function lerpColor(c1, c2, t) {
+  return c1.map((v, i) => Math.round(v + (c2[i] - v) * t));
+}
+
+function drawRing(ring, progress) {
+  const steps = 360;
+  const maxAngle = Math.PI * 2 * progress;
+  
+  for (let s = 0; s < steps * progress; s++) {
+    const angle = (s / steps) * Math.PI * 2;
+    if (angle > maxAngle) break;
+    
+    const nx = Math.cos(angle) * 3 + ring.noiseOffset;
+    const ny = Math.sin(angle) * 3 + ring.noiseOffset;
+    const wobble = fbm(nx, ny) * 8 - 4; // ring irregularity
+    
+    const innerR = ring.innerR + wobble;
+    const outerR = ring.outerR + wobble * 0.8;
+    
+    // Color: heartwood→sapwood gradient with variation
+    let baseColor;
+    if (ring.isScar) {
+      baseColor = lerpColor(scarColor, heartwood, 0.3 + fbm(nx * 2, ny * 2) * 0.4);
+    } else {
+      baseColor = lerpColor(heartwood, sapwood, ring.age * 0.85);
+      // Subtle hue variation within ring
+      const hueShift = fbm(nx * 1.5, ny * 1.5) * 15 - 7;
+      baseColor[0] = Math.min(255, Math.max(0, baseColor[0] + hueShift));
+      baseColor[1] = Math.min(255, Math.max(0, baseColor[1] + hueShift * 0.7));
+    }
+    
+    // Early/latewood within each ring
+    const ringPos = (angle / (Math.PI * 2) + ring.age) % 1;
+    const earlyLate = Math.sin(ringPos * Math.PI * 2 * 3 + ring.noiseOffset) * 0.5 + 0.5;
+    const darken = earlyLate * 20;
+    
+    const r = Math.max(0, baseColor[0] - darken);
+    const g = Math.max(0, baseColor[1] - darken);
+    const b = Math.max(0, baseColor[2] - darken * 0.5);
+    
+    // Draw wedge
+    const a1 = angle;
+    const a2 = angle + (Math.PI * 2 / steps) * 1.2; // slight overlap
+    
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(0.5, innerR), a1, a2);
+    ctx.arc(cx, cy, Math.max(0.5, outerR), a2, a1, true);
+    ctx.closePath();
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fill();
+  }
+  
+  // Ring boundary — subtle dark line
+  if (progress >= 1) {
+    ctx.beginPath();
+    for (let s = 0; s <= steps; s++) {
+      const angle = (s / steps) * Math.PI * 2;
+      const nx = Math.cos(angle) * 3 + ring.noiseOffset;
+      const ny = Math.sin(angle) * 3 + ring.noiseOffset;
+      const wobble = fbm(nx, ny) * 8 - 4;
+      const pr = ring.outerR + wobble * 0.8;
+      const px = cx + Math.cos(angle) * pr;
+      const py = cy + Math.sin(angle) * pr;
+      s === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(${scarColor.join(',')}, 0.25)`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+}
+
+// Draw radial cracks (medullary rays)
+function drawRays() {
+  const numRays = 8 + Math.floor(Math.random() * 6);
+  const outerR = rings[rings.length - 1].outerR;
+  
+  for (let i = 0; i < numRays; i++) {
+    const angle = (i / numRays) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+    const length = outerR * (0.3 + Math.random() * 0.65);
+    const startR = Math.random() * 10;
+    
+    ctx.beginPath();
+    const steps = 40;
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const r = startR + t * length;
+      const wobble = Math.sin(t * 8 + i) * 1.5;
+      const px = cx + Math.cos(angle + wobble * 0.02) * r;
+      const py = cy + Math.sin(angle + wobble * 0.02) * r;
+      s === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = `rgba(${resinColor.join(',')}, ${0.08 + Math.random() * 0.1})`;
+    ctx.lineWidth = 0.5 + Math.random() * 1;
+    ctx.stroke();
+  }
+}
+
+// Draw pith (center dot)
+function drawPith() {
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 10);
+  grad.addColorStop(0, `rgb(${scarColor.join(',')})`);
+  grad.addColorStop(1, `rgba(${heartwood.join(',')}, 0)`);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function animate() {
+  if (currentRing < rings.length) {
+    ringProgress += drawSpeed;
+    drawRing(rings[currentRing], Math.min(ringProgress, 1));
+    
+    if (ringProgress >= 1) {
+      ringProgress = 0;
+      currentRing++;
+    }
+    requestAnimationFrame(animate);
+  } else {
+    // Final touches
+    drawRays();
+    drawPith();
+    
+    // Subtle outer bark shadow
+    const grad = ctx.createRadialGradient(cx, cy, maxRadius * 0.85, cx, cy, maxRadius * 1.1);
+    grad.addColorStop(0, 'rgba(26,20,16,0)');
+    grad.addColorStop(1, 'rgba(26,20,16,0.8)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    
+    // Very subtle vignette
+    const vig = ctx.createRadialGradient(cx, cy, W * 0.3, cx, cy, W * 0.7);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.3)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+drawPith();
+animate();
+</script>
+</body>
+</html>
