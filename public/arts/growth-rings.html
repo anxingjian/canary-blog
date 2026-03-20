@@ -2,238 +2,315 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>年轮 / Growth Rings — Growth #5</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>年轮 / Growth Rings</title>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <style>
   * { margin: 0; padding: 0; }
-  html, body { overflow: hidden; background: #0c0a08; height: 100%; }
-  svg { display: block; width: 100vw; height: 100vh; }
-
-  .ring {
-    fill: none;
-    stroke-linecap: round;
-    animation: breathe var(--dur) ease-in-out infinite alternate;
-    animation-delay: var(--delay);
-  }
-
-  @keyframes breathe {
-    0% { r: var(--r-lo); opacity: var(--a-lo); }
-    100% { r: var(--r-hi); opacity: var(--a-hi); }
-  }
-
-  .ray {
-    stroke: hsla(35, 25%, 45%, 0.035);
-    stroke-width: 0.4;
-  }
-
-  #fish-group {
-    offset-path: path(var(--swim-path));
-    offset-rotate: auto;
-    animation: swim var(--swim-dur) linear infinite;
-  }
-
-  @keyframes swim {
-    from { offset-distance: 0%; }
-    to { offset-distance: 100%; }
-  }
-
-  .fish-body {
-    fill: hsla(35, 50%, 65%, 0.6);
-  }
-  .fish-tail {
-    fill: hsla(30, 45%, 55%, 0.5);
-  }
-  .fish-eye {
-    fill: hsla(25, 20%, 25%, 0.8);
-  }
-  .fish-fin {
-    fill: hsla(35, 40%, 60%, 0.35);
-  }
-
-  #fish-group {
-    animation: swimPath 45s linear infinite;
-    filter: drop-shadow(0 0 3px hsla(35, 50%, 65%, 0.3));
-  }
+  body { background: #1a1410; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+  canvas { display: block; }
 </style>
 </head>
 <body>
-<svg id="svg" viewBox="0 0 800 800" preserveAspectRatio="xMidYMid meet">
-  <defs>
-    <radialGradient id="cg">
-      <stop offset="0%" stop-color="rgba(45,28,12,0.35)"/>
-      <stop offset="100%" stop-color="rgba(10,9,8,0)"/>
-    </radialGradient>
-  </defs>
-</svg>
-
 <script>
-const svg = document.getElementById('svg');
-const NS = 'http://www.w3.org/2000/svg';
-const cx = 400, cy = 400;
+// === CONFIG ===
+const CONFIG = {
+  totalRings: 55,
+  breathAmp: 3.5,        // how much rings expand/contract
+  breathSpeed: 0.008,    // breathing tempo
+  fishCount: 3,
+  fishSize: 6,
+  bgColor: [26, 20, 16],
+  heartwood: [28, 18, 10],
+  sapwood: [210, 185, 145],
+  scarColor: [45, 25, 12],
+  resinColor: [160, 110, 50],
+  fishColor: [230, 200, 140],
+};
 
-let seed = 32005;
-function rand() { seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
+let rings = [];
+let fishes = [];
+let W, cx, cy, maxRadius;
+let pg; // offscreen buffer for static ring texture
 
-// Rays
-for (let i = 0; i < 18; i++) {
-  const a = rand() * Math.PI * 2;
-  const len = 80 + rand() * 280;
-  const line = document.createElementNS(NS, 'line');
-  line.setAttribute('x1', cx + Math.cos(a) * 8);
-  line.setAttribute('y1', cy + Math.sin(a) * 8);
-  line.setAttribute('x2', cx + Math.cos(a) * len);
-  line.setAttribute('y2', cy + Math.sin(a) * len);
-  line.setAttribute('class', 'ray');
-  svg.appendChild(line);
+// === NOISE HELPERS ===
+function fbm(x, y, octaves = 4) {
+  let val = 0, amp = 0.5, freq = 1;
+  for (let i = 0; i < octaves; i++) {
+    val += amp * noise(x * freq, y * freq);
+    amp *= 0.5; freq *= 2;
+  }
+  return val;
 }
 
-// Center glow
-const glow = document.createElementNS(NS, 'circle');
-glow.setAttribute('cx', cx); glow.setAttribute('cy', cy);
-glow.setAttribute('r', 35); glow.setAttribute('fill', 'url(#cg)');
-svg.appendChild(glow);
+// === RING DATA ===
+function generateRings() {
+  rings = [];
+  let r = 8;
+  for (let i = 0; i < CONFIG.totalRings && r < maxRadius; i++) {
+    const growth = 2.5 + random(5);
+    const isScar = random() < 0.12;
+    const isWide = random() < 0.15;
+    const w = isWide ? growth * 1.8 : (isScar ? growth * 0.4 : growth);
+    rings.push({
+      innerR: r,
+      outerR: r + w,
+      midR: r + w / 2,
+      isScar,
+      age: i / CONFIG.totalRings,
+      noiseOff: random(100),
+      breathPhase: random(TWO_PI), // each ring breathes slightly out of phase
+    });
+    r += w;
+  }
+}
 
-// Rings — fewer, more spaced out for fish to swim through
-const rings = [];
-let rAccum = 18;
-
-for (let i = 0; i < 25; i++) {
-  const t = i / 25;
-  const isTrauma = rand() < 0.1;
-  const gap = isTrauma ? 5 + rand() * 4 : 10 + rand() * 14;
-  rAccum += gap;
-  if (rAccum > 370) break;
-
-  const h = 25 + t * 15 + (rand() - 0.5) * 8;
-  const s = 30 + (1 - t) * 15;
-  const l = 18 + t * 28;
-  const sw = isTrauma ? 0.3 + rand() * 0.4 : 0.6 + rand() * 1.5;
-
-  // Dash pattern
-  const circ = 2 * Math.PI * rAccum;
-  let dash;
-  if (isTrauma) {
-    dash = `${2 + rand() * 4} ${3 + rand() * 5}`;
-  } else {
-    const d1 = 20 + rand() * 80;
-    const g1 = 1.5 + rand() * 3;
-    dash = `${d1} ${g1}`;
+// === FISH ===
+class Fish {
+  constructor() {
+    this.reset();
   }
 
-  // Breathing: radius oscillates ± a few px
-  const breathAmp = 1.5 + rand() * 3;
-  const rLo = rAccum - breathAmp;
-  const rHi = rAccum + breathAmp;
-  const aLo = isTrauma ? 0.15 : 0.25 + rand() * 0.15;
-  const aHi = isTrauma ? 0.35 : 0.5 + rand() * 0.3;
-  const dur = 5 + rand() * 8;
-  const delay = rand() * -12;
+  reset() {
+    // pick a ring gap to swim in
+    const ri = floor(random(5, rings.length - 3));
+    const ring = rings[ri];
+    this.swimR = (ring.innerR + ring.outerR) / 2;
+    this.angle = random(TWO_PI);
+    this.speed = random(0.003, 0.008) * (random() > 0.5 ? 1 : -1);
+    this.size = CONFIG.fishSize * random(0.7, 1.3);
+    this.wobbleOff = random(100);
+    this.opacity = 0;
+    this.fadeIn = true;
+    this.life = random(400, 800); // frames before fading out
+    this.age = 0;
+    this.ringAge = ring.age; // for color matching
+  }
 
-  const circle = document.createElementNS(NS, 'circle');
-  circle.setAttribute('cx', cx);
-  circle.setAttribute('cy', cy);
-  circle.setAttribute('r', rAccum);
-  circle.setAttribute('class', 'ring');
-  circle.setAttribute('stroke', `hsl(${h}, ${s}%, ${l}%)`);
-  circle.setAttribute('stroke-width', sw);
-  circle.setAttribute('stroke-dasharray', dash);
-  circle.setAttribute('stroke-dashoffset', rand() * circ);
-  circle.style.setProperty('--r-lo', rLo);
-  circle.style.setProperty('--r-hi', rHi);
-  circle.style.setProperty('--a-lo', aLo);
-  circle.style.setProperty('--a-hi', aHi);
-  circle.style.setProperty('--dur', dur + 's');
-  circle.style.setProperty('--delay', delay + 's');
+  update(t) {
+    this.angle += this.speed;
+    this.age++;
 
-  svg.appendChild(circle);
-  rings.push({ r: rAccum, t });
+    // fade in/out
+    if (this.fadeIn && this.opacity < 200) {
+      this.opacity = min(200, this.opacity + 3);
+    }
+    if (this.age > this.life) {
+      this.opacity -= 3;
+      if (this.opacity <= 0) this.reset();
+    }
+  }
+
+  draw(t) {
+    const wobble = sin(t * 3 + this.wobbleOff) * 1.5;
+    const r = this.swimR + wobble;
+    const x = cx + cos(this.angle) * r;
+    const y = cy + sin(this.angle) * r;
+
+    push();
+    translate(x, y);
+    rotate(this.angle + (this.speed > 0 ? HALF_PI : -HALF_PI));
+
+    // fish body — simple elegant shape
+    const s = this.size;
+    const c = CONFIG.fishColor;
+    const alpha = this.opacity;
+
+    noStroke();
+    // body
+    fill(c[0], c[1], c[2], alpha);
+    ellipse(0, 0, s * 1.2, s * 2.8);
+
+    // tail
+    const tailWag = sin(t * 8 + this.wobbleOff) * 0.3;
+    triangle(
+      -s * 0.5, s * 1.2,
+      s * 0.5, s * 1.2,
+      tailWag * s, s * 2.0
+    );
+
+    // eye
+    fill(CONFIG.bgColor[0], CONFIG.bgColor[1], CONFIG.bgColor[2], alpha);
+    circle(0, -s * 0.5, s * 0.35);
+
+    pop();
+  }
 }
 
-// Fish — small, elegant, hand-drawn feel
-// Fish swims in a spiral-ish path weaving between rings
-// Build a smooth path that spirals outward then inward
-const fishR1 = 50;  // inner orbit
-const fishR2 = 300; // outer orbit
-const pathPoints = [];
-const steps = 360;
-for (let i = 0; i <= steps; i++) {
-  const progress = i / steps;
-  // Spiral out for first half, spiral back in for second half
-  const phase = progress < 0.5 ? progress * 2 : 2 - progress * 2;
-  const r = fishR1 + (fishR2 - fishR1) * (0.5 - 0.5 * Math.cos(phase * Math.PI));
-  // Add gentle wobble to avoid perfect circle
-  const wobble = Math.sin(progress * Math.PI * 12) * 15;
-  const angle = progress * Math.PI * 4; // 2 full rotations
-  const x = cx + Math.cos(angle) * (r + wobble);
-  const y = cy + Math.sin(angle) * (r + wobble);
-  if (i === 0) pathPoints.push(`M ${x} ${y}`);
-  else pathPoints.push(`L ${x} ${y}`);
+// === DRAW STATIC RINGS TO BUFFER ===
+function drawRingsToBuffer() {
+  pg = createGraphics(W, W);
+  pg.background(CONFIG.bgColor);
+  pg.noStroke();
+
+  const steps = 360;
+
+  for (const ring of rings) {
+    for (let s = 0; s < steps; s++) {
+      const angle = (s / steps) * TWO_PI;
+      const nx = cos(angle) * 3 + ring.noiseOff;
+      const ny = sin(angle) * 3 + ring.noiseOff;
+      const wobble = fbm(nx, ny) * 8 - 4;
+
+      const innerR = max(0.5, ring.innerR + wobble);
+      const outerR = max(0.5, ring.outerR + wobble * 0.8);
+
+      let r, g, b;
+      if (ring.isScar) {
+        const t2 = 0.3 + fbm(nx * 2, ny * 2) * 0.4;
+        r = lerp(CONFIG.scarColor[0], CONFIG.heartwood[0], t2);
+        g = lerp(CONFIG.scarColor[1], CONFIG.heartwood[1], t2);
+        b = lerp(CONFIG.scarColor[2], CONFIG.heartwood[2], t2);
+      } else {
+        r = lerp(CONFIG.heartwood[0], CONFIG.sapwood[0], ring.age * 0.85);
+        g = lerp(CONFIG.heartwood[1], CONFIG.sapwood[1], ring.age * 0.85);
+        b = lerp(CONFIG.heartwood[2], CONFIG.sapwood[2], ring.age * 0.85);
+        const hueShift = fbm(nx * 1.5, ny * 1.5) * 15 - 7;
+        r = constrain(r + hueShift, 0, 255);
+        g = constrain(g + hueShift * 0.7, 0, 255);
+      }
+
+      // early/latewood darkening
+      const earlyLate = sin(((angle / TWO_PI + ring.age) % 1) * TWO_PI * 3 + ring.noiseOff) * 0.5 + 0.5;
+      const darken = earlyLate * 20;
+      r = max(0, r - darken);
+      g = max(0, g - darken);
+      b = max(0, b - darken * 0.5);
+
+      const a1 = angle;
+      const a2 = angle + (TWO_PI / steps) * 1.2;
+
+      pg.fill(r, g, b);
+      pg.beginShape();
+      // inner arc approximation
+      pg.vertex(cx + cos(a1) * innerR, cy + sin(a1) * innerR);
+      pg.vertex(cx + cos(a2) * innerR, cy + sin(a2) * innerR);
+      pg.vertex(cx + cos(a2) * outerR, cy + sin(a2) * outerR);
+      pg.vertex(cx + cos(a1) * outerR, cy + sin(a1) * outerR);
+      pg.endShape(CLOSE);
+    }
+
+    // ring boundary
+    pg.noFill();
+    pg.stroke(CONFIG.scarColor[0], CONFIG.scarColor[1], CONFIG.scarColor[2], 60);
+    pg.strokeWeight(0.5);
+    pg.beginShape();
+    for (let s = 0; s <= steps; s++) {
+      const angle = (s / steps) * TWO_PI;
+      const nx = cos(angle) * 3 + ring.noiseOff;
+      const ny = sin(angle) * 3 + ring.noiseOff;
+      const wobble = fbm(nx, ny) * 8 - 4;
+      const pr = ring.outerR + wobble * 0.8;
+      pg.vertex(cx + cos(angle) * pr, cy + sin(angle) * pr);
+    }
+    pg.endShape(CLOSE);
+    pg.noStroke();
+  }
+
+  // medullary rays
+  const numRays = 8 + floor(random(6));
+  const outerR = rings[rings.length - 1].outerR;
+  pg.noFill();
+  for (let i = 0; i < numRays; i++) {
+    const angle = (i / numRays) * TWO_PI + random(-0.15, 0.15);
+    const len = outerR * random(0.3, 0.95);
+    pg.stroke(CONFIG.resinColor[0], CONFIG.resinColor[1], CONFIG.resinColor[2], 20 + random(25));
+    pg.strokeWeight(0.5 + random(1));
+    pg.beginShape();
+    for (let s = 0; s <= 40; s++) {
+      const t = s / 40;
+      const rr = t * len;
+      const w = sin(t * 8 + i) * 0.02;
+      pg.vertex(cx + cos(angle + w) * rr, cy + sin(angle + w) * rr);
+    }
+    pg.endShape();
+  }
+
+  // pith
+  pg.noStroke();
+  for (let r = 10; r > 0; r -= 0.5) {
+    const a = map(r, 10, 0, 0, 255);
+    pg.fill(CONFIG.scarColor[0], CONFIG.scarColor[1], CONFIG.scarColor[2], a * 0.3);
+    pg.circle(cx, cy, r * 2);
+  }
+
+  // vignette
+  for (let r = W * 0.85; r < W * 1.1; r += 2) {
+    const a = map(r, W * 0.85, W * 1.1, 0, 200);
+    pg.noFill();
+    pg.stroke(CONFIG.bgColor[0], CONFIG.bgColor[1], CONFIG.bgColor[2], a);
+    pg.strokeWeight(3);
+    pg.circle(cx, cy, r * 2);
+  }
 }
-pathPoints.push('Z');
-const swimPathD = pathPoints.join(' ');
 
-// Add invisible path for offset-path
-const swimPath = document.createElementNS(NS, 'path');
-swimPath.setAttribute('id', 'swimPath');
-swimPath.setAttribute('d', swimPathD);
-swimPath.setAttribute('fill', 'none');
-swimPath.setAttribute('stroke', 'none');
-svg.appendChild(swimPath);
+// === P5 SETUP ===
+function setup() {
+  W = min(windowWidth, windowHeight, 900);
+  cx = W / 2;
+  cy = W / 2;
+  maxRadius = W * 0.42;
 
-// Fish SVG group
-const fishG = document.createElementNS(NS, 'g');
-fishG.setAttribute('id', 'fish-group');
+  createCanvas(W, W);
+  noiseSeed(42);
+  randomSeed(42);
 
-// Fish body — sleek teardrop
-const body = document.createElementNS(NS, 'path');
-body.setAttribute('d', 'M 0,-2.5 C 4,-2.5 8,-1.5 10,0 C 8,1.5 4,2.5 0,2.5 C -2,1.5 -3,0.8 -3,0 C -3,-0.8 -2,-1.5 0,-2.5 Z');
-body.setAttribute('class', 'fish-body');
-fishG.appendChild(body);
+  generateRings();
+  drawRingsToBuffer();
 
-// Tail
-const tail = document.createElementNS(NS, 'path');
-tail.setAttribute('d', 'M -3,0 C -5,-1.5 -8,-3.5 -9,-4 C -7,-1 -7,1 -9,4 C -8,3.5 -5,1.5 -3,0 Z');
-tail.setAttribute('class', 'fish-tail');
-fishG.appendChild(tail);
-
-// Dorsal fin
-const fin = document.createElementNS(NS, 'path');
-fin.setAttribute('d', 'M 3,-2.5 C 4,-5 6,-5.5 7,-4 C 7,-2.5 6,-2 5,-1.8');
-fin.setAttribute('class', 'fish-fin');
-fishG.appendChild(fin);
-
-// Eye
-const eye = document.createElementNS(NS, 'circle');
-eye.setAttribute('cx', 7); eye.setAttribute('cy', -0.5);
-eye.setAttribute('r', 0.7);
-eye.setAttribute('class', 'fish-eye');
-fishG.appendChild(eye);
-
-svg.appendChild(fishG);
-
-// Animate fish along path using JS (offset-path has cross-browser issues with SVG)
-const pathEl = document.getElementById('swimPath');
-const pathLen = pathEl.getTotalLength();
-let fishTime = 0;
-const fishSpeed = 0.15; // px per frame-ish
-
-function animateFish() {
-  fishTime += fishSpeed;
-  if (fishTime > pathLen) fishTime -= pathLen;
-  
-  const pt = pathEl.getPointAtLength(fishTime);
-  const pt2 = pathEl.getPointAtLength((fishTime + 2) % pathLen);
-  const angle = Math.atan2(pt2.y - pt.y, pt2.x - pt.x) * 180 / Math.PI;
-  
-  // Gentle tail wag via slight scale pulse
-  const wag = Math.sin(fishTime * 0.05) * 0.05;
-  
-  fishG.setAttribute('transform', 
-    `translate(${pt.x}, ${pt.y}) rotate(${angle}) scale(${1.8 + wag}, ${1.8})`
-  );
-  
-  requestAnimationFrame(animateFish);
+  // create fish
+  for (let i = 0; i < CONFIG.fishCount; i++) {
+    fishes.push(new Fish());
+  }
 }
-animateFish();
+
+// === P5 DRAW (animation loop) ===
+function draw() {
+  const t = frameCount * CONFIG.breathSpeed;
+
+  // Draw breathing rings by scaling from center
+  // Use the static buffer but apply per-pixel radial breathing via slight scale pulse
+  background(CONFIG.bgColor);
+
+  // Breathing: subtle scale oscillation
+  const breathScale = 1 + sin(t) * 0.006;
+  push();
+  translate(cx, cy);
+  scale(breathScale);
+  translate(-cx, -cy);
+  image(pg, 0, 0);
+  pop();
+
+  // Overlay: ring gap highlights that pulse (the "breathing" glow between rings)
+  for (let i = 2; i < rings.length; i += 3) {
+    const ring = rings[i];
+    const breathOffset = sin(t + ring.breathPhase) * CONFIG.breathAmp;
+    const r = ring.midR + breathOffset;
+    const alpha = map(sin(t + ring.breathPhase), -1, 1, 0, 18);
+
+    noFill();
+    stroke(CONFIG.sapwood[0], CONFIG.sapwood[1], CONFIG.sapwood[2], alpha);
+    strokeWeight(ring.outerR - ring.innerR);
+    circle(cx, cy, r * 2);
+  }
+
+  // Fish
+  noStroke();
+  for (const fish of fishes) {
+    fish.update(t);
+    fish.draw(t);
+  }
+}
+
+function windowResized() {
+  W = min(windowWidth, windowHeight, 900);
+  cx = W / 2;
+  cy = W / 2;
+  maxRadius = W * 0.42;
+  resizeCanvas(W, W);
+  generateRings();
+  drawRingsToBuffer();
+}
 </script>
 </body>
 </html>

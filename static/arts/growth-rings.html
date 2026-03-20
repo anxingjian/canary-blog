@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>年轮 / Growth Rings</title>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <style>
   * { margin: 0; padding: 0; }
   body { background: #1a1410; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
@@ -11,220 +12,305 @@
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
 <script>
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
+// === CONFIG ===
+const CONFIG = {
+  totalRings: 55,
+  breathAmp: 3.5,        // how much rings expand/contract
+  breathSpeed: 0.008,    // breathing tempo
+  fishCount: 3,
+  fishSize: 6,
+  bgColor: [26, 20, 16],
+  heartwood: [28, 18, 10],
+  sapwood: [210, 185, 145],
+  scarColor: [45, 25, 12],
+  resinColor: [160, 110, 50],
+  fishColor: [230, 200, 140],
+};
 
-const W = canvas.width = Math.min(window.innerWidth, window.innerHeight, 900);
-const H = canvas.height = W;
-const cx = W / 2, cy = H / 2;
+let rings = [];
+let fishes = [];
+let W, cx, cy, maxRadius;
+let pg; // offscreen buffer for static ring texture
 
-// Warm wood palette — analogous browns, from heartwood to sapwood
-const heartwood = [28, 18, 10];    // deep dark center
-const sapwood = [210, 185, 145];   // outer light rings
-const scarColor = [45, 25, 12];    // wound/scar dark bands
-const resinColor = [160, 110, 50]; // amber resin accent
-
-// Perlin-like noise (simplex approx)
-function hash(x, y) {
-  let h = x * 374761393 + y * 668265263;
-  h = (h ^ (h >> 13)) * 1274126177;
-  return ((h ^ (h >> 16)) & 0x7fffffff) / 0x7fffffff;
-}
-
-function noise2D(x, y) {
-  const ix = Math.floor(x), iy = Math.floor(y);
-  const fx = x - ix, fy = y - iy;
-  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
-  const a = hash(ix, iy), b = hash(ix + 1, iy);
-  const c = hash(ix, iy + 1), d = hash(ix + 1, iy + 1);
-  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
-}
-
+// === NOISE HELPERS ===
 function fbm(x, y, octaves = 4) {
   let val = 0, amp = 0.5, freq = 1;
   for (let i = 0; i < octaves; i++) {
-    val += amp * noise2D(x * freq, y * freq);
+    val += amp * noise(x * freq, y * freq);
     amp *= 0.5; freq *= 2;
   }
   return val;
 }
 
-// Generate ring data
-const totalRings = 65;
-const maxRadius = W * 0.42;
-const rings = [];
-
-// Not perfectly even — some years grow more than others
-let r = 8;
-for (let i = 0; i < totalRings && r < maxRadius; i++) {
-  const growth = 2.5 + Math.random() * 5; // variable growth years
-  const isScar = Math.random() < 0.12;     // ~12% chance of scar/stress year
-  const isWide = Math.random() < 0.15;     // good years
-  const width = isWide ? growth * 1.8 : (isScar ? growth * 0.4 : growth);
-  
-  rings.push({
-    innerR: r,
-    outerR: r + width,
-    isScar,
-    age: i / totalRings, // 0=center, 1=outer
-    noiseOffset: Math.random() * 100,
-  });
-  r += width;
-}
-
-// Animation state
-let currentRing = 0;
-let ringProgress = 0;
-const drawSpeed = 0.035;
-
-// Background
-ctx.fillStyle = '#1a1410';
-ctx.fillRect(0, 0, W, H);
-
-function lerpColor(c1, c2, t) {
-  return c1.map((v, i) => Math.round(v + (c2[i] - v) * t));
-}
-
-function drawRing(ring, progress) {
-  const steps = 360;
-  const maxAngle = Math.PI * 2 * progress;
-  
-  for (let s = 0; s < steps * progress; s++) {
-    const angle = (s / steps) * Math.PI * 2;
-    if (angle > maxAngle) break;
-    
-    const nx = Math.cos(angle) * 3 + ring.noiseOffset;
-    const ny = Math.sin(angle) * 3 + ring.noiseOffset;
-    const wobble = fbm(nx, ny) * 8 - 4; // ring irregularity
-    
-    const innerR = ring.innerR + wobble;
-    const outerR = ring.outerR + wobble * 0.8;
-    
-    // Color: heartwood→sapwood gradient with variation
-    let baseColor;
-    if (ring.isScar) {
-      baseColor = lerpColor(scarColor, heartwood, 0.3 + fbm(nx * 2, ny * 2) * 0.4);
-    } else {
-      baseColor = lerpColor(heartwood, sapwood, ring.age * 0.85);
-      // Subtle hue variation within ring
-      const hueShift = fbm(nx * 1.5, ny * 1.5) * 15 - 7;
-      baseColor[0] = Math.min(255, Math.max(0, baseColor[0] + hueShift));
-      baseColor[1] = Math.min(255, Math.max(0, baseColor[1] + hueShift * 0.7));
-    }
-    
-    // Early/latewood within each ring
-    const ringPos = (angle / (Math.PI * 2) + ring.age) % 1;
-    const earlyLate = Math.sin(ringPos * Math.PI * 2 * 3 + ring.noiseOffset) * 0.5 + 0.5;
-    const darken = earlyLate * 20;
-    
-    const r = Math.max(0, baseColor[0] - darken);
-    const g = Math.max(0, baseColor[1] - darken);
-    const b = Math.max(0, baseColor[2] - darken * 0.5);
-    
-    // Draw wedge
-    const a1 = angle;
-    const a2 = angle + (Math.PI * 2 / steps) * 1.2; // slight overlap
-    
-    ctx.beginPath();
-    ctx.arc(cx, cy, Math.max(0.5, innerR), a1, a2);
-    ctx.arc(cx, cy, Math.max(0.5, outerR), a2, a1, true);
-    ctx.closePath();
-    ctx.fillStyle = `rgb(${r},${g},${b})`;
-    ctx.fill();
+// === RING DATA ===
+function generateRings() {
+  rings = [];
+  let r = 8;
+  for (let i = 0; i < CONFIG.totalRings && r < maxRadius; i++) {
+    const growth = 2.5 + random(5);
+    const isScar = random() < 0.12;
+    const isWide = random() < 0.15;
+    const w = isWide ? growth * 1.8 : (isScar ? growth * 0.4 : growth);
+    rings.push({
+      innerR: r,
+      outerR: r + w,
+      midR: r + w / 2,
+      isScar,
+      age: i / CONFIG.totalRings,
+      noiseOff: random(100),
+      breathPhase: random(TWO_PI), // each ring breathes slightly out of phase
+    });
+    r += w;
   }
-  
-  // Ring boundary — subtle dark line
-  if (progress >= 1) {
-    ctx.beginPath();
+}
+
+// === FISH ===
+class Fish {
+  constructor() {
+    this.reset();
+  }
+
+  reset() {
+    // pick a ring gap to swim in
+    const ri = floor(random(5, rings.length - 3));
+    const ring = rings[ri];
+    this.swimR = (ring.innerR + ring.outerR) / 2;
+    this.angle = random(TWO_PI);
+    this.speed = random(0.003, 0.008) * (random() > 0.5 ? 1 : -1);
+    this.size = CONFIG.fishSize * random(0.7, 1.3);
+    this.wobbleOff = random(100);
+    this.opacity = 0;
+    this.fadeIn = true;
+    this.life = random(400, 800); // frames before fading out
+    this.age = 0;
+    this.ringAge = ring.age; // for color matching
+  }
+
+  update(t) {
+    this.angle += this.speed;
+    this.age++;
+
+    // fade in/out
+    if (this.fadeIn && this.opacity < 200) {
+      this.opacity = min(200, this.opacity + 3);
+    }
+    if (this.age > this.life) {
+      this.opacity -= 3;
+      if (this.opacity <= 0) this.reset();
+    }
+  }
+
+  draw(t) {
+    const wobble = sin(t * 3 + this.wobbleOff) * 1.5;
+    const r = this.swimR + wobble;
+    const x = cx + cos(this.angle) * r;
+    const y = cy + sin(this.angle) * r;
+
+    push();
+    translate(x, y);
+    rotate(this.angle + (this.speed > 0 ? HALF_PI : -HALF_PI));
+
+    // fish body — simple elegant shape
+    const s = this.size;
+    const c = CONFIG.fishColor;
+    const alpha = this.opacity;
+
+    noStroke();
+    // body
+    fill(c[0], c[1], c[2], alpha);
+    ellipse(0, 0, s * 1.2, s * 2.8);
+
+    // tail
+    const tailWag = sin(t * 8 + this.wobbleOff) * 0.3;
+    triangle(
+      -s * 0.5, s * 1.2,
+      s * 0.5, s * 1.2,
+      tailWag * s, s * 2.0
+    );
+
+    // eye
+    fill(CONFIG.bgColor[0], CONFIG.bgColor[1], CONFIG.bgColor[2], alpha);
+    circle(0, -s * 0.5, s * 0.35);
+
+    pop();
+  }
+}
+
+// === DRAW STATIC RINGS TO BUFFER ===
+function drawRingsToBuffer() {
+  pg = createGraphics(W, W);
+  pg.background(CONFIG.bgColor);
+  pg.noStroke();
+
+  const steps = 360;
+
+  for (const ring of rings) {
+    for (let s = 0; s < steps; s++) {
+      const angle = (s / steps) * TWO_PI;
+      const nx = cos(angle) * 3 + ring.noiseOff;
+      const ny = sin(angle) * 3 + ring.noiseOff;
+      const wobble = fbm(nx, ny) * 8 - 4;
+
+      const innerR = max(0.5, ring.innerR + wobble);
+      const outerR = max(0.5, ring.outerR + wobble * 0.8);
+
+      let r, g, b;
+      if (ring.isScar) {
+        const t2 = 0.3 + fbm(nx * 2, ny * 2) * 0.4;
+        r = lerp(CONFIG.scarColor[0], CONFIG.heartwood[0], t2);
+        g = lerp(CONFIG.scarColor[1], CONFIG.heartwood[1], t2);
+        b = lerp(CONFIG.scarColor[2], CONFIG.heartwood[2], t2);
+      } else {
+        r = lerp(CONFIG.heartwood[0], CONFIG.sapwood[0], ring.age * 0.85);
+        g = lerp(CONFIG.heartwood[1], CONFIG.sapwood[1], ring.age * 0.85);
+        b = lerp(CONFIG.heartwood[2], CONFIG.sapwood[2], ring.age * 0.85);
+        const hueShift = fbm(nx * 1.5, ny * 1.5) * 15 - 7;
+        r = constrain(r + hueShift, 0, 255);
+        g = constrain(g + hueShift * 0.7, 0, 255);
+      }
+
+      // early/latewood darkening
+      const earlyLate = sin(((angle / TWO_PI + ring.age) % 1) * TWO_PI * 3 + ring.noiseOff) * 0.5 + 0.5;
+      const darken = earlyLate * 20;
+      r = max(0, r - darken);
+      g = max(0, g - darken);
+      b = max(0, b - darken * 0.5);
+
+      const a1 = angle;
+      const a2 = angle + (TWO_PI / steps) * 1.2;
+
+      pg.fill(r, g, b);
+      pg.beginShape();
+      // inner arc approximation
+      pg.vertex(cx + cos(a1) * innerR, cy + sin(a1) * innerR);
+      pg.vertex(cx + cos(a2) * innerR, cy + sin(a2) * innerR);
+      pg.vertex(cx + cos(a2) * outerR, cy + sin(a2) * outerR);
+      pg.vertex(cx + cos(a1) * outerR, cy + sin(a1) * outerR);
+      pg.endShape(CLOSE);
+    }
+
+    // ring boundary
+    pg.noFill();
+    pg.stroke(CONFIG.scarColor[0], CONFIG.scarColor[1], CONFIG.scarColor[2], 60);
+    pg.strokeWeight(0.5);
+    pg.beginShape();
     for (let s = 0; s <= steps; s++) {
-      const angle = (s / steps) * Math.PI * 2;
-      const nx = Math.cos(angle) * 3 + ring.noiseOffset;
-      const ny = Math.sin(angle) * 3 + ring.noiseOffset;
+      const angle = (s / steps) * TWO_PI;
+      const nx = cos(angle) * 3 + ring.noiseOff;
+      const ny = sin(angle) * 3 + ring.noiseOff;
       const wobble = fbm(nx, ny) * 8 - 4;
       const pr = ring.outerR + wobble * 0.8;
-      const px = cx + Math.cos(angle) * pr;
-      const py = cy + Math.sin(angle) * pr;
-      s === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      pg.vertex(cx + cos(angle) * pr, cy + sin(angle) * pr);
     }
-    ctx.closePath();
-    ctx.strokeStyle = `rgba(${scarColor.join(',')}, 0.25)`;
-    ctx.lineWidth = 0.5;
-    ctx.stroke();
+    pg.endShape(CLOSE);
+    pg.noStroke();
   }
-}
 
-// Draw radial cracks (medullary rays)
-function drawRays() {
-  const numRays = 8 + Math.floor(Math.random() * 6);
+  // medullary rays
+  const numRays = 8 + floor(random(6));
   const outerR = rings[rings.length - 1].outerR;
-  
+  pg.noFill();
   for (let i = 0; i < numRays; i++) {
-    const angle = (i / numRays) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
-    const length = outerR * (0.3 + Math.random() * 0.65);
-    const startR = Math.random() * 10;
-    
-    ctx.beginPath();
-    const steps = 40;
-    for (let s = 0; s <= steps; s++) {
-      const t = s / steps;
-      const r = startR + t * length;
-      const wobble = Math.sin(t * 8 + i) * 1.5;
-      const px = cx + Math.cos(angle + wobble * 0.02) * r;
-      const py = cy + Math.sin(angle + wobble * 0.02) * r;
-      s === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    const angle = (i / numRays) * TWO_PI + random(-0.15, 0.15);
+    const len = outerR * random(0.3, 0.95);
+    pg.stroke(CONFIG.resinColor[0], CONFIG.resinColor[1], CONFIG.resinColor[2], 20 + random(25));
+    pg.strokeWeight(0.5 + random(1));
+    pg.beginShape();
+    for (let s = 0; s <= 40; s++) {
+      const t = s / 40;
+      const rr = t * len;
+      const w = sin(t * 8 + i) * 0.02;
+      pg.vertex(cx + cos(angle + w) * rr, cy + sin(angle + w) * rr);
     }
-    ctx.strokeStyle = `rgba(${resinColor.join(',')}, ${0.08 + Math.random() * 0.1})`;
-    ctx.lineWidth = 0.5 + Math.random() * 1;
-    ctx.stroke();
+    pg.endShape();
+  }
+
+  // pith
+  pg.noStroke();
+  for (let r = 10; r > 0; r -= 0.5) {
+    const a = map(r, 10, 0, 0, 255);
+    pg.fill(CONFIG.scarColor[0], CONFIG.scarColor[1], CONFIG.scarColor[2], a * 0.3);
+    pg.circle(cx, cy, r * 2);
+  }
+
+  // vignette
+  for (let r = W * 0.85; r < W * 1.1; r += 2) {
+    const a = map(r, W * 0.85, W * 1.1, 0, 200);
+    pg.noFill();
+    pg.stroke(CONFIG.bgColor[0], CONFIG.bgColor[1], CONFIG.bgColor[2], a);
+    pg.strokeWeight(3);
+    pg.circle(cx, cy, r * 2);
   }
 }
 
-// Draw pith (center dot)
-function drawPith() {
-  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 10);
-  grad.addColorStop(0, `rgb(${scarColor.join(',')})`);
-  grad.addColorStop(1, `rgba(${heartwood.join(',')}, 0)`);
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(cx, cy, 10, 0, Math.PI * 2);
-  ctx.fill();
-}
+// === P5 SETUP ===
+function setup() {
+  W = min(windowWidth, windowHeight, 900);
+  cx = W / 2;
+  cy = W / 2;
+  maxRadius = W * 0.42;
 
-function animate() {
-  if (currentRing < rings.length) {
-    ringProgress += drawSpeed;
-    drawRing(rings[currentRing], Math.min(ringProgress, 1));
-    
-    if (ringProgress >= 1) {
-      ringProgress = 0;
-      currentRing++;
-    }
-    requestAnimationFrame(animate);
-  } else {
-    // Final touches
-    drawRays();
-    drawPith();
-    
-    // Subtle outer bark shadow
-    const grad = ctx.createRadialGradient(cx, cy, maxRadius * 0.85, cx, cy, maxRadius * 1.1);
-    grad.addColorStop(0, 'rgba(26,20,16,0)');
-    grad.addColorStop(1, 'rgba(26,20,16,0.8)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-    
-    // Very subtle vignette
-    const vig = ctx.createRadialGradient(cx, cy, W * 0.3, cx, cy, W * 0.7);
-    vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(1, 'rgba(0,0,0,0.3)');
-    ctx.fillStyle = vig;
-    ctx.fillRect(0, 0, W, H);
+  createCanvas(W, W);
+  noiseSeed(42);
+  randomSeed(42);
+
+  generateRings();
+  drawRingsToBuffer();
+
+  // create fish
+  for (let i = 0; i < CONFIG.fishCount; i++) {
+    fishes.push(new Fish());
   }
 }
 
-drawPith();
-animate();
+// === P5 DRAW (animation loop) ===
+function draw() {
+  const t = frameCount * CONFIG.breathSpeed;
+
+  // Draw breathing rings by scaling from center
+  // Use the static buffer but apply per-pixel radial breathing via slight scale pulse
+  background(CONFIG.bgColor);
+
+  // Breathing: subtle scale oscillation
+  const breathScale = 1 + sin(t) * 0.006;
+  push();
+  translate(cx, cy);
+  scale(breathScale);
+  translate(-cx, -cy);
+  image(pg, 0, 0);
+  pop();
+
+  // Overlay: ring gap highlights that pulse (the "breathing" glow between rings)
+  for (let i = 2; i < rings.length; i += 3) {
+    const ring = rings[i];
+    const breathOffset = sin(t + ring.breathPhase) * CONFIG.breathAmp;
+    const r = ring.midR + breathOffset;
+    const alpha = map(sin(t + ring.breathPhase), -1, 1, 0, 18);
+
+    noFill();
+    stroke(CONFIG.sapwood[0], CONFIG.sapwood[1], CONFIG.sapwood[2], alpha);
+    strokeWeight(ring.outerR - ring.innerR);
+    circle(cx, cy, r * 2);
+  }
+
+  // Fish
+  noStroke();
+  for (const fish of fishes) {
+    fish.update(t);
+    fish.draw(t);
+  }
+}
+
+function windowResized() {
+  W = min(windowWidth, windowHeight, 900);
+  cx = W / 2;
+  cy = W / 2;
+  maxRadius = W * 0.42;
+  resizeCanvas(W, W);
+  generateRings();
+  drawRingsToBuffer();
+}
 </script>
 </body>
 </html>
