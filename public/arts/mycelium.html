@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>菌丝 / Mycelium — Growth #2</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #1a1410; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+
+let seed = 31802;
+function rand() { seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
+
+const bg = '#1a1410';
+const hyphaeColors = [
+  'rgba(194, 170, 130, ',
+  'rgba(160, 145, 110, ',
+  'rgba(130, 155, 120, ',
+  'rgba(210, 185, 140, ',
+];
+const nodeColor = 'rgba(220, 195, 150, ';
+
+ctx.fillStyle = bg;
+ctx.fillRect(0, 0, W, H);
+
+for (let i = 0; i < 40000; i++) {
+  const x = rand() * W;
+  const y = rand() * H;
+  const a = rand() * 0.03;
+  ctx.fillStyle = `rgba(${80 + rand()*40|0}, ${60 + rand()*30|0}, ${40 + rand()*20|0}, ${a})`;
+  ctx.fillRect(x, y, 1, 1);
+}
+
+class Hypha {
+  constructor(x, y, angle, energy, depth, colorIdx) {
+    this.x = x; this.y = y; this.angle = angle;
+    this.energy = energy; this.depth = depth; this.colorIdx = colorIdx;
+    this.points = [{x, y}]; this.children = [];
+    this.thickness = Math.max(0.3, 2.5 - depth * 0.3);
+  }
+  grow() {
+    const steps = Math.floor(this.energy * (30 + rand() * 40));
+    for (let i = 0; i < steps; i++) {
+      this.angle += (rand() - 0.5) * 0.6;
+      this.angle += Math.sin(this.angle) * 0.02;
+      const stepLen = 2 + rand() * 3;
+      this.x += Math.cos(this.angle) * stepLen;
+      this.y += Math.sin(this.angle) * stepLen;
+      if (this.x < 10 || this.x > W - 10 || this.y < 10 || this.y > H - 10) break;
+      this.points.push({x: this.x, y: this.y});
+      if (this.depth < 6 && rand() < 0.02 && this.energy > 0.2) {
+        const branchAngle = this.angle + (rand() > 0.5 ? 1 : -1) * (0.4 + rand() * 0.8);
+        const child = new Hypha(this.x, this.y, branchAngle, this.energy * (0.4 + rand() * 0.3), this.depth + 1, rand() < 0.3 ? (this.colorIdx + 1) % hyphaeColors.length : this.colorIdx);
+        this.children.push(child);
+      }
+      this.energy *= 0.997;
+    }
+  }
+  draw() {
+    if (this.points.length < 2) return;
+    const color = hyphaeColors[this.colorIdx];
+    ctx.beginPath();
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+    for (let i = 1; i < this.points.length; i++) {
+      const p = this.points[i]; const prev = this.points[i - 1];
+      const mx = (prev.x + p.x) / 2; const my = (prev.y + p.y) / 2;
+      ctx.quadraticCurveTo(prev.x, prev.y, mx, my);
+    }
+    const fadeAlpha = Math.max(0.08, 0.5 - this.depth * 0.06);
+    ctx.strokeStyle = color + fadeAlpha + ')';
+    ctx.lineWidth = this.thickness; ctx.lineCap = 'round'; ctx.stroke();
+    this.children.forEach(c => { c.grow(); c.draw(); });
+  }
+}
+
+const nodes = [];
+const numNodes = 5 + Math.floor(rand() * 4);
+for (let i = 0; i < numNodes; i++) {
+  nodes.push({ x: W * 0.3 + rand() * W * 0.4, y: H * 0.3 + rand() * H * 0.4 });
+}
+
+const allHyphae = [];
+nodes.forEach(node => {
+  const numHyphae = 4 + Math.floor(rand() * 6);
+  for (let i = 0; i < numHyphae; i++) {
+    const angle = rand() * Math.PI * 2;
+    const h = new Hypha(node.x + (rand()-0.5)*8, node.y + (rand()-0.5)*8, angle, 0.7 + rand()*0.3, 0, Math.floor(rand()*hyphaeColors.length));
+    allHyphae.push(h);
+  }
+});
+
+ctx.globalCompositeOperation = 'lighter';
+allHyphae.forEach(h => { h.grow(); h.draw(); });
+
+for (let i = 0; i < nodes.length; i++) {
+  for (let j = i + 1; j < nodes.length; j++) {
+    const dx = nodes[j].x - nodes[i].x; const dy = nodes[j].y - nodes[i].y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 300) {
+      ctx.beginPath();
+      const cx = (nodes[i].x+nodes[j].x)/2 + (rand()-0.5)*60;
+      const cy = (nodes[i].y+nodes[j].y)/2 + (rand()-0.5)*60;
+      ctx.moveTo(nodes[i].x, nodes[i].y);
+      ctx.quadraticCurveTo(cx, cy, nodes[j].x, nodes[j].y);
+      ctx.strokeStyle = `rgba(194, 170, 130, ${0.06*(1-dist/300)})`;
+      ctx.lineWidth = 1.5; ctx.stroke();
+    }
+  }
+}
+
+nodes.forEach(node => {
+  const grad = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, 20);
+  grad.addColorStop(0, nodeColor + '0.25)');
+  grad.addColorStop(0.5, nodeColor + '0.06)');
+  grad.addColorStop(1, nodeColor + '0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(node.x, node.y, 20, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = nodeColor + '0.6)';
+  ctx.beginPath(); ctx.arc(node.x, node.y, 2.5, 0, Math.PI*2); ctx.fill();
+});
+
+for (let i = 0; i < 80; i++) {
+  const x = rand()*W; const y = rand()*H;
+  const r = 0.5 + rand()*1.5; const a = 0.03 + rand()*0.06;
+  ctx.fillStyle = `rgba(210, 195, 155, ${a})`;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+}
+</script>
+</body>
+</html>
