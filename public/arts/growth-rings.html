@@ -11,30 +11,55 @@
   .ring {
     fill: none;
     stroke-linecap: round;
-  }
-
-  .ring-breathe {
     animation: breathe var(--dur) ease-in-out infinite alternate;
     animation-delay: var(--delay);
   }
 
   @keyframes breathe {
-    0% { opacity: var(--alpha-lo); }
-    100% { opacity: var(--alpha-hi); }
+    0% { r: var(--r-lo); opacity: var(--a-lo); }
+    100% { r: var(--r-hi); opacity: var(--a-hi); }
   }
 
   .ray {
-    stroke: hsla(35, 25%, 50%, 0.04);
-    stroke-width: 0.5;
-    stroke-linecap: round;
+    stroke: hsla(35, 25%, 45%, 0.035);
+    stroke-width: 0.4;
+  }
+
+  #fish-group {
+    offset-path: path(var(--swim-path));
+    offset-rotate: auto;
+    animation: swim var(--swim-dur) linear infinite;
+  }
+
+  @keyframes swim {
+    from { offset-distance: 0%; }
+    to { offset-distance: 100%; }
+  }
+
+  .fish-body {
+    fill: hsla(35, 50%, 65%, 0.6);
+  }
+  .fish-tail {
+    fill: hsla(30, 45%, 55%, 0.5);
+  }
+  .fish-eye {
+    fill: hsla(25, 20%, 25%, 0.8);
+  }
+  .fish-fin {
+    fill: hsla(35, 40%, 60%, 0.35);
+  }
+
+  #fish-group {
+    animation: swimPath 45s linear infinite;
+    filter: drop-shadow(0 0 3px hsla(35, 50%, 65%, 0.3));
   }
 </style>
 </head>
 <body>
 <svg id="svg" viewBox="0 0 800 800" preserveAspectRatio="xMidYMid meet">
   <defs>
-    <radialGradient id="center-glow">
-      <stop offset="0%" stop-color="rgba(50,30,12,0.4)"/>
+    <radialGradient id="cg">
+      <stop offset="0%" stop-color="rgba(45,28,12,0.35)"/>
       <stop offset="100%" stop-color="rgba(10,9,8,0)"/>
     </radialGradient>
   </defs>
@@ -45,22 +70,18 @@ const svg = document.getElementById('svg');
 const NS = 'http://www.w3.org/2000/svg';
 const cx = 400, cy = 400;
 
-// Seeded RNG
 let seed = 32005;
 function rand() { seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
 
-// Rays (behind rings)
-const numRays = 20;
-for (let i = 0; i < numRays; i++) {
-  const angle = rand() * Math.PI * 2;
-  const len = 100 + rand() * 260;
-  const x1 = cx + Math.cos(angle) * 10;
-  const y1 = cy + Math.sin(angle) * 10;
-  const x2 = cx + Math.cos(angle) * len;
-  const y2 = cy + Math.sin(angle) * len;
+// Rays
+for (let i = 0; i < 18; i++) {
+  const a = rand() * Math.PI * 2;
+  const len = 80 + rand() * 280;
   const line = document.createElementNS(NS, 'line');
-  line.setAttribute('x1', x1); line.setAttribute('y1', y1);
-  line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+  line.setAttribute('x1', cx + Math.cos(a) * 8);
+  line.setAttribute('y1', cy + Math.sin(a) * 8);
+  line.setAttribute('x2', cx + Math.cos(a) * len);
+  line.setAttribute('y2', cy + Math.sin(a) * len);
   line.setAttribute('class', 'ray');
   svg.appendChild(line);
 }
@@ -68,98 +89,151 @@ for (let i = 0; i < numRays; i++) {
 // Center glow
 const glow = document.createElementNS(NS, 'circle');
 glow.setAttribute('cx', cx); glow.setAttribute('cy', cy);
-glow.setAttribute('r', 40);
-glow.setAttribute('fill', 'url(#center-glow)');
+glow.setAttribute('r', 35); glow.setAttribute('fill', 'url(#cg)');
 svg.appendChild(glow);
 
-// Rings
-const NUM_RINGS = 40;
-let rAccum = 12;
+// Rings — fewer, more spaced out for fish to swim through
+const rings = [];
+let rAccum = 18;
 
-for (let i = 0; i < NUM_RINGS; i++) {
-  const t = i / NUM_RINGS; // 0=center, 1=edge
-  const isTrauma = rand() < 0.12;
-  const gap = isTrauma ? 2 + rand() * 3 : 4 + rand() * 8;
+for (let i = 0; i < 25; i++) {
+  const t = i / 25;
+  const isTrauma = rand() < 0.1;
+  const gap = isTrauma ? 5 + rand() * 4 : 10 + rand() * 14;
   rAccum += gap;
-  if (rAccum > 360) break;
+  if (rAccum > 370) break;
 
-  // Color: heartwood (dark warm brown) → sapwood (pale cream)
-  const h = 25 + t * 15 + (rand() - 0.5) * 10;
+  const h = 25 + t * 15 + (rand() - 0.5) * 8;
   const s = 30 + (1 - t) * 15;
-  const l = 20 + t * 28;
-  const strokeW = isTrauma ? 0.4 + rand() * 0.5 : 0.8 + rand() * 2;
+  const l = 18 + t * 28;
+  const sw = isTrauma ? 0.3 + rand() * 0.4 : 0.6 + rand() * 1.5;
 
-  // Dash pattern — varied per ring for organic texture
-  const circumference = 2 * Math.PI * rAccum;
-  let dashArray;
+  // Dash pattern
+  const circ = 2 * Math.PI * rAccum;
+  let dash;
   if (isTrauma) {
-    // Trauma: short dashes, lots of gaps
-    const dash = 2 + rand() * 4;
-    const gap2 = 3 + rand() * 6;
-    dashArray = `${dash} ${gap2}`;
+    dash = `${2 + rand() * 4} ${3 + rand() * 5}`;
   } else {
-    // Normal: mix of long arcs and small gaps
-    const pattern = rand();
-    if (pattern < 0.3) {
-      // Nearly continuous with tiny breaks
-      const dash = circumference * (0.15 + rand() * 0.25);
-      const gap2 = 1 + rand() * 3;
-      dashArray = `${dash} ${gap2}`;
-    } else if (pattern < 0.6) {
-      // Medium segments
-      const dash = 20 + rand() * 60;
-      const gap2 = 2 + rand() * 8;
-      dashArray = `${dash} ${gap2}`;
-    } else {
-      // Long and short alternating
-      const d1 = 30 + rand() * 80;
-      const g1 = 2 + rand() * 4;
-      const d2 = 5 + rand() * 15;
-      const g2 = 2 + rand() * 4;
-      dashArray = `${d1} ${g1} ${d2} ${g2}`;
-    }
+    const d1 = 20 + rand() * 80;
+    const g1 = 1.5 + rand() * 3;
+    dash = `${d1} ${g1}`;
   }
 
-  // Create group for rotation
-  const g = document.createElementNS(NS, 'g');
-  // Rotation: very slow, each ring different speed & direction
-  const rotDir = rand() > 0.5 ? 1 : -1;
-  const rotDur = 80 + rand() * 200; // 80-280s per full rotation
-  g.style.transformOrigin = `${cx}px ${cy}px`;
-  g.style.animation = `spin${rotDir > 0 ? 'CW' : 'CCW'} ${rotDur}s linear infinite`;
+  // Breathing: radius oscillates ± a few px
+  const breathAmp = 1.5 + rand() * 3;
+  const rLo = rAccum - breathAmp;
+  const rHi = rAccum + breathAmp;
+  const aLo = isTrauma ? 0.15 : 0.25 + rand() * 0.15;
+  const aHi = isTrauma ? 0.35 : 0.5 + rand() * 0.3;
+  const dur = 5 + rand() * 8;
+  const delay = rand() * -12;
 
   const circle = document.createElementNS(NS, 'circle');
   circle.setAttribute('cx', cx);
   circle.setAttribute('cy', cy);
   circle.setAttribute('r', rAccum);
-  circle.setAttribute('class', 'ring ring-breathe');
+  circle.setAttribute('class', 'ring');
   circle.setAttribute('stroke', `hsl(${h}, ${s}%, ${l}%)`);
-  circle.setAttribute('stroke-width', strokeW);
-  circle.setAttribute('stroke-dasharray', dashArray);
-  // Random starting rotation
-  circle.setAttribute('stroke-dashoffset', rand() * circumference);
+  circle.setAttribute('stroke-width', sw);
+  circle.setAttribute('stroke-dasharray', dash);
+  circle.setAttribute('stroke-dashoffset', rand() * circ);
+  circle.style.setProperty('--r-lo', rLo);
+  circle.style.setProperty('--r-hi', rHi);
+  circle.style.setProperty('--a-lo', aLo);
+  circle.style.setProperty('--a-hi', aHi);
+  circle.style.setProperty('--dur', dur + 's');
+  circle.style.setProperty('--delay', delay + 's');
 
-  // Breathing params
-  const alphaLo = isTrauma ? 0.15 : 0.2 + rand() * 0.2;
-  const alphaHi = isTrauma ? 0.35 : 0.5 + rand() * 0.35;
-  const breathDur = 4 + rand() * 8;
-  const breathDelay = rand() * -10;
-  circle.style.setProperty('--alpha-lo', alphaLo);
-  circle.style.setProperty('--alpha-hi', alphaHi);
-  circle.style.setProperty('--dur', breathDur + 's');
-  circle.style.setProperty('--delay', breathDelay + 's');
-
-  g.appendChild(circle);
-  svg.appendChild(g);
+  svg.appendChild(circle);
+  rings.push({ r: rAccum, t });
 }
 
-// Inject rotation keyframes
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes spinCW { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  @keyframes spinCCW { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
-`;
-document.head.appendChild(style);
+// Fish — small, elegant, hand-drawn feel
+// Fish swims in a spiral-ish path weaving between rings
+// Build a smooth path that spirals outward then inward
+const fishR1 = 50;  // inner orbit
+const fishR2 = 300; // outer orbit
+const pathPoints = [];
+const steps = 360;
+for (let i = 0; i <= steps; i++) {
+  const progress = i / steps;
+  // Spiral out for first half, spiral back in for second half
+  const phase = progress < 0.5 ? progress * 2 : 2 - progress * 2;
+  const r = fishR1 + (fishR2 - fishR1) * (0.5 - 0.5 * Math.cos(phase * Math.PI));
+  // Add gentle wobble to avoid perfect circle
+  const wobble = Math.sin(progress * Math.PI * 12) * 15;
+  const angle = progress * Math.PI * 4; // 2 full rotations
+  const x = cx + Math.cos(angle) * (r + wobble);
+  const y = cy + Math.sin(angle) * (r + wobble);
+  if (i === 0) pathPoints.push(`M ${x} ${y}`);
+  else pathPoints.push(`L ${x} ${y}`);
+}
+pathPoints.push('Z');
+const swimPathD = pathPoints.join(' ');
+
+// Add invisible path for offset-path
+const swimPath = document.createElementNS(NS, 'path');
+swimPath.setAttribute('id', 'swimPath');
+swimPath.setAttribute('d', swimPathD);
+swimPath.setAttribute('fill', 'none');
+swimPath.setAttribute('stroke', 'none');
+svg.appendChild(swimPath);
+
+// Fish SVG group
+const fishG = document.createElementNS(NS, 'g');
+fishG.setAttribute('id', 'fish-group');
+
+// Fish body — sleek teardrop
+const body = document.createElementNS(NS, 'path');
+body.setAttribute('d', 'M 0,-2.5 C 4,-2.5 8,-1.5 10,0 C 8,1.5 4,2.5 0,2.5 C -2,1.5 -3,0.8 -3,0 C -3,-0.8 -2,-1.5 0,-2.5 Z');
+body.setAttribute('class', 'fish-body');
+fishG.appendChild(body);
+
+// Tail
+const tail = document.createElementNS(NS, 'path');
+tail.setAttribute('d', 'M -3,0 C -5,-1.5 -8,-3.5 -9,-4 C -7,-1 -7,1 -9,4 C -8,3.5 -5,1.5 -3,0 Z');
+tail.setAttribute('class', 'fish-tail');
+fishG.appendChild(tail);
+
+// Dorsal fin
+const fin = document.createElementNS(NS, 'path');
+fin.setAttribute('d', 'M 3,-2.5 C 4,-5 6,-5.5 7,-4 C 7,-2.5 6,-2 5,-1.8');
+fin.setAttribute('class', 'fish-fin');
+fishG.appendChild(fin);
+
+// Eye
+const eye = document.createElementNS(NS, 'circle');
+eye.setAttribute('cx', 7); eye.setAttribute('cy', -0.5);
+eye.setAttribute('r', 0.7);
+eye.setAttribute('class', 'fish-eye');
+fishG.appendChild(eye);
+
+svg.appendChild(fishG);
+
+// Animate fish along path using JS (offset-path has cross-browser issues with SVG)
+const pathEl = document.getElementById('swimPath');
+const pathLen = pathEl.getTotalLength();
+let fishTime = 0;
+const fishSpeed = 0.15; // px per frame-ish
+
+function animateFish() {
+  fishTime += fishSpeed;
+  if (fishTime > pathLen) fishTime -= pathLen;
+  
+  const pt = pathEl.getPointAtLength(fishTime);
+  const pt2 = pathEl.getPointAtLength((fishTime + 2) % pathLen);
+  const angle = Math.atan2(pt2.y - pt.y, pt2.x - pt.x) * 180 / Math.PI;
+  
+  // Gentle tail wag via slight scale pulse
+  const wag = Math.sin(fishTime * 0.05) * 0.05;
+  
+  fishG.setAttribute('transform', 
+    `translate(${pt.x}, ${pt.y}) rotate(${angle}) scale(${1.8 + wag}, ${1.8})`
+  );
+  
+  requestAnimationFrame(animateFish);
+}
+animateFish();
 </script>
 </body>
 </html>
