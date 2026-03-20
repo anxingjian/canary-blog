@@ -5,182 +5,161 @@
 <title>年轮 / Growth Rings — Growth #5</title>
 <style>
   * { margin: 0; padding: 0; }
-  html, body { overflow: hidden; background: #0a0908; }
-  canvas { display: block; }
+  html, body { overflow: hidden; background: #0c0a08; height: 100%; }
+  svg { display: block; width: 100vw; height: 100vh; }
+
+  .ring {
+    fill: none;
+    stroke-linecap: round;
+  }
+
+  .ring-breathe {
+    animation: breathe var(--dur) ease-in-out infinite alternate;
+    animation-delay: var(--delay);
+  }
+
+  @keyframes breathe {
+    0% { opacity: var(--alpha-lo); }
+    100% { opacity: var(--alpha-hi); }
+  }
+
+  .ray {
+    stroke: hsla(35, 25%, 50%, 0.04);
+    stroke-width: 0.5;
+    stroke-linecap: round;
+  }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+<svg id="svg" viewBox="0 0 800 800" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <radialGradient id="center-glow">
+      <stop offset="0%" stop-color="rgba(50,30,12,0.4)"/>
+      <stop offset="100%" stop-color="rgba(10,9,8,0)"/>
+    </radialGradient>
+  </defs>
+</svg>
+
 <script>
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-let W, H, cx, cy, S;
+const svg = document.getElementById('svg');
+const NS = 'http://www.w3.org/2000/svg';
+const cx = 400, cy = 400;
 
-function resize() {
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
-  cx = W / 2;
-  cy = H / 2;
-  S = Math.min(W, H);
-}
-resize();
-window.addEventListener('resize', resize);
-
-// Seeded random for deterministic structure
+// Seeded RNG
 let seed = 32005;
 function rand() { seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
 
-// Ring data — each ring has a base radius, color, width, growth speed
-const NUM_RINGS = 50;
-const rings = [];
-const maxR = S * 0.44;
-const minR = S * 0.015;
-
-// Color palette: warm earth tones
-// heartwood (dark amber) → sapwood (pale cream)
-function ringHSL(t) {
-  const h = 25 + t * 15 + (rand() - 0.5) * 8;
-  const s = 35 - t * 15;
-  const l = 15 + t * 30;
-  return { h, s, l };
+// Rays (behind rings)
+const numRays = 20;
+for (let i = 0; i < numRays; i++) {
+  const angle = rand() * Math.PI * 2;
+  const len = 100 + rand() * 260;
+  const x1 = cx + Math.cos(angle) * 10;
+  const y1 = cy + Math.sin(angle) * 10;
+  const x2 = cx + Math.cos(angle) * len;
+  const y2 = cy + Math.sin(angle) * len;
+  const line = document.createElementNS(NS, 'line');
+  line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+  line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+  line.setAttribute('class', 'ray');
+  svg.appendChild(line);
 }
 
-let rAccum = minR;
+// Center glow
+const glow = document.createElementNS(NS, 'circle');
+glow.setAttribute('cx', cx); glow.setAttribute('cy', cy);
+glow.setAttribute('r', 40);
+glow.setAttribute('fill', 'url(#center-glow)');
+svg.appendChild(glow);
+
+// Rings
+const NUM_RINGS = 40;
+let rAccum = 12;
+
 for (let i = 0; i < NUM_RINGS; i++) {
-  const t = i / NUM_RINGS;
+  const t = i / NUM_RINGS; // 0=center, 1=edge
   const isTrauma = rand() < 0.12;
-  const baseWidth = isTrauma ? S * 0.002 + rand() * S * 0.003 : S * 0.005 + rand() * S * 0.012;
-  rAccum += baseWidth;
-  if (rAccum > maxR) break;
-  
-  const color = ringHSL(t);
-  // Each ring has slight phase offset for organic breathing
-  const phaseOffset = rand() * Math.PI * 2;
-  // Amplitude of breathing — inner rings breathe less
-  const breathAmp = (0.3 + t * 0.7) * S * 0.008;
-  // Speed varies — trauma rings pulse differently
-  const speed = isTrauma ? 0.3 + rand() * 0.2 : 0.5 + rand() * 0.5;
-  
-  // Distortion shape (polar noise) — precompute control points
-  const numPoints = 120;
-  const distortions = [];
-  for (let p = 0; p < numPoints; p++) {
-    distortions.push((rand() - 0.5) * 2);
-  }
-  
-  rings.push({
-    radius: rAccum,
-    width: baseWidth,
-    color,
-    trauma: isTrauma,
-    t,
-    phaseOffset,
-    breathAmp,
-    speed,
-    distortions,
-    // Rotation drift — each ring rotates at its own pace
-    rotSpeed: (rand() - 0.5) * 0.0003,
-    rotOffset: rand() * Math.PI * 2,
-    // Opacity pulse
-    baseAlpha: isTrauma ? 0.4 + rand() * 0.2 : 0.25 + rand() * 0.35,
-  });
-}
+  const gap = isTrauma ? 2 + rand() * 3 : 4 + rand() * 8;
+  rAccum += gap;
+  if (rAccum > 360) break;
 
-// Medullary rays — static radial lines
-const NUM_RAYS = 16 + Math.floor(rand() * 8);
-const rays = [];
-for (let i = 0; i < NUM_RAYS; i++) {
-  rays.push({
-    angle: rand() * Math.PI * 2,
-    length: maxR * (0.4 + rand() * 0.6),
-    width: 0.3 + rand() * 0.8,
-    alpha: 0.03 + rand() * 0.06,
-    drift: (rand() - 0.5) * 0.0002,
-  });
-}
+  // Color: heartwood (dark warm brown) → sapwood (pale cream)
+  const h = 25 + t * 15 + (rand() - 0.5) * 10;
+  const s = 30 + (1 - t) * 15;
+  const l = 20 + t * 28;
+  const strokeW = isTrauma ? 0.4 + rand() * 0.5 : 0.8 + rand() * 2;
 
-let time = 0;
-
-function draw() {
-  time += 0.016;
-  
-  // Subtle fade instead of full clear — creates trailing ghost effect
-  ctx.fillStyle = 'rgba(10, 9, 8, 0.15)';
-  ctx.fillRect(0, 0, W, H);
-  
-  // Draw rays first (behind rings)
-  for (const ray of rays) {
-    const a = ray.angle + time * ray.drift;
-    ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(a) * minR, cy + Math.sin(a) * minR);
-    ctx.lineTo(cx + Math.cos(a) * ray.length, cy + Math.sin(a) * ray.length);
-    ctx.strokeStyle = `hsla(35, 30%, 60%, ${ray.alpha})`;
-    ctx.lineWidth = ray.width;
-    ctx.stroke();
-  }
-  
-  // Draw rings
-  const numPoints = 120;
-  for (const ring of rings) {
-    const breathPhase = time * ring.speed + ring.phaseOffset;
-    const breath = Math.sin(breathPhase) * ring.breathAmp;
-    const rot = time * ring.rotSpeed + ring.rotOffset;
-    
-    // Alpha pulse — subtle
-    const alphaPulse = ring.baseAlpha + Math.sin(breathPhase * 0.7) * 0.08;
-    
-    ctx.beginPath();
-    for (let p = 0; p <= numPoints; p++) {
-      const idx = p % numPoints;
-      const angle = (p / numPoints) * Math.PI * 2 + rot;
-      
-      // Organic distortion from precomputed noise
-      const d1 = ring.distortions[idx];
-      const d2 = ring.distortions[(idx + 1) % numPoints];
-      const blend = (p / numPoints) * numPoints - idx;
-      const distortion = (d1 * (1 - blend) + d2 * blend) * S * 0.025 * (0.3 + ring.t * 0.7);
-      
-      const R = ring.radius + distortion + breath;
-      const x = cx + Math.cos(angle) * R;
-      const y = cy + Math.sin(angle) * R;
-      
-      if (p === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    
-    const { h, s, l } = ring.color;
-    ctx.strokeStyle = `hsla(${h}, ${s}%, ${l}%, ${alphaPulse})`;
-    ctx.lineWidth = ring.trauma ? ring.width * 0.5 : ring.width * 0.8;
-    ctx.stroke();
-    
-    // Inner glow for non-trauma rings
-    if (!ring.trauma && ring.t < 0.7) {
-      ctx.strokeStyle = `hsla(${h}, ${s + 10}%, ${l + 15}%, ${alphaPulse * 0.15})`;
-      ctx.lineWidth = ring.width * 2.5;
-      ctx.stroke();
+  // Dash pattern — varied per ring for organic texture
+  const circumference = 2 * Math.PI * rAccum;
+  let dashArray;
+  if (isTrauma) {
+    // Trauma: short dashes, lots of gaps
+    const dash = 2 + rand() * 4;
+    const gap2 = 3 + rand() * 6;
+    dashArray = `${dash} ${gap2}`;
+  } else {
+    // Normal: mix of long arcs and small gaps
+    const pattern = rand();
+    if (pattern < 0.3) {
+      // Nearly continuous with tiny breaks
+      const dash = circumference * (0.15 + rand() * 0.25);
+      const gap2 = 1 + rand() * 3;
+      dashArray = `${dash} ${gap2}`;
+    } else if (pattern < 0.6) {
+      // Medium segments
+      const dash = 20 + rand() * 60;
+      const gap2 = 2 + rand() * 8;
+      dashArray = `${dash} ${gap2}`;
+    } else {
+      // Long and short alternating
+      const d1 = 30 + rand() * 80;
+      const g1 = 2 + rand() * 4;
+      const d2 = 5 + rand() * 15;
+      const g2 = 2 + rand() * 4;
+      dashArray = `${d1} ${g1} ${d2} ${g2}`;
     }
   }
-  
-  // Center heartwood — dark, barely visible, pulsing
-  const heartBeat = Math.sin(time * 0.3) * S * 0.003;
-  const heartR = minR + heartBeat;
-  const heartGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, heartR * 3);
-  heartGrad.addColorStop(0, 'rgba(40, 25, 10, 0.5)');
-  heartGrad.addColorStop(0.5, 'rgba(30, 18, 8, 0.2)');
-  heartGrad.addColorStop(1, 'rgba(10, 9, 8, 0)');
-  ctx.fillStyle = heartGrad;
-  ctx.beginPath();
-  ctx.arc(cx, cy, heartR * 3, 0, Math.PI * 2);
-  ctx.fill();
-  
-  requestAnimationFrame(draw);
+
+  // Create group for rotation
+  const g = document.createElementNS(NS, 'g');
+  // Rotation: very slow, each ring different speed & direction
+  const rotDir = rand() > 0.5 ? 1 : -1;
+  const rotDur = 80 + rand() * 200; // 80-280s per full rotation
+  g.style.transformOrigin = `${cx}px ${cy}px`;
+  g.style.animation = `spin${rotDir > 0 ? 'CW' : 'CCW'} ${rotDur}s linear infinite`;
+
+  const circle = document.createElementNS(NS, 'circle');
+  circle.setAttribute('cx', cx);
+  circle.setAttribute('cy', cy);
+  circle.setAttribute('r', rAccum);
+  circle.setAttribute('class', 'ring ring-breathe');
+  circle.setAttribute('stroke', `hsl(${h}, ${s}%, ${l}%)`);
+  circle.setAttribute('stroke-width', strokeW);
+  circle.setAttribute('stroke-dasharray', dashArray);
+  // Random starting rotation
+  circle.setAttribute('stroke-dashoffset', rand() * circumference);
+
+  // Breathing params
+  const alphaLo = isTrauma ? 0.15 : 0.2 + rand() * 0.2;
+  const alphaHi = isTrauma ? 0.35 : 0.5 + rand() * 0.35;
+  const breathDur = 4 + rand() * 8;
+  const breathDelay = rand() * -10;
+  circle.style.setProperty('--alpha-lo', alphaLo);
+  circle.style.setProperty('--alpha-hi', alphaHi);
+  circle.style.setProperty('--dur', breathDur + 's');
+  circle.style.setProperty('--delay', breathDelay + 's');
+
+  g.appendChild(circle);
+  svg.appendChild(g);
 }
 
-// First frame: clear fully
-ctx.fillStyle = '#0a0908';
-ctx.fillRect(0, 0, W, H);
-draw();
+// Inject rotation keyframes
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes spinCW { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes spinCCW { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+`;
+document.head.appendChild(style);
 </script>
 </body>
 </html>
