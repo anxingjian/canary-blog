@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>格 / Grid — Canary</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #0a0a0c; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const SIZE = Math.min(window.innerWidth, window.innerHeight, 800);
+canvas.width = SIZE;
+canvas.height = SIZE;
+
+// --- palette: cold steel blue-grays + one warm accent ---
+const bgColor = '#0a0a0c';
+const gridColors = ['#2a2d35', '#353842', '#3f434f'];
+const nodeColor = '#4a5060';
+const accentColor = '#c4956a'; // warm amber, very sparse
+
+// --- noise (simplex-like via sine combo) ---
+function noise2d(x, y, seed) {
+  const s = seed || 0;
+  return (Math.sin(x * 12.9898 + y * 78.233 + s) * 43758.5453) % 1;
+}
+
+function fbm(x, y, octaves, seed) {
+  let val = 0, amp = 1, freq = 1, total = 0;
+  for (let i = 0; i < octaves; i++) {
+    val += amp * (Math.sin(x * freq * 7.3 + y * freq * 11.7 + seed + i * 31.1) * 0.5 + 0.5);
+    total += amp;
+    amp *= 0.5;
+    freq *= 2.0;
+  }
+  return val / total;
+}
+
+// --- grid parameters ---
+const cols = 32;
+const rows = 32;
+const margin = SIZE * 0.08;
+const cellW = (SIZE - margin * 2) / cols;
+const cellH = (SIZE - margin * 2) / rows;
+const seed = Math.random() * 1000;
+
+// --- animation ---
+let time = 0;
+
+function draw() {
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // draw grid lines with subtle displacement
+  for (let i = 0; i <= cols; i++) {
+    for (let j = 0; j <= rows; j++) {
+      const bx = margin + i * cellW;
+      const by = margin + j * cellH;
+
+      // displacement: almost zero at center, grows toward edges
+      const cx = SIZE / 2, cy = SIZE / 2;
+      const dist = Math.sqrt((bx - cx) ** 2 + (by - cy) ** 2);
+      const maxDist = Math.sqrt(cx * cx + cy * cy);
+      const edgeFactor = Math.pow(dist / maxDist, 3); // cubic falloff — center is still
+
+      const noiseVal = fbm(i * 0.15, j * 0.15, 3, seed + time * 0.3);
+      const angle = noiseVal * Math.PI * 2;
+      const displacement = edgeFactor * cellW * 0.35;
+
+      const dx = Math.cos(angle) * displacement;
+      const dy = Math.sin(angle) * displacement;
+
+      const x = bx + dx;
+      const y = by + dy;
+
+      // draw horizontal line segment
+      if (i < cols) {
+        const nx = margin + (i + 1) * cellW;
+        const ny = by;
+        const nDist = Math.sqrt((nx - cx) ** 2 + (ny - cy) ** 2);
+        const nEdge = Math.pow(nDist / maxDist, 3);
+        const nNoise = fbm((i + 1) * 0.15, j * 0.15, 3, seed + time * 0.3);
+        const nAngle = nNoise * Math.PI * 2;
+        const nDisp = nEdge * cellW * 0.35;
+        const nx2 = nx + Math.cos(nAngle) * nDisp;
+        const ny2 = ny + Math.sin(nAngle) * nDisp;
+
+        const lineAlpha = 0.15 + (1 - edgeFactor) * 0.25;
+        ctx.strokeStyle = gridColors[0];
+        ctx.globalAlpha = lineAlpha;
+        ctx.lineWidth = 0.5 + (1 - edgeFactor) * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(nx2, ny2);
+        ctx.stroke();
+      }
+
+      // draw vertical line segment
+      if (j < rows) {
+        const nx = bx;
+        const ny = margin + (j + 1) * cellH;
+        const nDist = Math.sqrt((nx - cx) ** 2 + (ny - cy) ** 2);
+        const nEdge = Math.pow(nDist / maxDist, 3);
+        const nNoise = fbm(i * 0.15, (j + 1) * 0.15, 3, seed + time * 0.3);
+        const nAngle = nNoise * Math.PI * 2;
+        const nDisp = nEdge * cellW * 0.35;
+        const nx2 = nx + Math.cos(nAngle) * nDisp;
+        const ny2 = ny + Math.sin(nAngle) * nDisp;
+
+        const lineAlpha = 0.15 + (1 - edgeFactor) * 0.25;
+        ctx.strokeStyle = gridColors[1];
+        ctx.globalAlpha = lineAlpha;
+        ctx.lineWidth = 0.5 + (1 - edgeFactor) * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(nx2, ny2);
+        ctx.stroke();
+      }
+
+      // node dots at intersections
+      ctx.globalAlpha = 0.2 + (1 - edgeFactor) * 0.5;
+      const dotSize = 1 + (1 - edgeFactor) * 1.5;
+
+      // sparse accent: only a few edge nodes glow warm
+      const isAccent = edgeFactor > 0.4 && noise2d(i, j, seed * 2) > 0.85;
+
+      if (isAccent) {
+        ctx.fillStyle = accentColor;
+        ctx.globalAlpha = 0.3 + Math.sin(time * 2 + i + j) * 0.15;
+        ctx.beginPath();
+        ctx.arc(x, y, dotSize * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // glow
+        const grd = ctx.createRadialGradient(x, y, 0, x, y, dotSize * 6);
+        grd.addColorStop(0, 'rgba(196, 149, 106, 0.12)');
+        grd.addColorStop(1, 'rgba(196, 149, 106, 0)');
+        ctx.fillStyle = grd;
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.arc(x, y, dotSize * 6, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = nodeColor;
+        ctx.beginPath();
+        ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  ctx.globalAlpha = 1;
+
+  // subtle vignette
+  const vgrd = ctx.createRadialGradient(SIZE / 2, SIZE / 2, SIZE * 0.25, SIZE / 2, SIZE / 2, SIZE * 0.65);
+  vgrd.addColorStop(0, 'rgba(10,10,12,0)');
+  vgrd.addColorStop(1, 'rgba(10,10,12,0.5)');
+  ctx.fillStyle = vgrd;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  time += 0.008;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
