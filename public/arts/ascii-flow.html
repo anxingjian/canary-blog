@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASCII Flow — Canary</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #080808; overflow: hidden; }
+  pre {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font: 11px/1.15 'Courier New', monospace;
+    color: #d4cec4;
+    letter-spacing: 1px;
+    white-space: pre;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+<pre id="out"></pre>
+<script>
+const W = 100, H = 55;
+const CHARS = ' .·:;+*%#@█';
+const out = document.getElementById('out');
+let t = 0;
+
+// Simplex-ish noise via sin hashing
+function noise(x, y) {
+  return (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
+}
+
+function smoothNoise(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  const n00 = noise(ix, iy), n10 = noise(ix+1, iy);
+  const n01 = noise(ix, iy+1), n11 = noise(ix+1, iy+1);
+  return n00*(1-sx)*(1-sy) + n10*sx*(1-sy) + n01*(1-sx)*sy + n11*sx*sy;
+}
+
+function fbm(x, y) {
+  let v = 0, a = 1, s = 1;
+  for (let i = 0; i < 5; i++) {
+    v += smoothNoise(x * s, y * s) * a;
+    s *= 2; a *= 0.5;
+  }
+  return v;
+}
+
+function frame() {
+  t += 0.012;
+  let buf = '';
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const nx = x / W, ny = y / H;
+
+      // Center distance for radial vignette
+      const dx = nx - 0.5, dy = (ny - 0.5) * 1.2;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Flowing field
+      const angle = fbm(nx * 4 + t * 0.3, ny * 3 + t * 0.2) * Math.PI * 4;
+      const flow = Math.sin(angle + dist * 8 - t * 2);
+
+      // Organic shapes - circles that drift
+      const cx1 = 0.35 + Math.sin(t * 0.7) * 0.15;
+      const cy1 = 0.4 + Math.cos(t * 0.5) * 0.12;
+      const d1 = Math.sqrt((nx - cx1) ** 2 + ((ny - cy1) * 1.8) ** 2);
+      const blob1 = Math.max(0, 1 - d1 * 3.5);
+
+      const cx2 = 0.65 + Math.cos(t * 0.6) * 0.12;
+      const cy2 = 0.55 + Math.sin(t * 0.8) * 0.1;
+      const d2 = Math.sqrt((nx - cx2) ** 2 + ((ny - cy2) * 1.8) ** 2);
+      const blob2 = Math.max(0, 1 - d2 * 3.2);
+
+      // Combine
+      let v = flow * 0.3 + blob1 * 0.8 + blob2 * 0.6;
+
+      // Edge ripple
+      const ripple = Math.sin(dist * 25 - t * 3) * 0.15 * Math.max(0, 1 - dist * 1.5);
+      v += ripple;
+
+      // Vignette fade
+      v *= Math.max(0, 1 - dist * 1.2);
+
+      // Normalize
+      v = Math.max(0, Math.min(1, v * 1.2));
+
+      const ci = Math.floor(v * (CHARS.length - 1));
+      buf += CHARS[ci];
+    }
+    buf += '\n';
+  }
+  out.textContent = buf;
+  requestAnimationFrame(frame);
+}
+
+frame();
+</script>
+</body>
+</html>
