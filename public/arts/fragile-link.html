@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fragile Link</title>
+<style>
+* { margin: 0; padding: 0; }
+body { background: #0a0a0a; overflow: hidden; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width = window.innerWidth;
+const H = canvas.height = window.innerHeight;
+const S = Math.min(W, H);
+
+const CONFIG = {
+  nodes: 120,
+  maxDist: S * 0.15,
+  pulseSpeed: 0.003,
+  driftSpeed: 0.3,
+  colors: {
+    active: 'rgba(200, 180, 140, ',    // warm gold
+    fading: 'rgba(200, 180, 140, ',
+    dead: 'rgba(60, 55, 50, ',          // dark brown
+    bg: '#0a0a0a'
+  }
+};
+
+class Node {
+  constructor() {
+    this.reset();
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+  }
+  
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - 0.5) * CONFIG.driftSpeed;
+    this.vy = (Math.random() - 0.5) * CONFIG.driftSpeed;
+    this.alive = true;
+    this.life = 1;
+    this.phase = Math.random() * Math.PI * 2;
+    this.deathTimer = 0;
+    // some nodes are "fragile" — they die and revive
+    this.fragile = Math.random() < 0.3;
+    this.reviveAt = 0;
+  }
+  
+  update(t) {
+    this.x += this.vx;
+    this.y += this.vy;
+    
+    // soft boundary
+    if (this.x < 0 || this.x > W) this.vx *= -1;
+    if (this.y < 0 || this.y > H) this.vy *= -1;
+    
+    if (this.fragile && this.alive) {
+      // fragile nodes randomly die
+      if (Math.random() < 0.001) {
+        this.alive = false;
+        this.deathTimer = t;
+        this.reviveAt = t + 2 + Math.random() * 4;
+      }
+    }
+    
+    if (!this.alive && t > this.reviveAt) {
+      this.alive = true;
+      this.life = 0;
+    }
+    
+    // life fades in/out
+    if (this.alive && this.life < 1) {
+      this.life = Math.min(1, this.life + 0.008);
+    }
+    if (!this.alive && this.life > 0) {
+      this.life = Math.max(0, this.life - 0.015);
+    }
+    
+    this.pulse = 0.5 + 0.5 * Math.sin(t * CONFIG.pulseSpeed * 60 + this.phase);
+  }
+}
+
+const nodes = Array.from({ length: CONFIG.nodes }, () => new Node());
+
+let t = 0;
+let disruption = 0; // global disruption event
+
+function draw() {
+  t++;
+  
+  // occasional global disruption — all connections flicker
+  if (Math.random() < 0.002 && disruption === 0) {
+    disruption = 30 + Math.random() * 40;
+  }
+  if (disruption > 0) disruption--;
+  
+  // fade trail
+  ctx.fillStyle = 'rgba(10, 10, 10, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+  
+  nodes.forEach(n => n.update(t / 60));
+  
+  // draw connections
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      const dx = a.x - b.x, dy = a.y - b.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      
+      if (d < CONFIG.maxDist) {
+        const strength = (1 - d / CONFIG.maxDist);
+        const aliveness = Math.min(a.life, b.life);
+        const disruptionFade = disruption > 0 ? Math.random() * 0.3 : 1;
+        const alpha = strength * aliveness * 0.4 * disruptionFade;
+        
+        if (alpha > 0.01) {
+          const color = aliveness < 0.3 ? CONFIG.colors.dead : CONFIG.colors.active;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = color + alpha + ')';
+          ctx.lineWidth = strength * 1.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+  
+  // draw nodes
+  nodes.forEach(n => {
+    const r = 1.5 + n.pulse * 1.5;
+    const alpha = n.life * (disruption > 0 ? (Math.random() > 0.3 ? 0.8 : 0.1) : 1);
+    
+    if (alpha > 0.01) {
+      // glow
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r * 3, 0, Math.PI * 2);
+      ctx.fillStyle = CONFIG.colors.active + alpha * 0.1 + ')';
+      ctx.fill();
+      
+      // core
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = CONFIG.colors.active + alpha * 0.8 + ')';
+      ctx.fill();
+    }
+  });
+  
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
