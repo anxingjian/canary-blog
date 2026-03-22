@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reconnect</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0f; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const CONFIG = {
+  nodeCount: 60,
+  maxDist: 150,
+  pulseSpeed: 0.02,
+  driftSpeed: 0.3,
+  disconnectChance: 0.002,
+  reconnectSpeed: 0.01,
+  colors: {
+    alive: 'rgba(200, 185, 140, ',    // warm gold
+    dead: 'rgba(80, 75, 65, ',         // muted
+    line: 'rgba(200, 185, 140, ',
+    pulse: 'rgba(255, 240, 200, ',
+    bg: '#0a0a0f'
+  }
+};
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+class Node {
+  constructor() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - 0.5) * CONFIG.driftSpeed;
+    this.vy = (Math.random() - 0.5) * CONFIG.driftSpeed;
+    this.radius = 2 + Math.random() * 2;
+    this.alive = true;
+    this.opacity = 1;
+    this.reconnecting = false;
+    this.pulsePhase = Math.random() * Math.PI * 2;
+    this.disconnectTime = 0;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // soft boundary
+    if (this.x < 0 || this.x > W) this.vx *= -1;
+    if (this.y < 0 || this.y > H) this.vy *= -1;
+
+    this.pulsePhase += CONFIG.pulseSpeed;
+
+    if (this.alive && Math.random() < CONFIG.disconnectChance) {
+      this.alive = false;
+      this.reconnecting = false;
+      this.disconnectTime = 0;
+    }
+
+    if (!this.alive) {
+      this.disconnectTime += 0.016;
+      this.opacity = Math.max(0.15, this.opacity - 0.01);
+      
+      // start reconnecting after a pause
+      if (this.disconnectTime > 1.5 + Math.random() * 2) {
+        this.reconnecting = true;
+      }
+      
+      if (this.reconnecting) {
+        this.opacity += CONFIG.reconnectSpeed;
+        if (this.opacity >= 1) {
+          this.opacity = 1;
+          this.alive = true;
+          this.reconnecting = false;
+        }
+      }
+    }
+  }
+
+  draw() {
+    const pulse = this.alive ? 0.7 + 0.3 * Math.sin(this.pulsePhase) : 1;
+    const color = this.alive ? CONFIG.colors.alive : 
+                  this.reconnecting ? CONFIG.colors.pulse : CONFIG.colors.dead;
+    const r = this.radius * pulse;
+
+    // glow
+    if (this.alive || this.reconnecting) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r * 4, 0, Math.PI * 2);
+      ctx.fillStyle = color + (this.opacity * 0.08) + ')';
+      ctx.fill();
+    }
+
+    // core
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = color + this.opacity + ')';
+    ctx.fill();
+
+    // reconnect spark
+    if (this.reconnecting && this.opacity > 0.5) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r * (2 + Math.sin(this.pulsePhase * 3)), 0, Math.PI * 2);
+      ctx.strokeStyle = CONFIG.colors.pulse + (this.opacity * 0.3) + ')';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+  }
+}
+
+const nodes = Array.from({ length: CONFIG.nodeCount }, () => new Node());
+
+function drawConnections() {
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      if (!a.alive && !a.reconnecting) continue;
+      if (!b.alive && !b.reconnecting) continue;
+
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < CONFIG.maxDist) {
+        const alpha = (1 - dist / CONFIG.maxDist) * 
+                      Math.min(a.opacity, b.opacity) * 0.4;
+        
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.strokeStyle = CONFIG.colors.line + alpha + ')';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+// text watermark
+function drawTitle() {
+  ctx.save();
+  ctx.font = '10px monospace';
+  ctx.fillStyle = 'rgba(200, 185, 140, 0.15)';
+  ctx.textAlign = 'right';
+  ctx.fillText('reconnect', W - 20, H - 20);
+  ctx.restore();
+}
+
+function frame() {
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.12)';
+  ctx.fillRect(0, 0, W, H);
+
+  drawConnections();
+  nodes.forEach(n => { n.update(); n.draw(); });
+  drawTitle();
+
+  requestAnimationFrame(frame);
+}
+
+frame();
+</script>
+</body>
+</html>
