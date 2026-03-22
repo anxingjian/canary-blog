@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>波 / Ripple — Order & Chaos #2</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0c10; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const size = Math.min(window.innerWidth, window.innerHeight, 800);
+canvas.width = size;
+canvas.height = size;
+
+const cols = 40;
+const rows = 40;
+const spacing = size / (cols + 1);
+
+// Two wave sources — off-grid positions
+const sources = [
+  { x: size * 0.3, y: size * 0.25 },
+  { x: size * 0.72, y: size * 0.68 }
+];
+
+const baseColor = { r: 140, g: 155, b: 175 };   // steel blue-grey
+const amberColor = { r: 218, g: 165, b: 80 };    // amber accent
+const bgColor = '#0a0c10';
+
+let time = 0;
+
+function wave(x, y, source, t, freq, speed) {
+  const dx = x - source.x;
+  const dy = y - source.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  return Math.sin(dist * freq - t * speed);
+}
+
+function draw() {
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, size, size);
+
+  time += 0.008;
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const baseX = (col + 1) * spacing;
+      const baseY = (row + 1) * spacing;
+
+      // Wave interference
+      const w1 = wave(baseX, baseY, sources[0], time, 0.035, 1.0);
+      const w2 = wave(baseX, baseY, sources[1], time, 0.028, 0.8);
+      const combined = (w1 + w2) / 2;
+
+      // Displacement proportional to combined amplitude
+      const displaceMag = combined * spacing * 0.6;
+      const angle1 = Math.atan2(baseY - sources[0].y, baseX - sources[0].x);
+      const angle2 = Math.atan2(baseY - sources[1].y, baseX - sources[1].x);
+      const avgAngle = (angle1 + angle2) / 2;
+
+      const dx = Math.cos(avgAngle) * displaceMag;
+      const dy = Math.sin(avgAngle) * displaceMag;
+
+      const x = baseX + dx;
+      const y = baseY + dy;
+
+      // Chaos intensity: how far displaced
+      const chaos = Math.abs(combined);
+
+      // Size: calm dots are small, agitated ones swell
+      const baseRadius = 1.2;
+      const radius = baseRadius + chaos * 2.5;
+
+      // Color: interpolate from steel grey to amber based on chaos
+      const t_color = Math.pow(chaos, 1.5); // non-linear, amber only at peaks
+      const r = Math.round(baseColor.r + (amberColor.r - baseColor.r) * t_color);
+      const g = Math.round(baseColor.g + (amberColor.g - baseColor.g) * t_color);
+      const b = Math.round(baseColor.b + (amberColor.b - baseColor.b) * t_color);
+
+      // Alpha: slight variation
+      const alpha = 0.35 + chaos * 0.6;
+
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+      ctx.fill();
+    }
+  }
+
+  // Subtle wave source markers — faint concentric rings
+  for (const src of sources) {
+    for (let i = 1; i <= 3; i++) {
+      const ringR = (time * 40 + i * 60) % (size * 0.7);
+      ctx.beginPath();
+      ctx.arc(src.x, src.y, ringR, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(218,165,80,${0.04 * (1 - ringR / (size * 0.7))})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+  }
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
