@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>裂 / Fracture</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #0a0c10; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const size = Math.min(window.innerWidth, window.innerHeight, 800);
+canvas.width = canvas.height = size;
+
+// --- Config ---
+const COLS = 36;
+const ROWS = 36;
+const spacing = size / (COLS + 2);
+const offsetX = spacing * 1.5;
+const offsetY = spacing * 1.5;
+const baseRadius = spacing * 0.12;
+
+// Colors - continuing series palette
+const bgColor = '#0a0c10';
+const coldGray = [140, 155, 175];    // steel blue-gray
+const warmAmber = [210, 160, 70];    // amber accent
+const crackDark = [40, 30, 25];      // dark crack interior
+
+// --- Fracture lines ---
+// Generate 3-4 fracture paths that propagate from stress points
+class FractureLine {
+  constructor(startX, startY, angle, energy) {
+    this.points = [{ x: startX, y: startY }];
+    this.energy = energy;
+    let cx = startX, cy = startY;
+    let a = angle;
+    while (this.energy > 0.05 && cx > -0.1 && cx < 1.1 && cy > -0.1 && cy < 1.1) {
+      const step = 0.015 + Math.random() * 0.02;
+      a += (Math.random() - 0.5) * 1.2;
+      cx += Math.cos(a) * step;
+      cy += Math.sin(a) * step;
+      this.points.push({ x: cx, y: cy });
+      this.energy *= 0.97;
+      // Branch occasionally
+      if (Math.random() < 0.08 && this.energy > 0.3) {
+        this.branch = new FractureLine(cx, cy, a + (Math.random() - 0.5) * 1.5, this.energy * 0.5);
+      }
+    }
+  }
+
+  distanceTo(nx, ny) {
+    let minD = Infinity;
+    for (const p of this.points) {
+      const d = Math.hypot(p.x - nx, p.y - ny);
+      if (d < minD) minD = d;
+    }
+    if (this.branch) {
+      const bd = this.branch.distanceTo(nx, ny);
+      if (bd < minD) minD = bd;
+    }
+    return minD;
+  }
+
+  getAllPoints() {
+    let pts = [...this.points];
+    if (this.branch) pts = pts.concat(this.branch.getAllPoints());
+    return pts;
+  }
+}
+
+// Seed fractures from 2 stress points
+const fractures = [];
+const stressPoints = [
+  { x: 0.35 + Math.random() * 0.1, y: 0.3 + Math.random() * 0.1 },
+  { x: 0.6 + Math.random() * 0.1, y: 0.65 + Math.random() * 0.1 },
+];
+
+for (const sp of stressPoints) {
+  const numCracks = 3 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < numCracks; i++) {
+    const angle = (Math.PI * 2 / numCracks) * i + (Math.random() - 0.5) * 0.8;
+    fractures.push(new FractureLine(sp.x, sp.y, angle, 0.8 + Math.random() * 0.2));
+  }
+}
+
+// --- Noise (simple value noise) ---
+function hash(x, y) {
+  let h = x * 374761393 + y * 668265263;
+  h = (h ^ (h >> 13)) * 1274126177;
+  return ((h ^ (h >> 16)) & 0xffff) / 0xffff;
+}
+
+function smoothNoise(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const a = hash(ix, iy), b = hash(ix + 1, iy);
+  const c = hash(ix, iy + 1), d = hash(ix + 1, iy + 1);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+
+function fbm(x, y, octaves = 4) {
+  let val = 0, amp = 0.5, freq = 1;
+  for (let i = 0; i < octaves; i++) {
+    val += amp * smoothNoise(x * freq, y * freq);
+    amp *= 0.5; freq *= 2;
+  }
+  return val;
+}
+
+// --- Animation ---
+let time = 0;
+const animDuration = 4000; // ms for fractures to propagate
+let startTime = null;
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function draw(timestamp) {
+  if (!startTime) startTime = timestamp;
+  const elapsed = timestamp - startTime;
+  const progress = clamp(elapsed / animDuration, 0, 1);
+  // Ease out
+  const t = 1 - Math.pow(1 - progress, 3);
+
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, size, size);
+
+  // Draw fracture lines (subtle dark cracks)
+  if (t > 0.05) {
+    ctx.save();
+    ctx.globalAlpha = 0.3 * t;
+    ctx.strokeStyle = `rgba(${warmAmber[0]}, ${warmAmber[1]}, ${warmAmber[2]}, 0.15)`;
+    ctx.lineWidth = 1.5;
+    for (const f of fractures) {
+      const pts = f.getAllPoints();
+      const drawCount = Math.floor(pts.length * t);
+      if (drawCount < 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x * size, pts[0].y * size);
+      for (let i = 1; i < drawCount; i++) {
+        ctx.lineTo(pts[i].x * size, pts[i].y * size);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Draw grid nodes
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      const nx = col / (COLS - 1); // normalized 0-1
+      const ny = row / (ROWS - 1);
+
+      // Base position
+      let px = offsetX + col * spacing;
+      let py = offsetY + row * spacing;
+
+      // Fracture influence
+      let fractureInfluence = 0;
+      for (const f of fractures) {
+        const d = f.distanceTo(nx, ny);
+        const influence = Math.max(0, 1 - d / 0.12) * t;
+        fractureInfluence = Math.max(fractureInfluence, influence);
+      }
+
+      // Near fracture: nodes get displaced, scattered
+      const noiseVal = fbm(col * 0.3 + 10, row * 0.3 + 20);
+      const displaceAngle = noiseVal * Math.PI * 4;
+      const displaceMag = fractureInfluence * spacing * 0.8;
+
+      px += Math.cos(displaceAngle) * displaceMag;
+      py += Math.sin(displaceAngle) * displaceMag;
+
+      // Some nodes near cracks disappear (gaps)
+      if (fractureInfluence > 0.7 && noiseVal > 0.55) continue;
+
+      // Size: nodes near fractures shrink or fragment
+      let r = baseRadius;
+      if (fractureInfluence > 0.3) {
+        r *= lerp(1, 0.4, (fractureInfluence - 0.3) / 0.7);
+      }
+
+      // Color: blend from cold to warm near fractures
+      const colorT = clamp(fractureInfluence * 1.5, 0, 1);
+      const cr = lerp(coldGray[0], warmAmber[0], colorT);
+      const cg = lerp(coldGray[1], warmAmber[1], colorT);
+      const cb = lerp(coldGray[2], warmAmber[2], colorT);
+
+      // Opacity: edge nodes slightly dimmer, fractured area has glow
+      let alpha = 0.5 + 0.3 * (1 - Math.max(Math.abs(nx - 0.5), Math.abs(ny - 0.5)) * 2);
+      if (fractureInfluence > 0.1) {
+        alpha = lerp(alpha, 0.9, fractureInfluence);
+      }
+
+      // Draw node
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${Math.round(cr)}, ${Math.round(cg)}, ${Math.round(cb)}, ${alpha})`;
+      ctx.fill();
+
+      // Amber glow halo for highly fractured nodes
+      if (fractureInfluence > 0.5) {
+        const glowR = r * (2 + fractureInfluence * 2);
+        const glow = ctx.createRadialGradient(px, py, r, px, py, glowR);
+        glow.addColorStop(0, `rgba(${warmAmber[0]}, ${warmAmber[1]}, ${warmAmber[2]}, ${0.15 * fractureInfluence})`);
+        glow.addColorStop(1, 'rgba(210, 160, 70, 0)');
+        ctx.beginPath();
+        ctx.arc(px, py, glowR, 0, Math.PI * 2);
+        ctx.fillStyle = glow;
+        ctx.fill();
+      }
+    }
+  }
+
+  // Stress point markers — faint pulse
+  if (t > 0.2) {
+    const pulse = 0.5 + 0.5 * Math.sin(elapsed * 0.003);
+    for (const sp of stressPoints) {
+      const glow = ctx.createRadialGradient(
+        sp.x * size, sp.y * size, 0,
+        sp.x * size, sp.y * size, spacing * 2
+      );
+      glow.addColorStop(0, `rgba(${warmAmber[0]}, ${warmAmber[1]}, ${warmAmber[2]}, ${0.08 * pulse * t})`);
+      glow.addColorStop(1, 'rgba(210, 160, 70, 0)');
+      ctx.beginPath();
+      ctx.arc(sp.x * size, sp.y * size, spacing * 2, 0, Math.PI * 2);
+      ctx.fillStyle = glow;
+      ctx.fill();
+    }
+  }
+
+  if (progress < 1) {
+    requestAnimationFrame(draw);
+  } else {
+    // Subtle continuous pulse after fracture completes
+    function pulse(ts) {
+      const pt = (ts - startTime - animDuration) * 0.0005;
+      // Redraw with slight breathing
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, size, size);
+
+      // Fracture lines
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = `rgba(${warmAmber[0]}, ${warmAmber[1]}, ${warmAmber[2]}, 0.15)`;
+      ctx.lineWidth = 1.5;
+      for (const f of fractures) {
+        const pts = f.getAllPoints();
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x * size, pts[0].y * size);
+        for (let i = 1; i < pts.length; i++) {
+          ctx.lineTo(pts[i].x * size, pts[i].y * size);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      const breathe = 0.5 + 0.5 * Math.sin(pt * 2);
+
+      for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+          const nx = col / (COLS - 1);
+          const ny = row / (ROWS - 1);
+          let px = offsetX + col * spacing;
+          let py = offsetY + row * spacing;
+
+          let fractureInfluence = 0;
+          for (const f of fractures) {
+            const d = f.distanceTo(nx, ny);
+            fractureInfluence = Math.max(fractureInfluence, Math.max(0, 1 - d / 0.12));
+          }
+
+          const noiseVal = fbm(col * 0.3 + 10, row * 0.3 + 20);
+          const displaceAngle = noiseVal * Math.PI * 4;
+          const displaceMag = fractureInfluence * spacing * (0.8 + breathe * 0.1);
+          px += Math.cos(displaceAngle) * displaceMag;
+          py += Math.sin(displaceAngle) * displaceMag;
+
+          if (fractureInfluence > 0.7 && noiseVal > 0.55) continue;
+
+          let r = baseRadius;
+          if (fractureInfluence > 0.3) {
+            r *= lerp(1, 0.4, (fractureInfluence - 0.3) / 0.7);
+          }
+
+          const colorT = clamp(fractureInfluence * 1.5, 0, 1);
+          const cr = lerp(coldGray[0], warmAmber[0], colorT);
+          const cg = lerp(coldGray[1], warmAmber[1], colorT);
+          const cb = lerp(coldGray[2], warmAmber[2], colorT);
+
+          let alpha = 0.5 + 0.3 * (1 - Math.max(Math.abs(nx - 0.5), Math.abs(ny - 0.5)) * 2);
+          if (fractureInfluence > 0.1) alpha = lerp(alpha, 0.9, fractureInfluence);
+
+          ctx.beginPath();
+          ctx.arc(px, py, r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${Math.round(cr)}, ${Math.round(cg)}, ${Math.round(cb)}, ${alpha})`;
+          ctx.fill();
+
+          if (fractureInfluence > 0.5) {
+            const glowR = r * (2 + fractureInfluence * (2 + breathe * 0.5));
+            const glow = ctx.createRadialGradient(px, py, r, px, py, glowR);
+            glow.addColorStop(0, `rgba(${warmAmber[0]}, ${warmAmber[1]}, ${warmAmber[2]}, ${(0.12 + breathe * 0.06) * fractureInfluence})`);
+            glow.addColorStop(1, 'rgba(210, 160, 70, 0)');
+            ctx.beginPath();
+            ctx.arc(px, py, glowR, 0, Math.PI * 2);
+            ctx.fillStyle = glow;
+            ctx.fill();
+          }
+        }
+      }
+
+      for (const sp of stressPoints) {
+        const glow = ctx.createRadialGradient(sp.x * size, sp.y * size, 0, sp.x * size, sp.y * size, spacing * 2);
+        glow.addColorStop(0, `rgba(${warmAmber[0]}, ${warmAmber[1]}, ${warmAmber[2]}, ${0.06 + breathe * 0.04})`);
+        glow.addColorStop(1, 'rgba(210, 160, 70, 0)');
+        ctx.beginPath();
+        ctx.arc(sp.x * size, sp.y * size, spacing * 2, 0, Math.PI * 2);
+        ctx.fillStyle = glow;
+        ctx.fill();
+      }
+
+      requestAnimationFrame(pulse);
+    }
+    requestAnimationFrame(pulse);
+  }
+}
+
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
