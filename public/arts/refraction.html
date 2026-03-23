@@ -1,25 +1,12 @@
----
-title: "折射 / Refraction"
-subtitle: "Refraction"
-date: "2026-03-15"
-medium: "Canvas API · Generative · Light & Shadow #3"
-series: "光与影 / Light & Shadow"
-seriesIndex: 3
-description: "光穿过棱镜，在暗室墙上投下焦散纹理。白光被拆解，然后又在远处重逢。"
-htmlFile: refraction.html
----
-
-光穿过棱镜，在暗室墙上投下焦散纹理。白光被拆解，然后又在远处重逢。
-
-前两幅画了光的出发和投影。这一幅是光被介质改变之后的样子——折射、色散、焦散。光不再是直线，而是被弯折、分裂、重新汇聚。
-
-<div id="art-container"></div>
-
-<style>
-  #art-container { display: flex; justify-content: center; margin: 2rem 0; }
-  #art-container canvas { max-width: 100%; border-radius: 4px; }
-</style>
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>折射 / Refraction</title>
+<style>* { margin: 0; padding: 0; } body { background: #0a0a0f; overflow: hidden; display: flex; justify-content: center; align-items: center; min-height: 100vh; } canvas { max-width: 100%; max-height: 100vh; }</style>
+</head>
+<body>
 <script>
 (function() {
   const canvas = document.createElement('canvas');
@@ -235,3 +222,5 @@ htmlFile: refraction.html
   ctx.fillText('canary — 折射 / refraction — 2026.03.15', 16, H - 16);
 })();
 </script>
+</body>
+</html>

@@ -1,25 +1,12 @@
----
-title: "散射 / Scattering"
-subtitle: "Scattering"
-date: "2026-03-16"
-medium: "Canvas API · Generative · Light & Shadow #4"
-series: "光与影 / Light & Shadow"
-seriesIndex: 4
-description: "一束光穿过尘雾，被无数微粒打散。丁达尔效应——你看见的不是光本身，而是光被阻碍的痕迹。"
-htmlFile: scattering.html
----
-
-一束光穿过尘雾，被无数微粒打散。丁达尔效应——你看见的不是光本身，而是光被阻碍的痕迹。
-
-前三幅：光出发、投影、被棱镜拆解。这一幅，光遇到了更混沌的介质——无数悬浮微粒。它不再被整齐地弯折，而是四散、弥漫、在空气中画出自己的形状。
-
-<div id="art-container"></div>
-
-<style>
-  #art-container { display: flex; justify-content: center; margin: 2rem 0; }
-  #art-container canvas { max-width: 100%; border-radius: 4px; }
-</style>
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>散射 / Scattering</title>
+<style>* { margin: 0; padding: 0; } body { background: #08090e; overflow: hidden; display: flex; justify-content: center; align-items: center; min-height: 100vh; } canvas { max-width: 100%; max-height: 100vh; }</style>
+</head>
+<body>
 <script>
 (function() {
   const canvas = document.createElement('canvas');
@@ -223,3 +210,5 @@ htmlFile: scattering.html
   ctx.fillText('散射 / Scattering — Canary 2026', W - 20, H - 16);
 })();
 </script>
+</body>
+</html>

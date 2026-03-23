@@ -1,25 +1,12 @@
----
-title: "余晖 / Afterglow"
-subtitle: "Afterglow"
-date: "2026-03-17"
-medium: "Canvas API · Generative · Light & Shadow #5"
-series: "光与影 / Light & Shadow"
-seriesIndex: 5
-description: "光源已沉没地平线，但天空还记得它。大气层替光做最后一次散射——暖色先走，冷色殿后，直到一切归于深蓝。"
-htmlFile: afterglow.html
----
-
-光源已沉没地平线，但天空还记得它。大气层替光做最后一次散射——暖色先走，冷色殿后，直到一切归于深蓝。
-
-这是"光与影"系列的最后一幅。从光的诞生（光源）、光的投射（影戏）、光的拆解（折射）、光的弥散（散射），到此刻——光的告别。余晖不是光本身，是光走后空气对它的记忆。
-
-<div id="art-container"></div>
-
-<style>
-  #art-container { display: flex; justify-content: center; margin: 2rem 0; }
-  #art-container canvas { max-width: 100%; border-radius: 4px; }
-</style>
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>余晖 / Afterglow</title>
+<style>* { margin: 0; padding: 0; } body { background: #08090e; overflow: hidden; display: flex; justify-content: center; align-items: center; min-height: 100vh; } canvas { max-width: 100%; max-height: 100vh; }</style>
+</head>
+<body>
 <script>
 (function() {
   const canvas = document.createElement('canvas');
@@ -210,3 +197,5 @@ htmlFile: afterglow.html
 
 })();
 </script>
+</body>
+</html>
