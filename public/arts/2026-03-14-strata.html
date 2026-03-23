@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strata — 2026.03.14</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #0a0a0f; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+let W, H, t = 0;
+
+function resize() {
+  W = c.width = innerWidth;
+  H = c.height = innerHeight;
+}
+resize();
+addEventListener('resize', resize);
+
+// Palette: deep earth tones with cold gold accent
+const layers = [
+  { color: [180, 160, 120], label: 'surface' },   // warm sand
+  { color: [120, 90, 70], label: 'soil' },          // earth
+  { color: [70, 55, 50], label: 'bedrock' },        // dark stone
+  { color: [40, 35, 45], label: 'mantle' },         // deep violet-grey
+  { color: [20, 18, 30], label: 'core' },           // near-black blue
+];
+
+// Particles: breathing lights in each stratum
+const particles = [];
+for (let i = 0; i < 120; i++) {
+  const layerIdx = Math.floor(Math.random() * layers.length);
+  particles.push({
+    x: Math.random() * 2000,
+    y: 0, // set in draw
+    layerIdx,
+    yRatio: 0.15 + Math.random() * 0.7, // position within layer
+    r: 1 + Math.random() * 2.5,
+    phase: Math.random() * Math.PI * 2,
+    speed: 0.3 + Math.random() * 0.7,
+  });
+}
+
+function noiseY(x, t, freq, amp) {
+  return Math.sin(x * freq + t) * amp + Math.cos(x * freq * 1.7 + t * 0.6) * amp * 0.5;
+}
+
+function draw() {
+  t += 0.004;
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, W, H);
+
+  const layerH = H / layers.length;
+
+  // Draw strata
+  for (let i = layers.length - 1; i >= 0; i--) {
+    const baseY = i * layerH;
+    const [r, g, b] = layers[i].color;
+
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+
+    // Wavy top edge
+    for (let x = 0; x <= W; x += 4) {
+      const wave = noiseY(x * 0.003, t + i * 0.5, 1, 12 + i * 3)
+                 + noiseY(x * 0.007, t * 0.7 + i, 1, 6);
+      ctx.lineTo(x, baseY + wave);
+    }
+    ctx.lineTo(W, H);
+    ctx.closePath();
+
+    // Gradient fill
+    const grad = ctx.createLinearGradient(0, baseY, 0, baseY + layerH);
+    grad.addColorStop(0, `rgba(${r},${g},${b},0.95)`);
+    grad.addColorStop(1, `rgba(${Math.max(0,r-20)},${Math.max(0,g-15)},${Math.max(0,b-10)},1)`);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  // Draw breathing particles
+  for (const p of particles) {
+    const baseY = p.layerIdx * layerH;
+    const wave = noiseY((p.x / W * W) * 0.003, t + p.layerIdx * 0.5, 1, 12 + p.layerIdx * 3);
+    const px = (p.x / 2000) * W;
+    const py = baseY + wave + p.yRatio * layerH;
+
+    const breath = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(t * p.speed * 2 + p.phase));
+    const [lr, lg, lb] = layers[p.layerIdx].color;
+
+    // Gold-tinted glow for deeper layers
+    const depth = p.layerIdx / (layers.length - 1);
+    const gr = Math.min(255, lr + 80 + depth * 60);
+    const gg = Math.min(255, lg + 60 + depth * 40);
+    const gb = Math.min(255, lb + 20);
+
+    ctx.beginPath();
+    ctx.arc(px, py, p.r * (0.8 + breath * 0.4), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${gr},${gg},${gb},${breath * 0.6})`;
+    ctx.fill();
+
+    // Soft glow
+    const glow = ctx.createRadialGradient(px, py, 0, px, py, p.r * 4);
+    glow.addColorStop(0, `rgba(${gr},${gg},${gb},${breath * 0.15})`);
+    glow.addColorStop(1, `rgba(${gr},${gg},${gb},0)`);
+    ctx.beginPath();
+    ctx.arc(px, py, p.r * 4, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+  }
+
+  // Title
+  ctx.fillStyle = 'rgba(200,185,140,0.12)';
+  ctx.font = '11px monospace';
+  ctx.fillText('strata · 2026.03.14', 20, H - 20);
+
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>

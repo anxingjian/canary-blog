@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moiré — 2026.03.16</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #f5f3ef; overflow: hidden; cursor: crosshair; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl');
+let W, H;
+let mouse = { x: 0.5, y: 0.5 };
+
+// Ripple trail — store recent mouse positions
+const MAX_RIPPLES = 12;
+let ripples = []; // { x, y, birth }
+
+function resize() {
+  W = canvas.width = innerWidth;
+  H = canvas.height = innerHeight;
+  gl.viewport(0, 0, W, H);
+}
+resize();
+addEventListener('resize', resize);
+
+let lastMX = -1, lastMY = -1;
+let shaderStart = 0; // set when draw() starts
+addEventListener('mousemove', e => {
+  mouse.x = e.clientX / W;
+  mouse.y = 1.0 - e.clientY / H;
+
+  const dx = e.clientX - lastMX;
+  const dy = e.clientY - lastMY;
+  if (lastMX < 0 || Math.sqrt(dx*dx + dy*dy) > 40) {
+    ripples.push({
+      x: mouse.x,
+      y: mouse.y,
+      birth: (performance.now() - shaderStart) / 1000
+    });
+    if (ripples.length > MAX_RIPPLES) ripples.shift();
+    lastMX = e.clientX;
+    lastMY = e.clientY;
+  }
+});
+
+const vs = `attribute vec2 p; void main(){ gl_Position=vec4(p,0,1); }`;
+const fs = `
+precision highp float;
+uniform float t;
+uniform vec2 r;
+uniform vec2 m;
+
+// Ripple data: xy = position, z = birth time, w = unused
+uniform vec4 rippleData[12];
+uniform int rippleCount;
+
+float hash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+void main(){
+  vec2 p = (gl_FragCoord.xy - r * 0.5) / min(r.x, r.y);
+  vec2 aspect = vec2(r.x/min(r.x,r.y), r.y/min(r.x,r.y));
+
+  // Mouse center
+  vec2 m2 = (m - 0.5) * aspect;
+  // Drifting center
+  vec2 m3 = vec2(0.3 * sin(t * 0.17), 0.3 * cos(t * 0.11));
+
+  float d1 = length(p);
+  float d2 = length(p - m2);
+  float d3 = length(p - m3);
+
+  float freq = 60.0;
+
+  float v1 = sin(d1 * freq);
+  float v2 = sin(d2 * freq * 1.02);
+  float v3 = sin(d3 * freq * 0.98 + t * 0.15);
+
+  // Base moiré
+  float moire = (v1 * v2 + v2 * v3 + v1 * v3) / 3.0;
+
+  // Ambient water ripple — always present, slow and gentle
+  float ambient = 0.0;
+  for (float i = 0.0; i < 3.0; i++) {
+    vec2 center = vec2(
+      0.3 * sin(t * 0.1 + i * 2.1),
+      0.3 * cos(t * 0.08 + i * 1.7)
+    );
+    float dist = length(p - center);
+    float wave = sin(dist * 25.0 - t * 1.5 + i * 1.3);
+    float envelope = exp(-dist * 1.5);
+    ambient += wave * envelope * 0.12;
+  }
+  moire += ambient;
+
+  // Add mouse ripple disturbances
+  float rippleEffect = 0.0;
+  for (int i = 0; i < 12; i++) {
+    if (i >= rippleCount) break;
+    vec2 rPos = (rippleData[i].xy - 0.5) * aspect;
+    float age = t - rippleData[i].z;
+    if (age < 0.0 || age > 4.0) continue;
+
+    float dist = length(p - rPos);
+    // Expanding ring
+    float ringRadius = age * 0.3;
+    float ringWidth = 0.08 + age * 0.02;
+    float ring = exp(-pow((dist - ringRadius) / ringWidth, 2.0));
+    // Fade out over time
+    float fade = exp(-age * 1.2);
+    // Ripple wave
+    float wave = sin(dist * 40.0 - age * 8.0) * ring * fade;
+    rippleEffect += wave;
+  }
+
+  // Ripples perturb the moiré pattern
+  moire += rippleEffect * 0.5;
+
+  float density = 1.0 - (0.5 + 0.5 * moire);
+  density = smoothstep(0.3, 0.75, density);
+
+  // Particle grid
+  vec2 cell = floor(gl_FragCoord.xy / 3.0);
+  float rnd = hash(cell);
+  float particle = step(rnd, density * 0.7);
+  float opacity = particle * (0.5 + 0.5 * hash(cell + 99.0));
+
+  // Ink on paper
+  vec3 paper = vec3(0.96, 0.94, 0.91);
+  vec3 ink = vec3(0.12, 0.11, 0.13);
+  vec3 color = mix(paper, ink, opacity * 0.85);
+
+  // Subtle vignette
+  float vig = 1.0 - 0.1 * dot(p, p);
+  color *= vig;
+
+  gl_FragColor = vec4(color, 1.0);
+}
+`;
+
+function createShader(src, type) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+  return s;
+}
+
+const prog = gl.createProgram();
+gl.attachShader(prog, createShader(vs, gl.VERTEX_SHADER));
+gl.attachShader(prog, createShader(fs, gl.FRAGMENT_SHADER));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+const pLoc = gl.getAttribLocation(prog, 'p');
+gl.enableVertexAttribArray(pLoc);
+gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
+
+const tLoc = gl.getUniformLocation(prog, 't');
+const rLoc = gl.getUniformLocation(prog, 'r');
+const mLoc = gl.getUniformLocation(prog, 'm');
+const rippleDataLoc = gl.getUniformLocation(prog, 'rippleData');
+const rippleCountLoc = gl.getUniformLocation(prog, 'rippleCount');
+
+let start = performance.now();
+shaderStart = start;
+
+function draw() {
+  const elapsed = (performance.now() - start) / 1000;
+  gl.uniform1f(tLoc, elapsed);
+  gl.uniform2f(rLoc, W, H);
+  gl.uniform2f(mLoc, mouse.x, mouse.y);
+
+  // Pack ripple data
+  const data = new Float32Array(MAX_RIPPLES * 4);
+  const now = elapsed;
+  // Filter out expired ripples
+  ripples = ripples.filter(r => (now - r.birth) < 4.0);
+  for (let i = 0; i < ripples.length && i < MAX_RIPPLES; i++) {
+    data[i * 4] = ripples[i].x;
+    data[i * 4 + 1] = ripples[i].y;
+    data[i * 4 + 2] = ripples[i].birth;
+    data[i * 4 + 3] = 0;
+  }
+  gl.uniform4fv(rippleDataLoc, data);
+  gl.uniform1i(rippleCountLoc, Math.min(ripples.length, MAX_RIPPLES));
+
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
