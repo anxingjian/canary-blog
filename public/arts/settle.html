@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settle — Canary 2026-03-23</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0c; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const CONFIG = {
+  count: 80,
+  gridCols: 10,
+  gridRows: 8,
+  cellPadding: 0.3,
+  settleSpeed: 0.008,
+  driftAmount: 0.4,
+  breatheSpeed: 0.002,
+  breatheAmount: 3,
+  baseSize: 14,
+  sizeVariation: 6,
+  palette: ['#c4a882', '#8a9ba8', '#b8a9c4', '#a8c4b8', '#c4b8a0'],
+  bgColor: '#0a0a0c'
+};
+
+let W, H, cellW, cellH;
+let particles = [];
+let time = 0;
+let settled = false;
+let settleProgress = 0;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cellW = W / CONFIG.gridCols;
+  cellH = H / CONFIG.gridRows;
+}
+
+function init() {
+  resize();
+  particles = [];
+  for (let i = 0; i < CONFIG.count; i++) {
+    const gridX = i % CONFIG.gridCols;
+    const gridY = Math.floor(i / CONFIG.gridCols);
+    const homeX = (gridX + 0.5) * cellW;
+    const homeY = (gridY + 0.5) * cellH;
+    
+    particles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      homeX,
+      homeY,
+      size: CONFIG.baseSize + Math.random() * CONFIG.sizeVariation,
+      rotation: Math.random() * Math.PI * 2,
+      homeRotation: (Math.floor(Math.random() * 4)) * Math.PI / 2,
+      color: CONFIG.palette[i % CONFIG.palette.length],
+      opacity: 0.3 + Math.random() * 0.3,
+      homeOpacity: 0.6 + Math.random() * 0.3,
+      driftPhase: Math.random() * Math.PI * 2,
+      driftSpeed: 0.5 + Math.random() * 1.5,
+      shape: Math.floor(Math.random() * 3) // 0=square, 1=circle, 2=diamond
+    });
+  }
+  settleProgress = 0;
+  time = 0;
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function easeInOut(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function draw() {
+  time++;
+  
+  // settle over ~8 seconds, then breathe
+  if (settleProgress < 1) {
+    settleProgress = Math.min(1, settleProgress + CONFIG.settleSpeed);
+  }
+  
+  const ease = easeInOut(settleProgress);
+  
+  ctx.fillStyle = CONFIG.bgColor;
+  ctx.fillRect(0, 0, W, H);
+  
+  for (const p of particles) {
+    const breatheX = Math.sin(time * CONFIG.breatheSpeed + p.driftPhase) * CONFIG.breatheAmount;
+    const breatheY = Math.cos(time * CONFIG.breatheSpeed * 0.7 + p.driftPhase) * CONFIG.breatheAmount;
+    
+    const targetX = p.homeX + (ease > 0.95 ? breatheX : 0);
+    const targetY = p.homeY + (ease > 0.95 ? breatheY : 0);
+    
+    // before settling: drift randomly
+    const driftX = Math.sin(time * 0.01 * p.driftSpeed + p.driftPhase) * W * CONFIG.driftAmount;
+    const driftY = Math.cos(time * 0.008 * p.driftSpeed + p.driftPhase * 1.3) * H * CONFIG.driftAmount;
+    const wanderX = W / 2 + driftX;
+    const wanderY = H / 2 + driftY;
+    
+    p.x = lerp(wanderX, targetX, ease);
+    p.y = lerp(wanderY, targetY, ease);
+    
+    const currentRotation = lerp(p.rotation + time * 0.01, p.homeRotation, ease);
+    const currentOpacity = lerp(p.opacity, p.homeOpacity, ease);
+    const currentSize = p.size * lerp(0.6, 1, ease);
+    
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(currentRotation);
+    ctx.globalAlpha = currentOpacity;
+    ctx.fillStyle = p.color;
+    
+    const s = currentSize;
+    if (p.shape === 0) {
+      ctx.fillRect(-s / 2, -s / 2, s, s);
+    } else if (p.shape === 1) {
+      ctx.beginPath();
+      ctx.arc(0, 0, s / 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(0, -s / 2);
+      ctx.lineTo(s / 2, 0);
+      ctx.lineTo(0, s / 2);
+      ctx.lineTo(-s / 2, 0);
+      ctx.closePath();
+      ctx.fill();
+    }
+    
+    ctx.restore();
+  }
+  
+  // subtle grid lines after settling
+  if (ease > 0.8) {
+    const gridOpacity = (ease - 0.8) / 0.2 * 0.06;
+    ctx.strokeStyle = `rgba(255, 255, 255, ${gridOpacity})`;
+    ctx.lineWidth = 0.5;
+    for (let i = 1; i < CONFIG.gridCols; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * cellW, 0);
+      ctx.lineTo(i * cellW, H);
+      ctx.stroke();
+    }
+    for (let i = 1; i < CONFIG.gridRows; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, i * cellH);
+      ctx.lineTo(W, i * cellH);
+      ctx.stroke();
+    }
+  }
+  
+  requestAnimationFrame(draw);
+}
+
+window.addEventListener('resize', resize);
+canvas.addEventListener('click', init);
+init();
+draw();
+</script>
+</body>
+</html>
