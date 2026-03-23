@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drift Clock</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0c; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const CONFIG = {
+  rings: 12,
+  dotsPerRing: 60,
+  baseRadius: 40,
+  ringGap: 22,
+  dotSize: 1.8,
+  driftSpeed: 0.0003,
+  colorA: [200, 180, 140],
+  colorB: [100, 120, 160],
+  fade: 0.04
+};
+
+let W, H, t = 0;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function draw() {
+  ctx.fillStyle = `rgba(10, 10, 12, ${CONFIG.fade})`;
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W / 2;
+  const cy = H / 2;
+
+  for (let r = 0; r < CONFIG.rings; r++) {
+    const radius = CONFIG.baseRadius + r * CONFIG.ringGap;
+    const drift = (r % 2 === 0 ? 1 : -1) * (1 + r * 0.15);
+    const phase = t * CONFIG.driftSpeed * drift;
+    const ringProgress = r / CONFIG.rings;
+
+    for (let d = 0; d < CONFIG.dotsPerRing; d++) {
+      const baseAngle = (d / CONFIG.dotsPerRing) * Math.PI * 2;
+      const angle = baseAngle + phase;
+
+      // slight radial breathing
+      const breathe = Math.sin(t * 0.001 + r * 0.5 + d * 0.1) * 3;
+      const rx = radius + breathe;
+
+      const x = cx + Math.cos(angle) * rx;
+      const y = cy + Math.sin(angle) * rx;
+
+      // color blend based on angle position
+      const colorT = (Math.sin(angle + t * 0.0005) + 1) / 2;
+      const red = lerp(CONFIG.colorA[0], CONFIG.colorB[0], colorT);
+      const green = lerp(CONFIG.colorA[1], CONFIG.colorB[1], colorT);
+      const blue = lerp(CONFIG.colorA[2], CONFIG.colorB[2], colorT);
+
+      // opacity: outer rings fainter
+      const alpha = lerp(0.9, 0.25, ringProgress);
+
+      ctx.beginPath();
+      ctx.arc(x, y, CONFIG.dotSize, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${red|0}, ${green|0}, ${blue|0}, ${alpha})`;
+      ctx.fill();
+    }
+  }
+
+  // center marker — current second
+  const now = new Date();
+  const sec = now.getSeconds() + now.getMilliseconds() / 1000;
+  const secAngle = (sec / 60) * Math.PI * 2 - Math.PI / 2;
+  const handLen = CONFIG.baseRadius - 12;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(secAngle) * handLen, cy + Math.sin(secAngle) * handLen);
+  ctx.strokeStyle = 'rgba(200, 180, 140, 0.6)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // center dot
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(200, 180, 140, 0.8)';
+  ctx.fill();
+
+  t++;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
