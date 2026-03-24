@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>涡 / Vortex — Order & Chaos #4</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0b0f; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+  canvas { max-width: 100vmin; max-height: 100vmin; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+(function() {
+  const canvas = document.getElementById('c');
+  const W = 800, H = 800;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Deterministic RNG
+  let seed = 24304;
+  function rand() { seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
+
+  // Grid parameters — same 36x36 as series
+  const cols = 36, rows = 36;
+  const cellW = W / cols, cellH = H / rows;
+
+  // Two vortex centers (evolved from fracture's stress points)
+  const vortices = [
+    { x: W * 0.35, y: H * 0.38, strength: 180, radius: W * 0.42, dir: 1 },
+    { x: W * 0.68, y: H * 0.62, strength: 140, radius: W * 0.36, dir: -1 }
+  ];
+
+  // Particles: grid nodes pulled into vortex flow
+  const particles = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const ox = (c + 0.5) * cellW;
+      const oy = (r + 0.5) * cellH;
+      particles.push({
+        ox, oy, x: ox, y: oy,
+        vx: 0, vy: 0,
+        size: 2.2,
+        chaos: 0,      // 0 = ordered, 1 = fully in vortex
+        trail: [],
+        phase: rand() * Math.PI * 2
+      });
+    }
+  }
+
+  // Calculate vortex influence on a point
+  function vortexField(px, py) {
+    let fx = 0, fy = 0;
+    for (const v of vortices) {
+      const dx = px - v.x;
+      const dy = py - v.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 1) continue;
+      const falloff = Math.max(0, 1 - dist / v.radius);
+      const power = falloff * falloff * v.strength / (dist * 0.5 + 50);
+      // Tangential force (rotation) + slight inward pull
+      fx += (-dy * power * v.dir + dx * power * -0.15) * 0.01;
+      fy += (dx * power * v.dir + dy * power * -0.15) * 0.01;
+    }
+    return { fx, fy };
+  }
+
+  // Color palette: cold steel-blue-grey base, amber emerging in vortex cores
+  function getColor(chaos, dist1, dist2) {
+    // Ordered: cool grey-blue
+    const cr = 120 + chaos * 80;   // 120 → 200
+    const cg = 130 + chaos * 40;   // 130 → 170
+    const cb = 150 - chaos * 50;   // 150 → 100
+
+    // Near vortex core: amber glow
+    const minDist = Math.min(dist1 / vortices[0].radius, dist2 / vortices[1].radius);
+    const coreness = Math.max(0, 1 - minDist * 2.5);
+    const r = cr + coreness * (220 - cr);
+    const g = cg + coreness * (160 - cg);
+    const b = cb + coreness * (50 - cb);
+    return { r: r | 0, g: g | 0, b: b | 0 };
+  }
+
+  let t = 0;
+  const TRAIL_LEN = 12;
+
+  function update() {
+    for (const p of particles) {
+      const { fx, fy } = vortexField(p.x, p.y);
+
+      // Spring force back to grid position (weakens as chaos grows)
+      const spring = 0.002 * (1 - p.chaos * 0.85);
+      const sx = (p.ox - p.x) * spring;
+      const sy = (p.oy - p.y) * spring;
+
+      // Subtle noise
+      const nx = Math.sin(p.x * 0.01 + t * 0.3 + p.phase) * 0.02;
+      const ny = Math.cos(p.y * 0.01 + t * 0.2 + p.phase) * 0.02;
+
+      p.vx = (p.vx + fx + sx + nx) * 0.96;
+      p.vy = (p.vy + fy + sy + ny) * 0.96;
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Calculate chaos level based on displacement from grid
+      const dx = p.x - p.ox;
+      const dy = p.y - p.oy;
+      const displacement = Math.sqrt(dx * dx + dy * dy);
+      p.chaos = Math.min(1, displacement / (cellW * 4));
+
+      // Trail
+      p.trail.push({ x: p.x, y: p.y });
+      if (p.trail.length > TRAIL_LEN) p.trail.shift();
+    }
+    t += 0.016;
+  }
+
+  function draw() {
+    // Dark background with slight vignette
+    ctx.fillStyle = '#0a0b0f';
+    ctx.fillRect(0, 0, W, H);
+
+    // Vortex core glow — very subtle
+    for (const v of vortices) {
+      const grad = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, v.radius * 0.4);
+      grad.addColorStop(0, 'rgba(200, 150, 60, 0.04)');
+      grad.addColorStop(0.5, 'rgba(180, 120, 50, 0.015)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Draw trails then particles
+    for (const p of particles) {
+      const d1 = Math.sqrt((p.x - vortices[0].x) ** 2 + (p.y - vortices[0].y) ** 2);
+      const d2 = Math.sqrt((p.x - vortices[1].x) ** 2 + (p.y - vortices[1].y) ** 2);
+      const col = getColor(p.chaos, d1, d2);
+
+      // Trail
+      if (p.trail.length > 2 && p.chaos > 0.1) {
+        ctx.beginPath();
+        ctx.moveTo(p.trail[0].x, p.trail[0].y);
+        for (let i = 1; i < p.trail.length; i++) {
+          ctx.lineTo(p.trail[i].x, p.trail[i].y);
+        }
+        const trailAlpha = p.chaos * 0.15;
+        ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},${trailAlpha})`;
+        ctx.lineWidth = 0.5 + p.chaos * 0.8;
+        ctx.stroke();
+      }
+
+      // Particle
+      const size = p.size * (1 - p.chaos * 0.3 + Math.sin(t * 2 + p.phase) * p.chaos * 0.15);
+      const alpha = 0.5 + p.chaos * 0.35;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.5, size), 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${alpha})`;
+      ctx.fill();
+    }
+
+    // Ghost grid — faint remnant of original order
+    ctx.strokeStyle = 'rgba(80, 90, 110, 0.03)';
+    ctx.lineWidth = 0.5;
+    for (let c = 0; c <= cols; c++) {
+      ctx.beginPath();
+      ctx.moveTo(c * cellW, 0);
+      ctx.lineTo(c * cellW, H);
+      ctx.stroke();
+    }
+    for (let r = 0; r <= rows; r++) {
+      ctx.beginPath();
+      ctx.moveTo(0, r * cellH);
+      ctx.lineTo(W, r * cellH);
+      ctx.stroke();
+    }
+  }
+
+  // Animation: gradual vortex activation
+  let frame = 0;
+  const RAMP_FRAMES = 180; // 3 seconds ramp up
+
+  function animate() {
+    frame++;
+    // Gradually increase vortex strength
+    if (frame < RAMP_FRAMES) {
+      const progress = frame / RAMP_FRAMES;
+      const ease = progress * progress * (3 - 2 * progress); // smoothstep
+      vortices[0].strength = 180 * ease;
+      vortices[1].strength = 140 * ease;
+    }
+    update();
+    draw();
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+})();
+</script>
+</body>
+</html>
