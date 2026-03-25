@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lattice</title>
+<style>
+* { margin: 0; padding: 0; }
+body { background: #0a0a0a; overflow: hidden; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const CONFIG = {
+  cols: 24,
+  rows: 16,
+  baseRadius: 3,
+  maxDisplace: 12,
+  breathSpeed: 0.008,
+  waveSpeed: 0.003,
+  lineAlpha: 0.08,
+  dotColor: [220, 200, 170],
+  lineColor: [220, 200, 170],
+};
+
+let W, H, cellW, cellH, nodes = [], time = 0;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cellW = W / (CONFIG.cols + 1);
+  cellH = H / (CONFIG.rows + 1);
+  initNodes();
+}
+
+function initNodes() {
+  nodes = [];
+  for (let r = 0; r < CONFIG.rows; r++) {
+    for (let c = 0; c < CONFIG.cols; c++) {
+      const baseX = (c + 1) * cellW;
+      const baseY = (r + 1) * cellH;
+      nodes.push({
+        baseX, baseY,
+        x: baseX, y: baseY,
+        phase: Math.random() * Math.PI * 2,
+        freq: 0.5 + Math.random() * 0.5,
+        amp: 0.3 + Math.random() * 0.7,
+        row: r, col: c,
+      });
+    }
+  }
+}
+
+function update() {
+  time++;
+  for (const n of nodes) {
+    const wave = Math.sin(n.col * 0.3 + n.row * 0.2 + time * CONFIG.waveSpeed);
+    const breath = Math.sin(time * CONFIG.breathSpeed + n.phase) * n.amp;
+    const dx = Math.sin(n.phase + time * 0.01 * n.freq) * CONFIG.maxDisplace * wave * 0.5;
+    const dy = Math.cos(n.phase + time * 0.012 * n.freq) * CONFIG.maxDisplace * breath;
+    n.x = n.baseX + dx;
+    n.y = n.baseY + dy;
+  }
+}
+
+function getNode(r, c) {
+  if (r < 0 || r >= CONFIG.rows || c < 0 || c >= CONFIG.cols) return null;
+  return nodes[r * CONFIG.cols + c];
+}
+
+function draw() {
+  ctx.fillStyle = 'rgba(10, 10, 10, 0.15)';
+  ctx.fillRect(0, 0, W, H);
+
+  // lines
+  const [lr, lg, lb] = CONFIG.lineColor;
+  for (const n of nodes) {
+    const right = getNode(n.row, n.col + 1);
+    const down = getNode(n.row + 1, n.col);
+    if (right) {
+      const dist = Math.hypot(n.x - right.x, n.y - right.y);
+      const alpha = Math.max(0, CONFIG.lineAlpha * (1 - dist / (cellW * 2)));
+      ctx.strokeStyle = `rgba(${lr},${lg},${lb},${alpha})`;
+      ctx.beginPath();
+      ctx.moveTo(n.x, n.y);
+      ctx.lineTo(right.x, right.y);
+      ctx.stroke();
+    }
+    if (down) {
+      const dist = Math.hypot(n.x - down.x, n.y - down.y);
+      const alpha = Math.max(0, CONFIG.lineAlpha * (1 - dist / (cellH * 2)));
+      ctx.strokeStyle = `rgba(${lr},${lg},${lb},${alpha})`;
+      ctx.beginPath();
+      ctx.moveTo(n.x, n.y);
+      ctx.lineTo(down.x, down.y);
+      ctx.stroke();
+    }
+  }
+
+  // dots
+  const [dr, dg, db] = CONFIG.dotColor;
+  for (const n of nodes) {
+    const breath = Math.sin(time * CONFIG.breathSpeed + n.phase);
+    const r = CONFIG.baseRadius + breath * 1.2 * n.amp;
+    const alpha = 0.4 + breath * 0.3;
+    ctx.fillStyle = `rgba(${dr},${dg},${db},${alpha})`;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, Math.max(0.5, r), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', resize);
+resize();
+loop();
+</script>
+</body>
+</html>
