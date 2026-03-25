@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>原声 / Origin Signal</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #0a0a0f; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width = 800;
+const H = canvas.height = 800;
+const CX = W / 2, CY = H / 2;
+
+// Color palette: deep indigo → warm amber decay
+const palette = [
+  [120, 140, 255],  // bright signal blue
+  [100, 120, 220],
+  [140, 110, 190],
+  [180, 120, 140],
+  [210, 150, 100],
+  [200, 160, 80],
+  [160, 130, 70],
+  [120, 100, 60],
+];
+
+const rings = [];
+const NUM_RINGS = 12;
+const POINTS_PER_RING = 120;
+
+// Each ring is an echo of the original signal
+for (let i = 0; i < NUM_RINGS; i++) {
+  const t = i / NUM_RINGS;
+  const baseRadius = 30 + i * 28;
+  const decay = Math.pow(0.82, i);
+  const points = [];
+  
+  for (let j = 0; j < POINTS_PER_RING; j++) {
+    const angle = (j / POINTS_PER_RING) * Math.PI * 2;
+    points.push({
+      angle,
+      baseR: baseRadius,
+      noiseOffset: Math.random() * 1000,
+      noiseSpeed: 0.003 + Math.random() * 0.004,
+      amplitude: 8 + i * 3.5,
+    });
+  }
+  
+  const ci = Math.min(i, palette.length - 1);
+  rings.push({ points, decay, colorIndex: ci, baseRadius, phase: i * 0.4 });
+}
+
+// Simple noise function
+function noise(x) {
+  const xi = Math.floor(x);
+  const xf = x - xi;
+  const u = xf * xf * (3 - 2 * xf);
+  return lerp(hash(xi), hash(xi + 1), u);
+}
+function hash(n) {
+  let x = Math.sin(n * 127.1) * 43758.5453;
+  return x - Math.floor(x);
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+let time = 0;
+
+function draw() {
+  // Fade trail
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+  
+  // Draw center pulse
+  const pulseR = 6 + Math.sin(time * 2) * 2;
+  const pulseAlpha = 0.7 + Math.sin(time * 3) * 0.3;
+  ctx.beginPath();
+  ctx.arc(CX, CY, pulseR, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(180, 200, 255, ${pulseAlpha})`;
+  ctx.fill();
+  
+  // Glow
+  const grad = ctx.createRadialGradient(CX, CY, 0, CX, CY, 30);
+  grad.addColorStop(0, `rgba(150, 170, 255, ${pulseAlpha * 0.3})`);
+  grad.addColorStop(1, 'rgba(150, 170, 255, 0)');
+  ctx.beginPath();
+  ctx.arc(CX, CY, 30, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  
+  // Draw rings (echoes)
+  for (let i = 0; i < rings.length; i++) {
+    const ring = rings[i];
+    const col = palette[ring.colorIndex];
+    const alpha = ring.decay * (0.5 + 0.2 * Math.sin(time * 0.5 + ring.phase));
+    const lineWidth = Math.max(0.5, 2.5 * ring.decay);
+    
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${alpha})`;
+    ctx.lineWidth = lineWidth;
+    
+    for (let j = 0; j <= POINTS_PER_RING; j++) {
+      const p = ring.points[j % POINTS_PER_RING];
+      const n = noise(p.noiseOffset + time * p.noiseSpeed);
+      const distortion = (n - 0.5) * 2 * p.amplitude * ring.decay;
+      
+      // Echo drift: outer rings wobble more
+      const wobble = Math.sin(time * 0.7 + p.angle * 3 + ring.phase) * (i * 1.2);
+      
+      const r = p.baseR + distortion + wobble;
+      const a = p.angle + Math.sin(time * 0.3 + i * 0.5) * 0.02 * i;
+      const x = CX + Math.cos(a) * r;
+      const y = CY + Math.sin(a) * r;
+      
+      if (j === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    
+    ctx.closePath();
+    ctx.stroke();
+    
+    // Scattered echo particles along outer rings
+    if (i > 5 && Math.random() < 0.15) {
+      const pIdx = Math.floor(Math.random() * POINTS_PER_RING);
+      const p = ring.points[pIdx];
+      const n = noise(p.noiseOffset + time * p.noiseSpeed);
+      const r = p.baseR + (n - 0.5) * p.amplitude * 2;
+      const a = p.angle;
+      const px = CX + Math.cos(a) * r;
+      const py = CY + Math.sin(a) * r;
+      ctx.beginPath();
+      ctx.arc(px, py, Math.random() * 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${alpha * 0.6})`;
+      ctx.fill();
+    }
+  }
+  
+  // Radial connection lines (signal paths) — very subtle
+  for (let k = 0; k < 6; k++) {
+    const angle = (k / 6) * Math.PI * 2 + time * 0.1;
+    const alpha = 0.04 + 0.02 * Math.sin(time + k);
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    const endR = rings[rings.length - 1].baseRadius + 20;
+    ctx.lineTo(CX + Math.cos(angle) * endR, CY + Math.sin(angle) * endR);
+    ctx.strokeStyle = `rgba(150, 170, 255, ${alpha})`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+  
+  time += 0.016;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
