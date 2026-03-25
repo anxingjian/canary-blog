@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entropy — Order & Chaos #6</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #0a0a0c; overflow: hidden; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+  canvas { max-width: 100vmin; max-height: 100vmin; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+(function() {
+  const canvas = document.getElementById('c');
+  const W = 800, H = 800;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const CONFIG = {
+    gridSize: 36,
+    cellGap: 1,
+    palette: {
+      cold: ['#6b7b8d', '#4a5568', '#8599ad', '#3d4f5f', '#2d3748'],
+      warm: ['#c4813a', '#d4956b', '#e8a855', '#b8732e']
+    },
+    cycleLength: 45000, // ms for full entropy cycle
+    rebuildStart: 0.7,  // when ghost grid starts appearing
+  };
+
+  const cellSize = W / CONFIG.gridSize;
+  let startTime = performance.now();
+
+  // Each cell: original grid position + chaos state
+  const cells = [];
+  for (let row = 0; row < CONFIG.gridSize; row++) {
+    for (let col = 0; col < CONFIG.gridSize; col++) {
+      const originX = col * cellSize + cellSize / 2;
+      const originY = row * cellSize + cellSize / 2;
+      cells.push({
+        originX, originY,
+        x: originX, y: originY,
+        size: cellSize - CONFIG.cellGap,
+        angle: 0,
+        // Chaos destination — random scatter
+        chaosX: Math.random() * W,
+        chaosY: Math.random() * H,
+        chaosAngle: (Math.random() - 0.5) * Math.PI * 4,
+        chaosSize: Math.random() * cellSize * 0.3 + 1,
+        // Visual
+        coldColor: CONFIG.palette.cold[Math.floor(Math.random() * CONFIG.palette.cold.length)],
+        warmColor: CONFIG.palette.warm[Math.floor(Math.random() * CONFIG.palette.warm.length)],
+        // Timing offset for staggered animation
+        delay: (row + col) / (CONFIG.gridSize * 2) * 0.3 + Math.random() * 0.15,
+        noisePhase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function draw(now) {
+    const elapsed = now - startTime;
+    const cycleT = (elapsed % CONFIG.cycleLength) / CONFIG.cycleLength;
+
+    ctx.fillStyle = '#0a0a0c';
+    ctx.fillRect(0, 0, W, H);
+
+    // Phase breakdown:
+    // 0.0 - 0.05: perfect grid
+    // 0.05 - 0.55: grid → full chaos
+    // 0.55 - 0.70: hold chaos (vibrating)
+    // 0.70 - 0.95: ghost grid fades in underneath
+    // 0.95 - 1.00: snap back to grid
+
+    for (const cell of cells) {
+      let cx, cy, sz, angle, alpha, warmMix;
+
+      const cellT = Math.max(0, Math.min(1, (cycleT - cell.delay) / 0.5));
+
+      if (cycleT < 0.05) {
+        // Perfect grid
+        cx = cell.originX;
+        cy = cell.originY;
+        sz = cell.size;
+        angle = 0;
+        alpha = 0.85;
+        warmMix = 0;
+      } else if (cycleT < 0.55) {
+        // Scatter to chaos
+        const t = easeInOutCubic(cellT);
+        cx = lerp(cell.originX, cell.chaosX, t);
+        cy = lerp(cell.originY, cell.chaosY, t);
+        sz = lerp(cell.size, cell.chaosSize, t);
+        angle = lerp(0, cell.chaosAngle, t);
+        alpha = lerp(0.85, 0.4 + Math.random() * 0.3, t);
+        warmMix = t;
+      } else if (cycleT < 0.70) {
+        // Chaos hold — vibrate
+        const vibT = (cycleT - 0.55) / 0.15;
+        const vibAmp = 8;
+        cx = cell.chaosX + Math.sin(now * 0.003 + cell.noisePhase) * vibAmp;
+        cy = cell.chaosY + Math.cos(now * 0.0025 + cell.noisePhase * 1.3) * vibAmp;
+        sz = cell.chaosSize * (0.8 + Math.sin(now * 0.005 + cell.noisePhase) * 0.3);
+        angle = cell.chaosAngle + Math.sin(now * 0.002 + cell.noisePhase) * 0.3;
+        alpha = 0.3 + Math.sin(now * 0.004 + cell.noisePhase) * 0.15;
+        warmMix = 1;
+      } else if (cycleT < 0.95) {
+        // Ghost grid fades in — chaos particles still there but fading
+        const rebuildT = (cycleT - 0.70) / 0.25;
+        const eased = easeInOutCubic(rebuildT);
+
+        // Chaos particle fading out
+        cx = cell.chaosX + Math.sin(now * 0.003 + cell.noisePhase) * (8 * (1 - eased));
+        cy = cell.chaosY + Math.cos(now * 0.0025 + cell.noisePhase) * (8 * (1 - eased));
+        sz = cell.chaosSize * (1 - eased * 0.7);
+        angle = cell.chaosAngle;
+        alpha = 0.3 * (1 - eased);
+        warmMix = 1 - eased;
+
+        // Draw ghost grid cell underneath
+        ctx.save();
+        ctx.globalAlpha = eased * 0.15;
+        ctx.translate(cell.originX, cell.originY);
+        ctx.fillStyle = cell.coldColor;
+        const ghostSize = cell.size * eased;
+        ctx.fillRect(-ghostSize / 2, -ghostSize / 2, ghostSize, ghostSize);
+        ctx.restore();
+      } else {
+        // Snap back
+        const snapT = (cycleT - 0.95) / 0.05;
+        const eased = easeInOutCubic(snapT);
+        cx = lerp(cell.chaosX, cell.originX, eased);
+        cy = lerp(cell.chaosY, cell.originY, eased);
+        sz = lerp(cell.chaosSize, cell.size, eased);
+        angle = lerp(cell.chaosAngle, 0, eased);
+        alpha = lerp(0.3, 0.85, eased);
+        warmMix = 1 - eased;
+      }
+
+      // Draw cell
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+
+      // Color blend
+      if (warmMix > 0.5) {
+        ctx.fillStyle = cell.warmColor;
+      } else {
+        ctx.fillStyle = cell.coldColor;
+      }
+
+      ctx.fillRect(-sz / 2, -sz / 2, sz, sz);
+      ctx.restore();
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
