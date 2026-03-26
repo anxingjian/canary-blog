@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>反射 / Reflection</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #08080e; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width = 800;
+const H = canvas.height = 800;
+
+// Two signal sources — an echo bouncing between walls
+const sources = [
+  { x: 200, y: 400, phase: 0, freq: 0.04, color: [100, 140, 240] },
+  { x: 600, y: 400, phase: Math.PI * 0.7, freq: 0.035, color: [220, 160, 90] },
+];
+
+// Boundary walls that reflect
+const walls = [
+  { x1: 0, y1: 0, x2: 800, y2: 0 },
+  { x1: 800, y1: 0, x2: 800, y2: 800 },
+  { x1: 800, y1: 800, x2: 0, y2: 800 },
+  { x1: 0, y1: 800, x2: 0, y2: 0 },
+];
+
+// Ghost reflections — mirror sources across walls
+const ghosts = [
+  { x: 200, y: -400, color: [100, 140, 240], decay: 0.3 },
+  { x: 200, y: 1200, color: [100, 140, 240], decay: 0.3 },
+  { x: -400, y: 400, color: [100, 140, 240], decay: 0.25 },
+  { x: 600, y: -400, color: [220, 160, 90], decay: 0.3 },
+  { x: 600, y: 1200, color: [220, 160, 90], decay: 0.3 },
+  { x: 1400, y: 400, color: [220, 160, 90], decay: 0.25 },
+];
+
+let time = 0;
+const imageData = ctx.createImageData(W, H);
+const data = imageData.data;
+
+// Particles at interference peaks
+const particles = [];
+const MAX_PARTICLES = 60;
+
+function wave(sx, sy, x, y, t, freq, phase, decay = 1.0) {
+  const dx = x - sx, dy = y - sy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const attenuation = decay / (1 + dist * 0.004);
+  return Math.sin(dist * freq - t * 2.5 + phase) * attenuation;
+}
+
+function drawField() {
+  const step = 4; // sample every 4 pixels for performance
+  
+  // Clear to near-black
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 8; data[i+1] = 8; data[i+2] = 14; data[i+3] = 255;
+  }
+  
+  for (let y = 0; y < H; y += step) {
+    for (let x = 0; x < W; x += step) {
+      // Sum waves from both sources
+      let v0 = 0, v1 = 0;
+      
+      v0 += wave(sources[0].x, sources[0].y, x, y, time, sources[0].freq, sources[0].phase);
+      v1 += wave(sources[1].x, sources[1].y, x, y, time, sources[1].freq, sources[1].phase);
+      
+      // Add ghost reflections (dimmer)
+      for (const g of ghosts) {
+        const gWave = wave(g.x, g.y, x, y, time, 0.037, time * 0.1, g.decay);
+        if (g.color[0] === 100) v0 += gWave;
+        else v1 += gWave;
+      }
+      
+      const total = v0 + v1;
+      const interference = v0 * v1; // Positive = constructive, negative = destructive
+      
+      // Color: blend of both sources weighted by their contribution
+      const w0 = Math.abs(v0), w1 = Math.abs(v1);
+      const wSum = w0 + w1 + 0.001;
+      
+      const r = (sources[0].color[0] * w0 + sources[1].color[0] * w1) / wSum;
+      const g = (sources[0].color[1] * w0 + sources[1].color[1] * w1) / wSum;
+      const b = (sources[0].color[2] * w0 + sources[1].color[2] * w1) / wSum;
+      
+      const brightness = Math.abs(total) * 0.5;
+      const interferenceBright = Math.max(0, interference) * 0.3;
+      const alpha = Math.min(1, brightness + interferenceBright);
+      
+      // Fill the step x step block
+      for (let dy = 0; dy < step && y + dy < H; dy++) {
+        for (let dx = 0; dx < step && x + dx < W; dx++) {
+          const idx = ((y + dy) * W + (x + dx)) * 4;
+          data[idx]     = Math.min(255, 8 + r * alpha);
+          data[idx + 1] = Math.min(255, 8 + g * alpha);
+          data[idx + 2] = Math.min(255, 14 + b * alpha);
+        }
+      }
+    }
+  }
+  
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function drawSources() {
+  for (const s of sources) {
+    // Breathing pulse
+    const pr = 4 + Math.sin(time * 3 + s.phase) * 1.5;
+    const glow = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 40);
+    glow.addColorStop(0, `rgba(${s.color[0]}, ${s.color[1]}, ${s.color[2]}, 0.6)`);
+    glow.addColorStop(0.3, `rgba(${s.color[0]}, ${s.color[1]}, ${s.color[2]}, 0.15)`);
+    glow.addColorStop(1, `rgba(${s.color[0]}, ${s.color[1]}, ${s.color[2]}, 0)`);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, 40, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, pr, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${s.color[0]}, ${s.color[1]}, ${s.color[2]}, 0.9)`;
+    ctx.fill();
+  }
+}
+
+function drawBoundaryGlow() {
+  // Subtle glow along edges where waves hit boundaries
+  const edgeWidth = 3;
+  ctx.globalAlpha = 0.08 + 0.04 * Math.sin(time * 0.7);
+  
+  // Top edge
+  const gradT = ctx.createLinearGradient(0, 0, 0, 30);
+  gradT.addColorStop(0, 'rgba(160, 150, 200, 0.4)');
+  gradT.addColorStop(1, 'rgba(160, 150, 200, 0)');
+  ctx.fillStyle = gradT;
+  ctx.fillRect(0, 0, W, 30);
+  
+  // Bottom
+  const gradB = ctx.createLinearGradient(0, H, 0, H - 30);
+  gradB.addColorStop(0, 'rgba(160, 150, 200, 0.4)');
+  gradB.addColorStop(1, 'rgba(160, 150, 200, 0)');
+  ctx.fillStyle = gradB;
+  ctx.fillRect(0, H - 30, W, 30);
+  
+  // Left
+  const gradL = ctx.createLinearGradient(0, 0, 30, 0);
+  gradL.addColorStop(0, 'rgba(160, 150, 200, 0.4)');
+  gradL.addColorStop(1, 'rgba(160, 150, 200, 0)');
+  ctx.fillStyle = gradL;
+  ctx.fillRect(0, 0, 30, H);
+  
+  // Right
+  const gradR = ctx.createLinearGradient(W, 0, W - 30, 0);
+  gradR.addColorStop(0, 'rgba(160, 150, 200, 0.4)');
+  gradR.addColorStop(1, 'rgba(160, 150, 200, 0)');
+  ctx.fillStyle = gradR;
+  ctx.fillRect(W - 30, 0, 30, H);
+  
+  ctx.globalAlpha = 1;
+}
+
+// Nodal line visualization — the silence between echoes
+function drawNodalLines() {
+  ctx.globalAlpha = 0.12;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.lineWidth = 0.5;
+  
+  const step = 8;
+  for (let y = 0; y < H; y += step) {
+    for (let x = 0; x < W; x += step) {
+      const v0 = wave(sources[0].x, sources[0].y, x, y, time, sources[0].freq, sources[0].phase);
+      const v1 = wave(sources[1].x, sources[1].y, x, y, time, sources[1].freq, sources[1].phase);
+      const total = v0 + v1;
+      
+      // Near-zero = nodal point (destructive interference)
+      if (Math.abs(total) < 0.06) {
+        ctx.beginPath();
+        ctx.arc(x, y, 0.8, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Connecting line between sources — the signal path
+function drawSignalPath() {
+  const alpha = 0.04 + 0.02 * Math.sin(time * 0.5);
+  ctx.beginPath();
+  ctx.moveTo(sources[0].x, sources[0].y);
+  ctx.lineTo(sources[1].x, sources[1].y);
+  ctx.strokeStyle = `rgba(180, 170, 200, ${alpha})`;
+  ctx.lineWidth = 0.5;
+  ctx.setLineDash([4, 8]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // Traveling pulse along the path
+  const pulseT = (time * 0.3) % 1;
+  const px = sources[0].x + (sources[1].x - sources[0].x) * pulseT;
+  const py = sources[0].y + (sources[1].y - sources[0].y) * pulseT;
+  ctx.beginPath();
+  ctx.arc(px, py, 2, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(200, 190, 220, ${0.4 + 0.2 * Math.sin(time * 4)})`;
+  ctx.fill();
+}
+
+// Slow drift of sources
+function updateSources() {
+  sources[0].x = 200 + Math.sin(time * 0.15) * 30;
+  sources[0].y = 400 + Math.cos(time * 0.12) * 40;
+  sources[1].x = 600 + Math.sin(time * 0.13 + 2) * 30;
+  sources[1].y = 400 + Math.cos(time * 0.1 + 1) * 40;
+}
+
+function frame() {
+  updateSources();
+  drawField();
+  drawNodalLines();
+  drawBoundaryGlow();
+  drawSignalPath();
+  drawSources();
+  
+  time += 0.02;
+  requestAnimationFrame(frame);
+}
+
+frame();
+</script>
+</body>
+</html>
