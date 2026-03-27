@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>衰减 / Decay</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #0a0a10; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width = 800;
+const H = canvas.height = 800;
+const CX = W / 2, CY = H / 2;
+
+let time = 0;
+
+// The original signal — a pulse that was once clean
+// Now we watch it degrade as it propagates
+
+// Fragments — pieces that have broken off from the wave
+const fragments = [];
+const MAX_FRAGS = 200;
+
+function initFragments() {
+  for (let i = 0; i < MAX_FRAGS; i++) {
+    resetFragment(i);
+  }
+}
+
+function resetFragment(i) {
+  const angle = Math.random() * Math.PI * 2;
+  const dist = 80 + Math.random() * 300;
+  fragments[i] = {
+    x: CX + Math.cos(angle) * dist,
+    y: CY + Math.sin(angle) * dist,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: (Math.random() - 0.5) * 0.3,
+    size: 1 + Math.random() * 3,
+    life: 0.3 + Math.random() * 0.7,
+    decay: 0.0005 + Math.random() * 0.001,
+    angle: angle,
+    dist: dist,
+    hue: Math.random() < 0.6 ? 220 : 35, // blue or amber — remnants of both sources
+    drift: (Math.random() - 0.5) * 0.02,
+  };
+}
+
+initFragments();
+
+// Concentric rings — the signal's wavefront, increasingly broken
+class Ring {
+  constructor(birthTime) {
+    this.birthTime = birthTime;
+    this.speed = 40; // px per second
+    // Each ring has random break points that grow over distance
+    this.breaks = [];
+    const numBreaks = 2 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < numBreaks; i++) {
+      this.breaks.push({
+        angle: Math.random() * Math.PI * 2,
+        width: 0.05 + Math.random() * 0.15, // initial gap width in radians
+        growRate: 0.02 + Math.random() * 0.04,
+      });
+    }
+    // Color starts as the echo-blue, fades toward grey
+    this.hue = 220 + (Math.random() - 0.5) * 30;
+    this.satBase = 60 + Math.random() * 20;
+  }
+
+  getRadius(t) {
+    return (t - this.birthTime) * this.speed;
+  }
+
+  draw(t) {
+    const r = this.getRadius(t);
+    if (r < 0 || r > 560) return false; // off screen
+
+    // Decay factor: further = more degraded
+    const decayFactor = Math.max(0, 1 - r / 400);
+    const distortion = (1 - decayFactor) * 0.4;
+
+    // Opacity fades with distance
+    const alpha = decayFactor * 0.7 + 0.02;
+    // Saturation drops
+    const sat = this.satBase * decayFactor;
+    // Lightness shifts from bright to dim
+    const light = 50 + 20 * decayFactor;
+
+    ctx.lineWidth = Math.max(0.3, 2.5 * decayFactor);
+
+    // Draw ring in segments, skipping breaks
+    const segments = 120;
+    const segAngle = (Math.PI * 2) / segments;
+
+    for (let i = 0; i < segments; i++) {
+      const a = i * segAngle;
+
+      // Check if this segment falls in a break
+      let inBreak = false;
+      for (const brk of this.breaks) {
+        const gapWidth = brk.width + brk.growRate * (r / 40);
+        let diff = a - brk.angle;
+        // Normalize to -PI..PI
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        if (Math.abs(diff) < gapWidth) {
+          inBreak = true;
+          break;
+        }
+      }
+
+      if (inBreak) continue;
+
+      // Position with increasing jitter
+      const jitter = distortion * (Math.sin(a * 13 + t * 2) * 8 + Math.cos(a * 7 - t) * 5);
+      const rr = r + jitter;
+
+      // Pixelation effect at far distances — snap to grid
+      let px = CX + Math.cos(a) * rr;
+      let py = CY + Math.sin(a) * rr;
+
+      if (decayFactor < 0.4) {
+        const grid = 4 + Math.floor((1 - decayFactor) * 8);
+        px = Math.round(px / grid) * grid;
+        py = Math.round(py / grid) * grid;
+      }
+
+      const a2 = a + segAngle;
+      const jitter2 = distortion * (Math.sin(a2 * 13 + t * 2) * 8 + Math.cos(a2 * 7 - t) * 5);
+      const rr2 = r + jitter2;
+      let px2 = CX + Math.cos(a2) * rr2;
+      let py2 = CY + Math.sin(a2) * rr2;
+
+      if (decayFactor < 0.4) {
+        const grid = 4 + Math.floor((1 - decayFactor) * 8);
+        px2 = Math.round(px2 / grid) * grid;
+        py2 = Math.round(py2 / grid) * grid;
+      }
+
+      // Color shifts subtly per segment at far distance
+      const segHue = this.hue + (1 - decayFactor) * Math.sin(a * 5 + t) * 40;
+
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px2, py2);
+      ctx.strokeStyle = `hsla(${segHue}, ${sat}%, ${light}%, ${alpha})`;
+      ctx.stroke();
+    }
+
+    // Spawn fragments at break edges
+    if (Math.random() < 0.03 * (1 - decayFactor + 0.2)) {
+      const brk = this.breaks[Math.floor(Math.random() * this.breaks.length)];
+      const edgeAngle = brk.angle + (Math.random() < 0.5 ? 1 : -1) * brk.width;
+      const fx = CX + Math.cos(edgeAngle) * r;
+      const fy = CY + Math.sin(edgeAngle) * r;
+
+      // Find a dead fragment to reuse
+      for (let i = 0; i < MAX_FRAGS; i++) {
+        if (fragments[i].life <= 0) {
+          fragments[i] = {
+            x: fx, y: fy,
+            vx: Math.cos(edgeAngle) * 0.5 + (Math.random() - 0.5) * 0.3,
+            vy: Math.sin(edgeAngle) * 0.5 + (Math.random() - 0.5) * 0.3,
+            size: 1 + Math.random() * 2,
+            life: 0.4 + Math.random() * 0.5,
+            decay: 0.002 + Math.random() * 0.003,
+            angle: edgeAngle,
+            dist: r,
+            hue: this.hue,
+            drift: (Math.random() - 0.5) * 0.01,
+          };
+          break;
+        }
+      }
+    }
+
+    return true;
+  }
+}
+
+// Emit rings periodically
+const rings = [];
+let lastRingTime = 0;
+const RING_INTERVAL = 1.2; // seconds between rings
+
+// Ghost of the original signal — a faint, perfect circle at center
+function drawGhost() {
+  const pulseR = 15 + Math.sin(time * 1.5) * 3;
+  const grad = ctx.createRadialGradient(CX, CY, 0, CX, CY, pulseR * 3);
+  grad.addColorStop(0, 'rgba(100, 140, 240, 0.15)');
+  grad.addColorStop(0.3, 'rgba(100, 140, 240, 0.05)');
+  grad.addColorStop(1, 'rgba(100, 140, 240, 0)');
+  ctx.beginPath();
+  ctx.arc(CX, CY, pulseR * 3, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Tiny bright core
+  ctx.beginPath();
+  ctx.arc(CX, CY, 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(140, 170, 255, ${0.5 + 0.2 * Math.sin(time * 2)})`;
+  ctx.fill();
+
+  // A single clean ring near center — what the signal used to look like
+  ctx.beginPath();
+  ctx.arc(CX, CY, pulseR, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(120, 155, 245, ${0.25 + 0.1 * Math.sin(time * 1.8)})`;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+// Draw fragments
+function drawFragments() {
+  for (let i = 0; i < MAX_FRAGS; i++) {
+    const f = fragments[i];
+    if (f.life <= 0) continue;
+
+    f.x += f.vx;
+    f.y += f.vy;
+    f.vx += f.drift;
+    f.vy += f.drift * 0.7;
+    f.life -= f.decay;
+
+    const sat = f.life * 50;
+    const light = 40 + f.life * 30;
+    const alpha = f.life * 0.6;
+
+    ctx.beginPath();
+    // Some fragments are dots, some are tiny lines
+    if (f.size > 2) {
+      const len = f.size * 2;
+      ctx.moveTo(f.x - Math.cos(f.angle) * len, f.y - Math.sin(f.angle) * len);
+      ctx.lineTo(f.x + Math.cos(f.angle) * len, f.y + Math.sin(f.angle) * len);
+      ctx.strokeStyle = `hsla(${f.hue}, ${sat}%, ${light}%, ${alpha})`;
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    } else {
+      ctx.arc(f.x, f.y, f.size * f.life, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${f.hue}, ${sat}%, ${light}%, ${alpha})`;
+      ctx.fill();
+    }
+  }
+}
+
+// Static noise at the periphery — the signal floor
+function drawNoise() {
+  const noiseAlpha = 0.03 + 0.01 * Math.sin(time * 0.3);
+  const step = 6;
+  for (let y = 0; y < H; y += step) {
+    for (let x = 0; x < W; x += step) {
+      const dx = x - CX, dy = y - CY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Noise only in outer region
+      if (dist < 250) continue;
+      const noiseVal = Math.random();
+      if (noiseVal > 0.92) {
+        const distFactor = Math.min(1, (dist - 250) / 200);
+        const a = noiseAlpha * distFactor * (0.5 + noiseVal * 0.5);
+        ctx.fillStyle = `rgba(${130 + Math.random() * 40}, ${130 + Math.random() * 30}, ${160 + Math.random() * 40}, ${a})`;
+        ctx.fillRect(x, y, step * 0.6, step * 0.6);
+      }
+    }
+  }
+}
+
+// Subtle vignette — darkness closing in
+function drawVignette() {
+  const grad = ctx.createRadialGradient(CX, CY, 150, CX, CY, 500);
+  grad.addColorStop(0, 'rgba(10, 10, 16, 0)');
+  grad.addColorStop(0.6, 'rgba(10, 10, 16, 0)');
+  grad.addColorStop(1, 'rgba(10, 10, 16, 0.5)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// Waveform trace along the bottom — showing degradation over distance
+function drawWaveformTrace() {
+  const y0 = H - 50;
+  const traceH = 25;
+  ctx.globalAlpha = 0.2;
+
+  ctx.beginPath();
+  for (let x = 0; x < W; x++) {
+    // Map x to distance from center
+    const dist = (x / W) * 500;
+    const decayFactor = Math.max(0, 1 - dist / 400);
+
+    // Clean wave that degrades
+    let val = Math.sin(x * 0.05 - time * 3) * decayFactor;
+    // Add noise at far distances
+    val += (1 - decayFactor) * (Math.sin(x * 0.37 + time * 7) * 0.3 + Math.sin(x * 1.1) * 0.1);
+
+    // Quantize at far distances
+    if (decayFactor < 0.3) {
+      val = Math.round(val * 4) / 4;
+    }
+
+    const py = y0 - val * traceH;
+    if (x === 0) ctx.moveTo(x, py);
+    else ctx.lineTo(x, py);
+  }
+  ctx.strokeStyle = 'rgba(120, 150, 220, 0.5)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.globalAlpha = 1;
+}
+
+function frame() {
+  // Soft fade instead of hard clear — creates trailing ghost effect
+  ctx.fillStyle = 'rgba(10, 10, 16, 0.15)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Emit new ring
+  if (time - lastRingTime > RING_INTERVAL) {
+    rings.push(new Ring(time));
+    lastRingTime = time;
+    // Keep ring count manageable
+    if (rings.length > 15) rings.shift();
+  }
+
+  drawNoise();
+
+  // Draw all active rings
+  for (let i = rings.length - 1; i >= 0; i--) {
+    if (!rings[i].draw(time)) {
+      rings.splice(i, 1);
+    }
+  }
+
+  drawFragments();
+  drawGhost();
+  drawVignette();
+  drawWaveformTrace();
+
+  time += 0.016;
+  requestAnimationFrame(frame);
+}
+
+frame();
+</script>
+</body>
+</html>
