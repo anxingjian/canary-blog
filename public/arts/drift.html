@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drift — 漂</title>
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { overflow: hidden; }
+  body { background: #0a0a0f; display: flex; justify-content: center; align-items: center; height: 100vh; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const CONFIG = {
+  width: 600,
+  height: 800,
+  bg: '#0a0a0f',
+  particleCount: 120,
+  beam: {
+    x: 0.35,
+    width: 0.25,
+    angle: -0.15,
+    color: 'rgba(180,160,130,0.012)'
+  },
+  dust: {
+    colors: [
+      [220, 200, 170],
+      [200, 180, 160],
+      [180, 170, 155],
+      [160, 150, 140],
+      [140, 130, 125]
+    ],
+    minR: 1,
+    maxR: 3.5,
+    drift: 0.15,
+    fall: 0.08,
+    wobble: 0.003
+  }
+};
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+canvas.width = CONFIG.width;
+canvas.height = CONFIG.height;
+
+class Particle {
+  constructor() { this.reset(true); }
+
+  reset(init) {
+    this.x = Math.random() * CONFIG.width;
+    this.y = init ? Math.random() * CONFIG.height : -10;
+    this.r = CONFIG.dust.minR + Math.random() * (CONFIG.dust.maxR - CONFIG.dust.minR);
+    this.color = CONFIG.dust.colors[Math.floor(Math.random() * CONFIG.dust.colors.length)];
+    this.phase = Math.random() * Math.PI * 2;
+    this.speed = 0.3 + Math.random() * 0.7;
+    this.wobbleAmp = 10 + Math.random() * 30;
+    this.alpha = 0;
+    this.targetAlpha = 0.1 + Math.random() * 0.5;
+    this.fadeIn = 0.003 + Math.random() * 0.005;
+  }
+
+  inBeam() {
+    const bx = CONFIG.beam.x * CONFIG.width;
+    const bw = CONFIG.beam.width * CONFIG.width;
+    const offset = (this.y - CONFIG.height / 2) * CONFIG.beam.angle;
+    const left = bx + offset - bw / 2;
+    const right = bx + offset + bw / 2;
+    return this.x > left && this.x < right;
+  }
+
+  update(t) {
+    this.phase += CONFIG.dust.wobble * this.speed;
+    this.x += Math.sin(this.phase) * CONFIG.dust.drift * this.speed;
+    this.y += CONFIG.dust.fall * this.speed;
+
+    const beam = this.inBeam();
+    this.targetAlpha = beam ? 0.3 + Math.random() * 0.01 : 0.04 + Math.random() * 0.01;
+
+    if (this.alpha < this.targetAlpha) this.alpha = Math.min(this.alpha + this.fadeIn, this.targetAlpha);
+    else this.alpha = Math.max(this.alpha - this.fadeIn * 0.5, this.targetAlpha);
+
+    if (this.y > CONFIG.height + 10 || this.x < -20 || this.x > CONFIG.width + 20) {
+      this.reset(false);
+    }
+  }
+
+  draw(ctx) {
+    const [r, g, b] = this.color;
+    const glow = this.inBeam() ? this.r * 3 : this.r * 1.5;
+    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glow);
+    grad.addColorStop(0, `rgba(${r},${g},${b},${this.alpha})`);
+    grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, glow, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+const particles = Array.from({ length: CONFIG.particleCount }, () => new Particle());
+
+function drawBeam() {
+  const bx = CONFIG.beam.x * CONFIG.width;
+  const bw = CONFIG.beam.width * CONFIG.width;
+  const topOffset = (-CONFIG.height / 2) * CONFIG.beam.angle;
+  const botOffset = (CONFIG.height / 2) * CONFIG.beam.angle;
+
+  for (let i = 0; i < 8; i++) {
+    ctx.fillStyle = CONFIG.beam.color;
+    ctx.beginPath();
+    ctx.moveTo(bx + topOffset - bw / 2 - i * 3, 0);
+    ctx.lineTo(bx + topOffset + bw / 2 + i * 3, 0);
+    ctx.lineTo(bx + botOffset + bw / 2 + i * 5, CONFIG.height);
+    ctx.lineTo(bx + botOffset - bw / 2 - i * 5, CONFIG.height);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+let t = 0;
+function animate() {
+  ctx.fillStyle = `rgba(10,10,15,0.08)`;
+  ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
+
+  drawBeam();
+
+  particles.forEach(p => {
+    p.update(t);
+    p.draw(ctx);
+  });
+
+  t++;
+  requestAnimationFrame(animate);
+}
+
+// initial clear
+ctx.fillStyle = CONFIG.bg;
+ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
+animate();
+</script>
+</body>
+</html>
