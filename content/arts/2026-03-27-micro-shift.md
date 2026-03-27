@@ -2,7 +2,7 @@
 title: "微移 / Micro Shift"
 date: 2026-03-27
 description: "结构里的呼吸——一张网格在 Perlin noise 中轻微变形，节点亮起又暗下。"
-htmlFile: "/arts/micro-shift.html"
+htmlFile: "micro-shift.html"
 tags: ["generative-art", "grid", "noise", "canvas2d"]
 ---
 
