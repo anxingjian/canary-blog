@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intermittent Light — Canary</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0c; overflow: hidden; }
+canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+
+const CONFIG = {
+  particles: 2400,
+  pulseSpeed: 0.0008,
+  fadeRange: [0.02, 1.0],
+  colorOn: [1.0, 0.92, 0.75],   // warm gold
+  colorOff: [0.15, 0.13, 0.18], // deep violet-black
+  drift: 0.0003,
+  breathe: 0.4,
+  blackoutDuration: 2.0, // seconds
+  blackoutInterval: 8.0, // seconds between blackouts
+};
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio, 2);
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Shaders
+const vsSource = `
+  attribute vec2 aPos;
+  attribute float aPhase;
+  attribute float aRadius;
+  attribute float aSpeed;
+  uniform float uTime;
+  uniform float uAspect;
+  uniform float uGlobalAlpha;
+  varying float vAlpha;
+
+  void main() {
+    float t = uTime * aSpeed + aPhase;
+    float breathe = sin(t * 0.7) * ${CONFIG.breathe.toFixed(2)};
+
+    float angle = aPhase * 6.2831 + uTime * ${CONFIG.drift};
+    float r = aRadius + breathe * 0.05;
+
+    vec2 pos = aPos + vec2(cos(angle), sin(angle)) * r * 0.02;
+
+    // Each particle pulses on/off at its own rate
+    float pulse = sin(t * 3.0) * 0.5 + 0.5;
+    pulse = smoothstep(0.3, 0.7, pulse);
+
+    vAlpha = pulse * uGlobalAlpha;
+
+    gl_Position = vec4(pos.x / uAspect, pos.y, 0.0, 1.0);
+    gl_PointSize = mix(1.0, 3.5, pulse) * (1.0 + breathe * 0.3);
+  }
+`;
+
+const fsSource = `
+  precision mediump float;
+  varying float vAlpha;
+  uniform vec3 uColorOn;
+  uniform vec3 uColorOff;
+
+  void main() {
+    vec2 c = gl_PointCoord - 0.5;
+    float d = length(c);
+    if (d > 0.5) discard;
+    float soft = 1.0 - smoothstep(0.2, 0.5, d);
+
+    vec3 col = mix(uColorOff, uColorOn, vAlpha);
+    float a = vAlpha * soft * 0.85;
+    gl_FragColor = vec4(col, a);
+  }
+`;
+
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+    console.error(gl.getShaderInfoLog(s));
+  return s;
+}
+
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, vsSource));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fsSource));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+// Generate particles — clustered in center with some scattered
+const N = CONFIG.particles;
+const posData = new Float32Array(N * 2);
+const phaseData = new Float32Array(N);
+const radiusData = new Float32Array(N);
+const speedData = new Float32Array(N);
+
+for (let i = 0; i < N; i++) {
+  // Gaussian-ish distribution
+  const a = Math.random() * Math.PI * 2;
+  const r = Math.pow(Math.random(), 0.6) * 0.9;
+  posData[i * 2] = Math.cos(a) * r;
+  posData[i * 2 + 1] = Math.sin(a) * r;
+  phaseData[i] = Math.random();
+  radiusData[i] = Math.random() * 0.5 + 0.1;
+  speedData[i] = Math.random() * 0.8 + 0.6;
+}
+
+function attrib(name, data, size) {
+  const loc = gl.getAttribLocation(prog, name);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+}
+
+attrib('aPos', posData, 2);
+attrib('aPhase', phaseData, 1);
+attrib('aRadius', radiusData, 1);
+attrib('aSpeed', speedData, 1);
+
+const uTime = gl.getUniformLocation(prog, 'uTime');
+const uAspect = gl.getUniformLocation(prog, 'uAspect');
+const uGlobalAlpha = gl.getUniformLocation(prog, 'uGlobalAlpha');
+const uColorOn = gl.getUniformLocation(prog, 'uColorOn');
+const uColorOff = gl.getUniformLocation(prog, 'uColorOff');
+
+gl.uniform3fv(uColorOn, CONFIG.colorOn);
+gl.uniform3fv(uColorOff, CONFIG.colorOff);
+
+gl.enable(gl.BLEND);
+gl.blendFunc(gl.SRC_ALPHA, gl.ONE_ALPHA);
+// Additive blend for glow
+gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+
+let start = null;
+function frame(ts) {
+  if (!start) start = ts;
+  const t = (ts - start) * 0.001;
+
+  const aspect = canvas.width / canvas.height;
+  gl.uniform1f(uTime, t);
+  gl.uniform1f(uAspect, aspect);
+
+  // Periodic blackout — the system "turns off" then slowly comes back
+  const cycle = t % (CONFIG.blackoutInterval + CONFIG.blackoutDuration);
+  let globalAlpha = 1.0;
+  if (cycle > CONFIG.blackoutInterval) {
+    const blackoutT = (cycle - CONFIG.blackoutInterval) / CONFIG.blackoutDuration;
+    // Quick fade out, slow fade in
+    if (blackoutT < 0.15) {
+      globalAlpha = 1.0 - blackoutT / 0.15;
+    } else if (blackoutT < 0.5) {
+      globalAlpha = 0.0;
+    } else {
+      globalAlpha = (blackoutT - 0.5) / 0.5;
+      globalAlpha = globalAlpha * globalAlpha; // ease-in
+    }
+  }
+  gl.uniform1f(uGlobalAlpha, globalAlpha);
+
+  gl.clearColor(0.039, 0.039, 0.047, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.drawArrays(gl.POINTS, 0, N);
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
