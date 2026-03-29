@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Library — Canary</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #08070a; overflow: hidden; }
+canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const CONFIG = {
+  hexRows: 6,
+  hexCols: 8,
+  hexRadius: 80,
+  wallWidth: 2,
+  wallColor: 'rgba(180, 160, 130, 0.12)',
+  glyphCount: 600,
+  glyphChars: 'abcdefghijklmnopqrstuvwxyz0123456789αβγδεζηθικλμνξπρστυφχψω',
+  glyphSize: [9, 14],
+  glyphFade: [0.03, 0.25],
+  driftSpeed: 0.15,
+  pulseSpeed: 0.0006,
+  lampColor: [255, 220, 160],
+  lampRadius: 120,
+  lampCount: 5,
+  perspective: 0.7,
+  corridorDepth: 8,
+};
+
+let W, H, glyphs = [], lamps = [], time = 0;
+
+function resize() {
+  W = canvas.width = window.innerWidth * devicePixelRatio;
+  H = canvas.height = window.innerHeight * devicePixelRatio;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Hexagon helpers
+function hexCorner(cx, cy, r, i) {
+  const angle = Math.PI / 3 * i - Math.PI / 6;
+  return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
+}
+
+function drawHex(cx, cy, r, alpha) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const [x, y] = hexCorner(cx, cy, r, i);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.strokeStyle = `rgba(180, 160, 130, ${alpha})`;
+  ctx.lineWidth = CONFIG.wallWidth;
+  ctx.stroke();
+}
+
+// Initialize glyphs
+function initGlyphs() {
+  glyphs = [];
+  for (let i = 0; i < CONFIG.glyphCount; i++) {
+    glyphs.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      char: CONFIG.glyphChars[Math.floor(Math.random() * CONFIG.glyphChars.length)],
+      size: CONFIG.glyphSize[0] + Math.random() * (CONFIG.glyphSize[1] - CONFIG.glyphSize[0]),
+      alpha: CONFIG.glyphFade[0] + Math.random() * (CONFIG.glyphFade[1] - CONFIG.glyphFade[0]),
+      vx: (Math.random() - 0.5) * CONFIG.driftSpeed,
+      vy: -Math.random() * CONFIG.driftSpeed * 0.5 - 0.05,
+      phase: Math.random() * Math.PI * 2,
+      pulseAmp: 0.3 + Math.random() * 0.7,
+      rotation: (Math.random() - 0.5) * 0.3,
+    });
+  }
+}
+
+// Initialize lamps (soft light sources)
+function initLamps() {
+  lamps = [];
+  for (let i = 0; i < CONFIG.lampCount; i++) {
+    lamps.push({
+      x: W * (0.15 + Math.random() * 0.7),
+      y: H * (0.1 + Math.random() * 0.8),
+      phase: Math.random() * Math.PI * 2,
+      radius: CONFIG.lampRadius * (0.7 + Math.random() * 0.6),
+    });
+  }
+}
+
+initGlyphs();
+initLamps();
+
+// Draw corridor layers (receding hexagonal halls)
+function drawCorridors() {
+  const cx = W / 2, cy = H / 2;
+  const hexW = CONFIG.hexRadius * Math.sqrt(3);
+  const hexH = CONFIG.hexRadius * 2;
+
+  for (let d = CONFIG.corridorDepth; d >= 0; d--) {
+    const scale = Math.pow(CONFIG.perspective, d);
+    const alpha = 0.04 + (1 - d / CONFIG.corridorDepth) * 0.1;
+    const r = CONFIG.hexRadius * scale;
+    const offsetX = hexW * scale;
+    const offsetY = hexH * 0.75 * scale;
+
+    for (let row = -CONFIG.hexRows; row <= CONFIG.hexRows; row++) {
+      for (let col = -CONFIG.hexCols; col <= CONFIG.hexCols; col++) {
+        const x = cx + col * offsetX + (row % 2 ? offsetX / 2 : 0);
+        const y = cy + row * offsetY;
+        // Only draw if on screen
+        if (x > -r && x < W + r && y > -r && y < H + r) {
+          drawHex(x, y, r, alpha * (0.5 + 0.5 * Math.sin(time * CONFIG.pulseSpeed + d * 0.5 + col * 0.2)));
+        }
+      }
+    }
+  }
+}
+
+// Draw lamps (soft radial glow)
+function drawLamps() {
+  for (const lamp of lamps) {
+    const flicker = 0.6 + 0.4 * Math.sin(time * 0.001 + lamp.phase);
+    const [r, g, b] = CONFIG.lampColor;
+    const grad = ctx.createRadialGradient(lamp.x, lamp.y, 0, lamp.x, lamp.y, lamp.radius * flicker);
+    grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.06)`);
+    grad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.02)`);
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(lamp.x - lamp.radius, lamp.y - lamp.radius, lamp.radius * 2, lamp.radius * 2);
+  }
+}
+
+// Update and draw glyphs
+function drawGlyphs() {
+  for (const g of glyphs) {
+    g.x += g.vx;
+    g.y += g.vy;
+    g.phase += 0.01;
+
+    // Wrap around
+    if (g.y < -20) { g.y = H + 20; g.x = Math.random() * W; }
+    if (g.x < -20) g.x = W + 20;
+    if (g.x > W + 20) g.x = -20;
+
+    const pulse = g.alpha * (0.5 + 0.5 * Math.sin(time * CONFIG.pulseSpeed * 2 + g.phase) * g.pulseAmp);
+
+    // Proximity to lamps increases visibility slightly
+    let lampBoost = 0;
+    for (const lamp of lamps) {
+      const dx = g.x - lamp.x, dy = g.y - lamp.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < lamp.radius) {
+        lampBoost = Math.max(lampBoost, (1 - dist / lamp.radius) * 0.15);
+      }
+    }
+
+    const alpha = Math.min(pulse + lampBoost, 0.4);
+    ctx.save();
+    ctx.translate(g.x, g.y);
+    ctx.rotate(g.rotation);
+    ctx.font = `${g.size}px "Courier New", monospace`;
+    ctx.fillStyle = `rgba(200, 190, 170, ${alpha})`;
+    ctx.fillText(g.char, 0, 0);
+    ctx.restore();
+
+    // Occasionally change character
+    if (Math.random() < 0.001) {
+      g.char = CONFIG.glyphChars[Math.floor(Math.random() * CONFIG.glyphChars.length)];
+    }
+  }
+}
+
+// Main loop
+function frame(t) {
+  time = t;
+  ctx.fillStyle = 'rgba(8, 7, 10, 0.15)';
+  ctx.fillRect(0, 0, W, H);
+
+  drawCorridors();
+  drawLamps();
+  drawGlyphs();
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
