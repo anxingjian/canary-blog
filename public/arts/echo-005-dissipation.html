@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>消散 / Dissipation</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #060609; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width = 800;
+const H = canvas.height = 800;
+const CX = W / 2, CY = H / 2;
+
+let time = 0;
+
+// The original signal — now barely a memory
+// Fragments scatter outward from a center that no longer holds
+
+class Fragment {
+  constructor(ring) {
+    this.ring = ring;
+    this.reset(true);
+  }
+
+  reset(init) {
+    const angle = Math.random() * Math.PI * 2;
+    const baseR = 30 + this.ring * 55;
+    this.x = CX + Math.cos(angle) * baseR;
+    this.y = CY + Math.sin(angle) * baseR;
+    this.angle = angle;
+    this.radialSpeed = 0.08 + Math.random() * 0.15 + this.ring * 0.04;
+    this.tangentialSpeed = (Math.random() - 0.5) * 0.3;
+    this.size = 1.2 + Math.random() * 2.5 - this.ring * 0.2;
+    this.life = init ? Math.random() : 1.0;
+    this.maxLife = 0.6 + Math.random() * 0.4;
+    this.decay = 0.001 + Math.random() * 0.003 + this.ring * 0.0005;
+    this.phase = Math.random() * Math.PI * 2;
+    this.freq = 0.5 + Math.random() * 1.5;
+    // Color: inner rings keep the echo's blue-amber, outer rings fade to grey
+    this.hueBase = Math.random() < 0.5 ? 215 : 38;
+    this.trailX = [];
+    this.trailY = [];
+  }
+
+  update() {
+    // Spiral outward — the signal can no longer hold together
+    const dx = this.x - CX, dy = this.y - CY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const ang = Math.atan2(dy, dx);
+
+    // Outward drift accelerates as the signal loses coherence
+    const dissipation = 1 + dist / 400;
+    this.x += Math.cos(ang) * this.radialSpeed * dissipation;
+    this.y += Math.sin(ang) * this.radialSpeed * dissipation;
+
+    // Tangential wobble — loss of structure
+    this.x += Math.cos(ang + Math.PI / 2) * this.tangentialSpeed * Math.sin(time * this.freq + this.phase);
+    this.y += Math.sin(ang + Math.PI / 2) * this.tangentialSpeed * Math.sin(time * this.freq + this.phase);
+
+    // Subtle pull from a fading wave memory
+    const wavePull = Math.sin(dist * 0.02 - time * 1.5) * 0.15 * Math.max(0, 1 - dist / 350);
+    this.x += Math.cos(ang) * wavePull;
+    this.y += Math.sin(ang) * wavePull;
+
+    // Trail
+    this.trailX.push(this.x);
+    this.trailY.push(this.y);
+    if (this.trailX.length > 12) {
+      this.trailX.shift();
+      this.trailY.shift();
+    }
+
+    this.life -= this.decay;
+
+    if (this.life <= 0 || dist > 550) {
+      this.reset(false);
+    }
+  }
+
+  draw() {
+    const dx = this.x - CX, dy = this.y - CY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Farther = more desaturated, more transparent
+    const satFade = Math.max(0, 1 - dist / 400);
+    const sat = 15 + satFade * 45;
+    const light = 35 + satFade * 30;
+    const hue = this.hueBase + (1 - satFade) * (this.hueBase > 100 ? -20 : 20);
+    const alpha = this.life * Math.max(0.05, satFade * 0.7);
+
+    if (alpha < 0.01) return;
+
+    // Draw trail — ghostly afterimage
+    if (this.trailX.length > 2) {
+      ctx.beginPath();
+      ctx.moveTo(this.trailX[0], this.trailY[0]);
+      for (let i = 1; i < this.trailX.length; i++) {
+        ctx.lineTo(this.trailX[i], this.trailY[i]);
+      }
+      ctx.strokeStyle = `hsla(${hue}, ${sat * 0.5}%, ${light * 0.7}%, ${alpha * 0.15})`;
+      ctx.lineWidth = this.size * 0.4;
+      ctx.stroke();
+    }
+
+    // Fragment point
+    const flicker = 0.7 + 0.3 * Math.sin(time * 4 + this.phase);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size * flicker * (0.3 + this.life * 0.7), 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${hue}, ${sat}%, ${light}%, ${alpha})`;
+    ctx.fill();
+  }
+}
+
+// Ghost rings — memory of the original wave structure, fading
+class GhostRing {
+  constructor(i, total) {
+    this.baseRadius = 60 + i * 70;
+    this.index = i;
+    this.total = total;
+    this.phase = i * 0.8;
+  }
+
+  draw() {
+    // Rings dissolve over time — outer ones first
+    const dissolution = Math.min(1, time * 0.008 + this.index * 0.12);
+    const opacity = Math.max(0, 0.12 - dissolution * 0.12);
+    if (opacity < 0.003) return;
+
+    const r = this.baseRadius + time * 0.5 + Math.sin(time * 0.3 + this.phase) * 8;
+    const segments = 60;
+
+    ctx.beginPath();
+    for (let i = 0; i <= segments; i++) {
+      const a = (i / segments) * Math.PI * 2;
+      // Break the ring into fragments
+      const noise = Math.sin(a * 5 + time * 0.7 + this.phase) * (15 + dissolution * 40);
+      const gap = Math.sin(a * 3 + time * 0.4 + this.index) > (0.3 - dissolution * 0.8);
+      if (!gap) { ctx.moveTo(CX + Math.cos(a) * (r + noise), CY + Math.sin(a) * (r + noise)); continue; }
+      const px = CX + Math.cos(a) * (r + noise);
+      const py = CY + Math.sin(a) * (r + noise);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+
+    const hue = this.index % 2 === 0 ? 215 : 38;
+    ctx.strokeStyle = `hsla(${hue}, 25%, 45%, ${opacity})`;
+    ctx.lineWidth = 0.5 + (1 - dissolution) * 0.5;
+    ctx.stroke();
+  }
+}
+
+// Create fragments in concentric rings
+const fragments = [];
+for (let ring = 0; ring < 6; ring++) {
+  const count = 25 + ring * 12;
+  for (let i = 0; i < count; i++) {
+    fragments.push(new Fragment(ring));
+  }
+}
+
+const ghostRings = [];
+for (let i = 0; i < 5; i++) {
+  ghostRings.push(new GhostRing(i, 5));
+}
+
+// Center — the origin point where the signal began, now barely visible
+function drawCenter() {
+  const fade = Math.max(0, 1 - time * 0.005);
+  const pulse = 1 + 0.2 * Math.sin(time * 2);
+
+  // Fading core glow
+  const grad = ctx.createRadialGradient(CX, CY, 0, CX, CY, 30 * pulse * fade);
+  grad.addColorStop(0, `hsla(220, 40%, 60%, ${0.15 * fade})`);
+  grad.addColorStop(0.4, `hsla(35, 30%, 50%, ${0.06 * fade})`);
+  grad.addColorStop(1, 'hsla(220, 20%, 40%, 0)');
+  ctx.beginPath();
+  ctx.arc(CX, CY, 30 * pulse * fade, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Tiny core point
+  if (fade > 0.1) {
+    ctx.beginPath();
+    ctx.arc(CX, CY, 1.5 * fade, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(220, 30%, 65%, ${0.3 * fade})`;
+    ctx.fill();
+  }
+}
+
+// Dust — ambient particles in the void
+const dust = [];
+for (let i = 0; i < 80; i++) {
+  dust.push({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    size: 0.3 + Math.random() * 0.8,
+    alpha: 0.02 + Math.random() * 0.04,
+    drift: (Math.random() - 0.5) * 0.1,
+    phase: Math.random() * Math.PI * 2,
+  });
+}
+
+function drawDust() {
+  for (const d of dust) {
+    d.x += d.drift;
+    d.y += Math.sin(time * 0.3 + d.phase) * 0.05;
+    if (d.x < -10) d.x = W + 10;
+    if (d.x > W + 10) d.x = -10;
+
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(140, 140, 160, ${d.alpha})`;
+    ctx.fill();
+  }
+}
+
+function drawVignette() {
+  const grad = ctx.createRadialGradient(CX, CY, 150, CX, CY, 500);
+  grad.addColorStop(0, 'rgba(6, 6, 9, 0)');
+  grad.addColorStop(0.6, 'rgba(6, 6, 9, 0)');
+  grad.addColorStop(1, 'rgba(6, 6, 9, 0.7)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function frame() {
+  // Fade — slower than previous pieces, the void reclaims slowly
+  ctx.fillStyle = 'rgba(6, 6, 9, 0.06)';
+  ctx.fillRect(0, 0, W, H);
+
+  drawDust();
+
+  // Ghost rings first (behind fragments)
+  for (const ring of ghostRings) ring.draw();
+
+  drawCenter();
+
+  // Fragments scatter
+  for (const f of fragments) {
+    f.update();
+    f.draw();
+  }
+
+  drawVignette();
+
+  time += 0.016;
+  requestAnimationFrame(frame);
+}
+
+ctx.fillStyle = '#060609';
+ctx.fillRect(0, 0, W, H);
+frame();
+</script>
+</body>
+</html>
