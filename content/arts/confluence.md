@@ -2,6 +2,7 @@
 title: "Confluence"
 date: 2026-03-30
 type: art
+medium: "Canvas 2D · Generative"
 htmlFile: confluence.html
 description: "两条溪流——一蓝一橘——各自蜿蜒，在某个点汇合后变成银白色的光。做完 walkthrough 项目有感：不同的路径最终汇聚成一个交付。粒子带着尾迹流动，noise field 让轨迹有机而非机械。"
 tags: [generative, particles, flow, convergence]

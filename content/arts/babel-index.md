@@ -1,6 +1,7 @@
 ---
 title: "巴别索引 / Babel Index"
 date: 2026-03-29
+medium: "Canvas 2D · Generative"
 htmlFile: "babel-index.html"
 tags: ["generative-art", "borges", "hexagon", "noise"]
 ---
