@@ -2,6 +2,7 @@
 title: "巴别索引 / Babel Index"
 date: 2026-03-29
 medium: "Canvas 2D · Generative"
+description: "六角蜂巢网格里填满随机字符——噪声海。一束微光缓慢螺旋搜索，经过的格子短暂亮起，偶尔某个格子亮成暖金色：信号，从噪声里被索引出来的一页。灵感来自博尔赫斯的巴别图书馆。"
 htmlFile: "babel-index.html"
 tags: ["generative-art", "borges", "hexagon", "noise"]
 ---
