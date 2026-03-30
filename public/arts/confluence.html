@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confluence</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0a; overflow: hidden; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const CONFIG = {
+  particles: 200,
+  convergenceX: 0.72,
+  convergenceY: 0.5,
+  trailLength: 60,
+  speed: 0.4,
+  colors: {
+    top: [100, 160, 255],    // cool blue stream
+    bottom: [255, 140, 80],  // warm amber stream
+    converged: [220, 220, 240], // pale silver after merge
+  },
+  noiseScale: 0.003,
+  curvature: 0.015,
+};
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Simple noise (hash-based)
+function hash(x, y) {
+  let h = x * 374761393 + y * 668265263;
+  h = (h ^ (h >> 13)) * 1274126177;
+  return ((h ^ (h >> 16)) & 0x7fffffff) / 0x7fffffff;
+}
+function noise2d(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const a = hash(ix, iy), b = hash(ix + 1, iy);
+  const c = hash(ix, iy + 1), d = hash(ix + 1, iy + 1);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+
+class Particle {
+  constructor(stream) {
+    this.stream = stream; // 0 = top, 1 = bottom
+    this.reset();
+  }
+  reset() {
+    this.x = -Math.random() * W * 0.3;
+    this.y = this.stream === 0
+      ? H * (0.15 + Math.random() * 0.25)
+      : H * (0.6 + Math.random() * 0.25);
+    this.trail = [];
+    this.life = 0;
+    this.maxLife = 300 + Math.random() * 200;
+    this.merged = false;
+    this.size = 0.5 + Math.random() * 1;
+  }
+  update(t) {
+    this.life++;
+    if (this.life > this.maxLife || this.x > W + 50) {
+      this.reset();
+      return;
+    }
+
+    const cx = W * CONFIG.convergenceX;
+    const cy = H * CONFIG.convergenceY;
+
+    // Pull toward convergence point
+    const dx = cx - this.x;
+    const dy = cy - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const pull = Math.min(CONFIG.curvature, CONFIG.curvature * (W / (dist + 100)));
+
+    // Noise field
+    const n = noise2d(this.x * CONFIG.noiseScale + t * 0.0003, this.y * CONFIG.noiseScale);
+    const angle = n * Math.PI * 2;
+
+    // Before convergence: curve toward center. After: flow right.
+    if (this.x < cx - 50) {
+      this.x += CONFIG.speed * 1.2 + Math.cos(angle) * 0.3;
+      this.y += dy * pull + Math.sin(angle) * 0.4;
+    } else {
+      this.merged = true;
+      this.x += CONFIG.speed * 1.5 + Math.cos(angle) * 0.2;
+      this.y += Math.sin(angle) * 0.3;
+    }
+
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > CONFIG.trailLength) this.trail.shift();
+  }
+  draw() {
+    if (this.trail.length < 2) return;
+    const c = this.merged ? CONFIG.colors.converged
+      : this.stream === 0 ? CONFIG.colors.top : CONFIG.colors.bottom;
+
+    for (let i = 1; i < this.trail.length; i++) {
+      const t = i / this.trail.length;
+      const alpha = t * 0.35;
+      ctx.beginPath();
+      ctx.moveTo(this.trail[i - 1].x, this.trail[i - 1].y);
+      ctx.lineTo(this.trail[i].x, this.trail[i].y);
+      ctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${alpha})`;
+      ctx.lineWidth = this.size * t;
+      ctx.stroke();
+    }
+  }
+}
+
+const particles = [];
+for (let i = 0; i < CONFIG.particles; i++) {
+  particles.push(new Particle(i < CONFIG.particles / 2 ? 0 : 1));
+}
+
+// Draw convergence glow
+function drawGlow(t) {
+  const cx = W * CONFIG.convergenceX;
+  const cy = H * CONFIG.convergenceY;
+  const pulse = 1 + Math.sin(t * 0.001) * 0.15;
+  const r = 40 * pulse;
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  grad.addColorStop(0, 'rgba(200, 210, 255, 0.12)');
+  grad.addColorStop(0.5, 'rgba(200, 210, 255, 0.04)');
+  grad.addColorStop(1, 'rgba(200, 210, 255, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+}
+
+let frame = 0;
+function animate() {
+  ctx.fillStyle = 'rgba(10, 10, 10, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+
+  drawGlow(frame);
+
+  for (const p of particles) {
+    p.update(frame);
+    p.draw();
+  }
+
+  frame++;
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>
