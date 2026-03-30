@@ -11,250 +11,244 @@
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+<canvas id="c" width="800" height="800"></canvas>
 <script>
 const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-const W = canvas.width = 800;
-const H = canvas.height = 800;
+const gl = canvas.getContext('webgl', { alpha: false, antialias: false });
+const W = 800, H = 800;
 
-let time = 0;
+// --- Shaders ---
+const vsrc = `
+attribute vec2 a_pos;
+varying vec2 v_uv;
+void main() {
+  v_uv = a_pos * 0.5 + 0.5;
+  gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
 
-// Two signal sources — echoes that have traveled different paths and now overlap
-const sources = [
-  { x: 280, y: 320, phase: 0, freq: 0.035, hue: 215, label: 'A' },
-  { x: 520, y: 480, phase: Math.PI * 0.7, freq: 0.038, hue: 40, label: 'B' },
-];
+const fsrc = `
+precision highp float;
+varying vec2 v_uv;
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform sampler2D u_prev;
 
-// Particles that drift along interference nodal lines
-const particles = [];
-const MAX_P = 300;
-for (let i = 0; i < MAX_P; i++) {
-  particles.push({
-    x: Math.random() * W,
-    y: Math.random() * H,
-    life: Math.random(),
-    speed: 0.2 + Math.random() * 0.4,
-    size: 0.5 + Math.random() * 1.5,
-  });
+#define PI 3.14159265
+
+// Sources
+const vec2 srcA = vec2(280.0, 320.0);
+const vec2 srcB = vec2(520.0, 480.0);
+const float freqA = 0.035;
+const float freqB = 0.038;
+const float phaseB = 0.7 * PI;
+
+// Hash noise for particles
+float hash(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
 }
 
-// Compute interference value at a point
-function interference(px, py, t) {
-  let sum = 0;
-  for (const s of sources) {
-    const dx = px - s.x, dy = py - s.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    // Decaying wave from each source
-    const amp = Math.max(0, 1 - dist / 450);
-    const wave = Math.sin(dist * s.freq - t * 2.2 + s.phase);
-    sum += wave * amp;
-  }
-  return sum; // ranges roughly -2 to 2
+float interference(vec2 p, float t) {
+  float dA = length(p - srcA);
+  float dB = length(p - srcB);
+  float ampA = max(0.0, 1.0 - dA / 450.0);
+  float ampB = max(0.0, 1.0 - dB / 450.0);
+  float wA = sin(dA * freqA - t * 2.2);
+  float wB = sin(dB * freqB - t * 2.2 + phaseB);
+  return wA * ampA + wB * ampB;
 }
 
-// Field visualization — the main interference pattern
-function drawField() {
-  const step = 4;
-  const imgData = ctx.getImageData(0, 0, W, H);
-  const d = imgData.data;
+void main() {
+  vec2 px = v_uv * u_resolution;
+  float t = u_time;
 
-  for (let y = 0; y < H; y += step) {
-    for (let x = 0; x < W; x += step) {
-      const val = interference(x, y, time);
-      const absVal = Math.abs(val);
+  // Previous frame for trail
+  vec3 prev = texture2D(u_prev, v_uv).rgb;
 
-      // Constructive interference: bright bands
-      // Destructive interference: dark nodal lines
-      const constructive = val > 0;
+  // Interference field
+  float val = interference(px, t);
+  float absVal = abs(val);
+  bool constructive = val > 0.0;
+  vec3 fieldCol = vec3(0.0);
+  float fieldAlpha = 0.0;
 
-      let r, g, b, a;
-
-      if (absVal > 0.8) {
-        // Strong constructive — glowing bands
-        const intensity = (absVal - 0.8) / 1.2;
-        if (constructive) {
-          // Blend of both source colors — blue-white
-          r = Math.floor(80 + intensity * 140);
-          g = Math.floor(100 + intensity * 130);
-          b = Math.floor(180 + intensity * 75);
-        } else {
-          // Amber tones from negative constructive
-          r = Math.floor(100 + intensity * 140);
-          g = Math.floor(80 + intensity * 90);
-          b = Math.floor(40 + intensity * 50);
-        }
-        a = Math.floor(intensity * 180 + 20);
-      } else if (absVal < 0.15) {
-        // Destructive — dark nodal line, very faint glow
-        r = 30; g = 25; b = 40;
-        a = Math.floor((0.15 - absVal) / 0.15 * 40);
-      } else {
-        // Mid region — subtle wash
-        const t2 = absVal / 0.8;
-        r = Math.floor(20 + t2 * 40);
-        g = Math.floor(20 + t2 * 45);
-        b = Math.floor(30 + t2 * 60);
-        a = Math.floor(t2 * 50 + 5);
-      }
-
-      // Fill the step x step block
-      for (let dy = 0; dy < step && y + dy < H; dy++) {
-        for (let dx = 0; dx < step && x + dx < W; dx++) {
-          const idx = ((y + dy) * W + (x + dx)) * 4;
-          // Blend with existing (fading trail)
-          d[idx] = Math.min(255, d[idx] * 0.92 + r * 0.12);
-          d[idx + 1] = Math.min(255, d[idx + 1] * 0.92 + g * 0.12);
-          d[idx + 2] = Math.min(255, d[idx + 2] * 0.92 + b * 0.12);
-          d[idx + 3] = 255;
-        }
-      }
+  if (absVal > 0.8) {
+    float intensity = (absVal - 0.8) / 1.2;
+    if (constructive) {
+      fieldCol = vec3(80.0 + intensity * 140.0, 100.0 + intensity * 130.0, 180.0 + intensity * 75.0) / 255.0;
+    } else {
+      fieldCol = vec3(100.0 + intensity * 140.0, 80.0 + intensity * 90.0, 40.0 + intensity * 50.0) / 255.0;
     }
+    fieldAlpha = (intensity * 180.0 + 20.0) / 255.0;
+  } else if (absVal < 0.15) {
+    fieldCol = vec3(30.0, 25.0, 40.0) / 255.0;
+    fieldAlpha = (0.15 - absVal) / 0.15 * 40.0 / 255.0;
+  } else {
+    float t2 = absVal / 0.8;
+    fieldCol = vec3(20.0 + t2 * 40.0, 20.0 + t2 * 45.0, 30.0 + t2 * 60.0) / 255.0;
+    fieldAlpha = (t2 * 50.0 + 5.0) / 255.0;
   }
-  ctx.putImageData(imgData, 0, 0);
-}
 
-// Draw source points — the two echo origins
-function drawSources() {
-  for (const s of sources) {
-    const pulse = 1 + 0.3 * Math.sin(time * 3 + s.phase);
+  // Blend field with prev frame (trail effect)
+  vec3 col = prev * 0.92 + fieldCol * fieldAlpha * 0.12 / max(fieldAlpha, 0.001) * fieldAlpha;
+  col = prev * 0.92 + fieldCol * 0.12;
 
-    // Glow
-    const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 40 * pulse);
-    grad.addColorStop(0, `hsla(${s.hue}, 70%, 70%, 0.3)`);
-    grad.addColorStop(0.5, `hsla(${s.hue}, 60%, 50%, 0.08)`);
-    grad.addColorStop(1, `hsla(${s.hue}, 50%, 40%, 0)`);
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, 40 * pulse, 0, Math.PI * 2);
-    ctx.fillStyle = grad;
-    ctx.fill();
+  // Fade background
+  col = mix(col, vec3(8.0/255.0, 8.0/255.0, 14.0/255.0), 0.08);
 
-    // Core
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, 3, 0, Math.PI * 2);
-    ctx.fillStyle = `hsla(${s.hue}, 60%, 75%, 0.7)`;
-    ctx.fill();
+  // Wave rings from sources
+  for (int s = 0; s < 2; s++) {
+    vec2 src = s == 0 ? srcA : srcB;
+    float freq = s == 0 ? freqA : freqB;
+    float hue_sel = s == 0 ? 215.0 : 40.0;
+    float d = length(px - src);
+    float wavelength = PI * 2.0 / freq;
+    float phase = mod(d - t * 2.2 / freq * wavelength / (PI * 2.0), wavelength);
+    float ring = 1.0 - smoothstep(0.0, 2.0, abs(phase));
+    float decay = max(0.0, 1.0 - d / 450.0);
+    float ringAlpha = ring * decay * 0.06;
+    // Approximate hue
+    vec3 ringCol = s == 0 ? vec3(0.35, 0.45, 0.7) : vec3(0.7, 0.5, 0.3);
+    col += ringCol * ringAlpha;
   }
-}
 
-// Particles follow the gradients of the interference field
-function drawParticles() {
-  for (const p of particles) {
-    const val = interference(p.x, p.y, time);
-
-    // Compute gradient (direction of steepest change)
-    const eps = 3;
-    const gx = interference(p.x + eps, p.y, time) - interference(p.x - eps, p.y, time);
-    const gy = interference(p.x, p.y + eps, time) - interference(p.x, p.y - eps, time);
-
-    // Move along nodal lines (perpendicular to gradient)
-    p.x += -gy * p.speed * 1.5;
-    p.y += gx * p.speed * 1.5;
-
-    p.life -= 0.002;
-
-    // Wrap or reset
-    if (p.x < -10 || p.x > W + 10 || p.y < -10 || p.y > H + 10 || p.life <= 0) {
-      p.x = Math.random() * W;
-      p.y = Math.random() * H;
-      p.life = 0.5 + Math.random() * 0.5;
-    }
-
-    const absVal = Math.abs(val);
-    // Particles are more visible near nodal lines (low interference)
-    const brightness = absVal < 0.3 ? (0.3 - absVal) / 0.3 : 0.05;
-    const alpha = p.life * brightness * 0.8;
-
-    if (alpha < 0.01) continue;
-
-    // Color based on which source is dominant
-    const d0 = Math.hypot(p.x - sources[0].x, p.y - sources[0].y);
-    const d1 = Math.hypot(p.x - sources[1].x, p.y - sources[1].y);
-    const blend = d0 / (d0 + d1); // 0 = near source 0, 1 = near source 1
-    const hue = sources[0].hue * (1 - blend) + sources[1].hue * blend;
-
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * (0.5 + brightness), 0, Math.PI * 2);
-    ctx.fillStyle = `hsla(${hue}, 40%, 65%, ${alpha})`;
-    ctx.fill();
+  // Axis line between sources (dashed)
+  vec2 ab = srcB - srcA;
+  float abLen = length(ab);
+  vec2 abDir = ab / abLen;
+  vec2 toP = px - srcA;
+  float proj = dot(toP, abDir);
+  float perp = abs(dot(toP, vec2(-abDir.y, abDir.x)));
+  if (proj > 0.0 && proj < abLen && perp < 1.0) {
+    float dash = step(0.5, fract(proj / 12.0));
+    float axAlpha = (0.04 + 0.02 * sin(t * 0.8)) * dash;
+    col += vec3(0.47, 0.51, 0.63) * axAlpha;
   }
-}
-
-// Connecting line between sources — the axis of interference
-function drawAxis() {
-  const alpha = 0.04 + 0.02 * Math.sin(time * 0.8);
-  ctx.beginPath();
-  ctx.moveTo(sources[0].x, sources[0].y);
-  ctx.lineTo(sources[1].x, sources[1].y);
-  ctx.strokeStyle = `rgba(120, 130, 160, ${alpha})`;
-  ctx.lineWidth = 0.5;
-  ctx.setLineDash([4, 8]);
-  ctx.stroke();
-  ctx.setLineDash([]);
 
   // Midpoint marker
-  const mx = (sources[0].x + sources[1].x) / 2;
-  const my = (sources[0].y + sources[1].y) / 2;
-  ctx.beginPath();
-  ctx.arc(mx, my, 2, 0, Math.PI * 2);
-  ctx.fillStyle = `rgba(160, 160, 180, ${alpha * 3})`;
-  ctx.fill();
-}
+  vec2 mid = (srcA + srcB) * 0.5;
+  float midD = length(px - mid);
+  col += vec3(0.63, 0.63, 0.7) * smoothstep(2.5, 1.0, midD) * 0.12;
 
-// Concentric rings from each source — faint, showing wave origin
-function drawWaveRings() {
-  for (const s of sources) {
-    const maxR = 450;
-    const spacing = Math.PI * 2 / s.freq; // wavelength in pixels
-    const numRings = Math.floor(maxR / spacing);
-
-    for (let i = 0; i < numRings; i++) {
-      const r = (i * spacing + time * 2.2 / s.freq * spacing / (Math.PI * 2)) % maxR;
-      if (r < 10) continue;
-      const decay = Math.max(0, 1 - r / maxR);
-      const alpha = decay * 0.06;
-      if (alpha < 0.005) continue;
-
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
-      ctx.strokeStyle = `hsla(${s.hue}, 40%, 55%, ${alpha})`;
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
-    }
+  // Source glows
+  for (int s = 0; s < 2; s++) {
+    vec2 src = s == 0 ? srcA : srcB;
+    float phase_s = s == 0 ? 0.0 : phaseB;
+    float pulse = 1.0 + 0.3 * sin(t * 3.0 + phase_s);
+    float d = length(px - src);
+    float glow = smoothstep(40.0 * pulse, 0.0, d);
+    vec3 glowCol = s == 0 ? vec3(0.45, 0.55, 0.8) : vec3(0.75, 0.55, 0.3);
+    col += glowCol * glow * 0.3;
+    // Core
+    col += glowCol * smoothstep(4.0, 2.0, d) * 0.7;
   }
+
+  // Particles along nodal lines (procedural)
+  for (int i = 0; i < 80; i++) {
+    float fi = float(i);
+    float seed = hash(vec2(fi * 1.731, fi * 0.419));
+    float seed2 = hash(vec2(fi * 2.913, fi * 0.773));
+    // Particle position evolves over time
+    vec2 pp = vec2(seed * 800.0, seed2 * 800.0);
+    // Drift along nodal lines
+    float pTime = mod(t * (0.2 + seed * 0.4) + fi * 3.7, 20.0);
+    for (int step = 0; step < 8; step++) {
+      float eps = 3.0;
+      float gx = interference(pp + vec2(eps, 0.0), t) - interference(pp - vec2(eps, 0.0), t);
+      float gy = interference(pp + vec2(0.0, eps), t) - interference(pp - vec2(0.0, eps), t);
+      pp += vec2(-gy, gx) * 1.5 * (0.2 + seed * 0.4);
+    }
+    float pVal = abs(interference(pp, t));
+    float brightness = pVal < 0.3 ? (0.3 - pVal) / 0.3 : 0.05;
+    float d = length(px - pp);
+    float pSize = (0.5 + seed * 1.5) * (0.5 + brightness);
+    float pAlpha = smoothstep(pSize + 0.5, pSize - 0.5, d) * brightness * 0.6;
+    // Color blend
+    float d0 = length(pp - srcA);
+    float d1 = length(pp - srcB);
+    float blend = d0 / (d0 + d1);
+    vec3 pCol = mix(vec3(0.45, 0.55, 0.75), vec3(0.7, 0.55, 0.35), blend);
+    col += pCol * pAlpha;
+  }
+
+  // Vignette
+  vec2 center = u_resolution * 0.5;
+  float vd = length(px - center);
+  float vig = smoothstep(200.0, 500.0, vd) * 0.6;
+  col = mix(col, vec3(8.0/255.0, 8.0/255.0, 14.0/255.0), vig);
+
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+// --- WebGL setup ---
+function createShader(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderInfoLog(s) === '') console.warn(gl.getShaderInfoLog(s));
+  return s;
 }
 
-// Vignette
-function drawVignette() {
-  const cx = W / 2, cy = H / 2;
-  const grad = ctx.createRadialGradient(cx, cy, 200, cx, cy, 500);
-  grad.addColorStop(0, 'rgba(8, 8, 14, 0)');
-  grad.addColorStop(0.7, 'rgba(8, 8, 14, 0)');
-  grad.addColorStop(1, 'rgba(8, 8, 14, 0.6)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
-}
+const prog = gl.createProgram();
+gl.attachShader(prog, createShader(gl.VERTEX_SHADER, vsrc));
+gl.attachShader(prog, createShader(gl.FRAGMENT_SHADER, fsrc));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) console.error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
 
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+const aPos = gl.getAttribLocation(prog, 'a_pos');
+gl.enableVertexAttribArray(aPos);
+gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+const uTime = gl.getUniformLocation(prog, 'u_time');
+const uRes = gl.getUniformLocation(prog, 'u_resolution');
+const uPrev = gl.getUniformLocation(prog, 'u_prev');
+gl.uniform2f(uRes, W, H);
+
+// Ping-pong FBOs for trail
+function createFBO() {
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, W, H, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  return { tex, fb };
+}
+const fbo0 = createFBO(), fbo1 = createFBO();
+let ping = 0;
+
+let time = 0;
 function frame() {
-  // Slow fade for trails
-  ctx.fillStyle = 'rgba(8, 8, 14, 0.08)';
-  ctx.fillRect(0, 0, W, H);
-
-  drawField();
-  drawWaveRings();
-  drawAxis();
-  drawParticles();
-  drawSources();
-  drawVignette();
-
   time += 0.016;
+  const src = ping === 0 ? fbo0 : fbo1;
+  const dst = ping === 0 ? fbo1 : fbo0;
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fb);
+  gl.viewport(0, 0, W, H);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, src.tex);
+  gl.uniform1i(uPrev, 0);
+  gl.uniform1f(uTime, time);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  // Draw to screen
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, W, H);
+  gl.bindTexture(gl.TEXTURE_2D, dst.tex);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  ping = 1 - ping;
   requestAnimationFrame(frame);
 }
-
-// Initial clear
-ctx.fillStyle = '#08080e';
-ctx.fillRect(0, 0, W, H);
 frame();
 </script>
-</body>
-</html>
+</body></html>

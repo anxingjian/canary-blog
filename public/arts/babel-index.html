@@ -1,142 +1,186 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>巴别索引 / Babel Index</title>
-<style>body{margin:0;overflow:hidden;background:#0a0a0d}</style>
+<style>body{margin:0;overflow:hidden;background:#0a0a0d}canvas{display:block;width:100vw;height:100vh}</style>
 </head><body>
 <canvas id="c"></canvas>
 <script>
-const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
-let W,H;function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
-resize();window.onresize=resize;
+// Babel Index — Hex grid + spiral search beam + chars in cells
+// WebGL for the field/glow, overlay Canvas 2D for text (WebGL can't render text natively)
+// Strategy: Use two canvases — WebGL for background effects, 2D overlay for hex outlines + chars
 
+const glCanvas = document.getElementById('c');
+const gl = glCanvas.getContext('webgl', { alpha: false });
+
+// Overlay canvas for text
+const overlay = document.createElement('canvas');
+overlay.style.cssText = 'position:absolute;top:0;left:0;width:100vw;height:100vh;pointer-events:none';
+document.body.appendChild(overlay);
+const ctx = overlay.getContext('2d');
+
+let W, H;
+function resize() {
+  W = glCanvas.width = overlay.width = innerWidth;
+  H = glCanvas.height = overlay.height = innerHeight;
+  gl.viewport(0, 0, W, H);
+  buildGrid();
+}
+
+// --- WebGL: search beam glow ---
+const vsrc = `
+attribute vec2 a_pos;
+varying vec2 v_uv;
+void main(){v_uv=a_pos*0.5+0.5;gl_Position=vec4(a_pos,0,1);}`;
+
+const fsrc = `
+precision mediump float;
+varying vec2 v_uv;
+uniform vec2 u_res;
+uniform vec2 u_beam;
+uniform float u_time;
+uniform vec2 u_found;
+uniform float u_foundTimer;
+
+void main(){
+  vec2 px=v_uv*u_res;
+  vec3 col=vec3(0.039,0.039,0.051); // #0a0a0d
+
+  // Search beam glow
+  float d=length(px-u_beam);
+  float glow=exp(-d*d/(120.0*120.0))*0.06;
+  col+=vec3(0.863,0.745,0.471)*glow; // signalGlow
+
+  // Found cell pulse
+  if(u_foundTimer>0.0 && u_foundTimer<2.0){
+    float fd=length(px-u_found);
+    float hexR=48.0;
+    float ring=smoothstep(hexR+2.0,hexR,fd)*smoothstep(hexR-4.0,hexR-2.0,fd);
+    float pulse=sin(u_foundTimer*8.0)*0.5+0.5;
+    float fadeOut=max(0.0,1.0-u_foundTimer/2.0);
+    col+=vec3(0.863,0.745,0.471)*ring*pulse*fadeOut*0.6;
+  }
+
+  gl_FragColor=vec4(col,1);
+}`;
+
+function makeShader(type,src){
+  const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(s));
+  return s;
+}
+const prog=gl.createProgram();
+gl.attachShader(prog,makeShader(gl.VERTEX_SHADER,vsrc));
+gl.attachShader(prog,makeShader(gl.FRAGMENT_SHADER,fsrc));
+gl.linkProgram(prog);gl.useProgram(prog);
+
+const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const aPos=gl.getAttribLocation(prog,'a_pos');
+gl.enableVertexAttribArray(aPos);gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
+
+const uRes=gl.getUniformLocation(prog,'u_res');
+const uBeam=gl.getUniformLocation(prog,'u_beam');
+const uTime=gl.getUniformLocation(prog,'u_time');
+const uFound=gl.getUniformLocation(prog,'u_found');
+const uFoundTimer=gl.getUniformLocation(prog,'u_foundTimer');
+
+// --- Cell grid (2D overlay) ---
 const CONFIG={
-  hexRadius:40,
-  charSet:'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789αβγδεζηθικλμνξπρστυφχψω',
-  bgColor:'#0a0a0d',
-  noiseColor:[140,135,125],
-  signalColor:[220,190,120],
-  signalGlow:[220,190,120],
-  fadeSpeed:0.03,
-  searchSpeed:0.0004,
-  charSize:9,
-  density:0.7
+  hexRadius:40,charSet:'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789αβγδεζηθικλμνξπρστυφχψω',
+  noiseColor:[140,135,125],signalColor:[220,190,120],signalGlow:[220,190,120],
+  fadeSpeed:0.03,searchSpeed:0.0004,charSize:9
 };
-
-// Each hexagonal cell contains random chars; one cell at a time "lights up" as if being indexed
 const sqrt3=Math.sqrt(3);
 let cells=[];
-let searchAngle=0;
-let searchX=0,searchY=0;
+let searchAngle=0,searchX=0,searchY=0;
 let found=null,foundTimer=0;
 
 function buildGrid(){
   cells=[];
-  const r=CONFIG.hexRadius;
-  const dx=r*1.5;
-  const dy=r*sqrt3;
-  const cols=Math.ceil(W/dx)+2;
-  const rows=Math.ceil(H/dy)+2;
+  const r=CONFIG.hexRadius,dx=r*1.5,dy=r*sqrt3;
+  const cols=Math.ceil(W/dx)+2,rows=Math.ceil(H/dy)+2;
   for(let col=-1;col<cols;col++){
     for(let row=-1;row<rows;row++){
-      const x=col*dx;
-      const y=row*dy+(col%2?dy/2:0);
-      // Each cell has random chars
+      const x=col*dx,y=row*dy+(col%2?dy/2:0);
       const chars=[];
-      const n=Math.floor(3+Math.random()*8);
+      const n=3+Math.random()*8|0;
       for(let i=0;i<n;i++){
-        chars.push({
-          ch:CONFIG.charSet[Math.random()*CONFIG.charSet.length|0],
-          ox:(Math.random()-0.5)*r*0.6,
-          oy:(Math.random()-0.5)*r*0.6,
-          alpha:0.05+Math.random()*0.15
-        });
+        chars.push({ch:CONFIG.charSet[Math.random()*CONFIG.charSet.length|0],
+          ox:(Math.random()-0.5)*r*0.6,oy:(Math.random()-0.5)*r*0.6,
+          alpha:0.05+Math.random()*0.15});
       }
       cells.push({x,y,chars,brightness:0,isSignal:Math.random()<0.008});
     }
   }
 }
-buildGrid();
-window.onresize=()=>{resize();buildGrid()};
+
+resize();
+window.onresize=resize;
 
 function drawHex(x,y,r,alpha){
   ctx.beginPath();
   for(let i=0;i<6;i++){
     const a=Math.PI/3*i-Math.PI/6;
-    const px=x+Math.cos(a)*r;
-    const py=y+Math.sin(a)*r;
+    const px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;
     i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
   }
   ctx.closePath();
   ctx.strokeStyle=`rgba(${CONFIG.noiseColor},${alpha})`;
-  ctx.lineWidth=0.5;
-  ctx.stroke();
+  ctx.lineWidth=0.5;ctx.stroke();
 }
 
 function draw(t){
-  ctx.fillStyle=CONFIG.bgColor;
-  ctx.fillRect(0,0,W,H);
-
-  // Search beam spirals slowly
+  // WebGL pass
   searchAngle+=CONFIG.searchSpeed;
   const spiralR=150+Math.sin(t*0.0001)*100;
   searchX=W/2+Math.cos(searchAngle)*spiralR+Math.sin(searchAngle*0.3)*200;
   searchY=H/2+Math.sin(searchAngle)*spiralR+Math.cos(searchAngle*0.7)*150;
 
-  // Draw subtle search beam
-  const grad=ctx.createRadialGradient(searchX,searchY,0,searchX,searchY,CONFIG.hexRadius*3);
-  grad.addColorStop(0,`rgba(${CONFIG.signalGlow},0.06)`);
-  grad.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=grad;
-  ctx.fillRect(0,0,W,H);
+  gl.uniform2f(uRes,W,H);
+  gl.uniform2f(uBeam,searchX,H-searchY); // flip Y for WebGL
+  gl.uniform1f(uTime,t*0.001);
+  if(found){
+    gl.uniform2f(uFound,found.x,H-found.y);
+    gl.uniform1f(uFoundTimer,foundTimer);
+  }else{
+    gl.uniform1f(uFoundTimer,-1.0);
+  }
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
 
+  // 2D overlay
+  ctx.clearRect(0,0,W,H);
   ctx.font=`${CONFIG.charSize}px monospace`;
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
+  ctx.textAlign='center';ctx.textBaseline='middle';
 
   for(const cell of cells){
     const dist=Math.hypot(cell.x-searchX,cell.y-searchY);
     const inBeam=dist<CONFIG.hexRadius*2.5;
-
-    // Brightness decay/rise
-    if(inBeam){
-      cell.brightness=Math.min(1,cell.brightness+0.08);
-    }else{
-      cell.brightness=Math.max(0,cell.brightness-CONFIG.fadeSpeed);
-    }
-
+    if(inBeam)cell.brightness=Math.min(1,cell.brightness+0.08);
+    else cell.brightness=Math.max(0,cell.brightness-CONFIG.fadeSpeed);
     const b=cell.brightness;
-    const hexAlpha=0.06+b*0.15;
-    drawHex(cell.x,cell.y,CONFIG.hexRadius,hexAlpha);
+    drawHex(cell.x,cell.y,CONFIG.hexRadius,0.06+b*0.15);
 
-    // Draw chars
     for(const ch of cell.chars){
       let alpha=ch.alpha;
       if(cell.isSignal&&b>0.5){
-        // Signal cell — glows warm
         const glow=Math.sin(t*0.003+cell.x*0.01)*0.3+0.7;
         const a=alpha+b*0.6*glow;
         ctx.fillStyle=`rgba(${CONFIG.signalColor},${Math.min(1,a)})`;
-        // Glow effect
-        ctx.shadowColor=`rgba(${CONFIG.signalGlow},${b*0.4})`;
-        ctx.shadowBlur=8;
+        ctx.shadowColor=`rgba(${CONFIG.signalGlow},${b*0.4})`;ctx.shadowBlur=8;
       }else{
         const a=alpha+b*0.25;
         ctx.fillStyle=`rgba(${CONFIG.noiseColor},${Math.min(0.6,a)})`;
-        ctx.shadowColor='transparent';
-        ctx.shadowBlur=0;
+        ctx.shadowColor='transparent';ctx.shadowBlur=0;
       }
       ctx.fillText(ch.ch,cell.x+ch.ox,cell.y+ch.oy);
     }
-    ctx.shadowColor='transparent';
-    ctx.shadowBlur=0;
+    ctx.shadowColor='transparent';ctx.shadowBlur=0;
   }
 
-  // Periodic "found" flash — when beam passes over a signal cell
+  // Found flash
   if(!found){
     for(const cell of cells){
-      if(cell.isSignal&&cell.brightness>0.8&&Math.random()<0.01){
-        found=cell;foundTimer=0;break;
-      }
+      if(cell.isSignal&&cell.brightness>0.8&&Math.random()<0.01){found=cell;foundTimer=0;break;}
     }
   }
   if(found){
@@ -151,9 +195,8 @@ function draw(t){
     }
     ctx.closePath();
     ctx.strokeStyle=`rgba(${CONFIG.signalColor},${pulse*fadeOut*0.6})`;
-    ctx.lineWidth=1.5;
-    ctx.stroke();
-    if(foundTimer>2){found=null}
+    ctx.lineWidth=1.5;ctx.stroke();
+    if(foundTimer>2)found=null;
   }
 
   requestAnimationFrame(draw);

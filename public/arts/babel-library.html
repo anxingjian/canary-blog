@@ -7,192 +7,202 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #08070a; overflow: hidden; }
-canvas { display: block; width: 100vw; height: 100vh; }
+canvas { display: block; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; }
+#overlay { pointer-events: none; z-index: 1; }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+<canvas id="gl"></canvas>
+<canvas id="overlay"></canvas>
 <script>
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
+const glCanvas = document.getElementById('gl');
+const gl = glCanvas.getContext('webgl', { alpha: false });
+const overlay = document.getElementById('overlay');
+const ctx = overlay.getContext('2d');
 
 const CONFIG = {
-  hexRows: 6,
-  hexCols: 8,
-  hexRadius: 80,
-  wallWidth: 2,
-  wallColor: 'rgba(180, 160, 130, 0.12)',
+  hexRows: 6, hexCols: 8, hexRadius: 80, wallWidth: 2,
   glyphCount: 600,
   glyphChars: 'abcdefghijklmnopqrstuvwxyz0123456789αβγδεζηθικλμνξπρστυφχψω',
-  glyphSize: [9, 14],
-  glyphFade: [0.03, 0.25],
-  driftSpeed: 0.15,
-  pulseSpeed: 0.0006,
-  lampColor: [255, 220, 160],
-  lampRadius: 120,
-  lampCount: 5,
-  perspective: 0.7,
-  corridorDepth: 8,
+  glyphSize: [9, 14], glyphFade: [0.03, 0.25], driftSpeed: 0.15,
+  pulseSpeed: 0.0006, lampColor: [255, 220, 160], lampRadius: 120, lampCount: 5,
+  perspective: 0.7, corridorDepth: 8,
 };
 
-let W, H, glyphs = [], lamps = [], time = 0;
+let W, H, dpr, glyphs = [], lamps = [], time = 0;
 
 function resize() {
-  W = canvas.width = window.innerWidth * devicePixelRatio;
-  H = canvas.height = window.innerHeight * devicePixelRatio;
-  canvas.style.width = window.innerWidth + 'px';
-  canvas.style.height = window.innerHeight + 'px';
-}
-window.addEventListener('resize', resize);
-resize();
-
-// Hexagon helpers
-function hexCorner(cx, cy, r, i) {
-  const angle = Math.PI / 3 * i - Math.PI / 6;
-  return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
+  dpr = devicePixelRatio;
+  W = glCanvas.width = overlay.width = innerWidth * dpr;
+  H = glCanvas.height = overlay.height = innerHeight * dpr;
+  glCanvas.style.width = overlay.style.width = innerWidth + 'px';
+  glCanvas.style.height = overlay.style.height = innerHeight + 'px';
+  gl.viewport(0, 0, W, H);
 }
 
-function drawHex(cx, cy, r, alpha) {
-  ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const [x, y] = hexCorner(cx, cy, r, i);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+// --- WebGL: background corridors + lamp glows ---
+const vsrc = `
+attribute vec2 a_pos;
+varying vec2 v_uv;
+void main(){v_uv=a_pos*0.5+0.5;gl_Position=vec4(a_pos,0,1);}`;
+
+const fsrc = `
+precision mediump float;
+varying vec2 v_uv;
+uniform vec2 u_res;
+uniform float u_time;
+uniform vec2 u_lamps[5];
+uniform float u_lampPhase[5];
+uniform float u_lampRadius[5];
+
+#define PI 3.14159265
+
+void main(){
+  vec2 px = v_uv * u_res;
+  vec2 center = u_res * 0.5;
+  // Fade from previous (trail effect via dark overlay)
+  vec3 col = vec3(8.0/255.0, 7.0/255.0, 10.0/255.0);
+
+  // Hexagonal corridor layers
+  float hexR = 80.0;
+  float hexW = hexR * 1.732;
+  float hexH = hexR * 2.0;
+
+  for(int d = 8; d >= 0; d--){
+    float fd = float(d);
+    float scale = pow(0.7, fd);
+    float alpha = 0.04 + (1.0 - fd / 8.0) * 0.1;
+    float r = hexR * scale;
+    float offX = hexW * scale;
+    float offY = hexH * 0.75 * scale;
+
+    // Check if pixel is near any hex edge in this layer
+    for(int row = -6; row <= 6; row++){
+      for(int c = -8; c <= 8; c++){
+        float fr = float(row);
+        float fc = float(c);
+        float hx = center.x + fc * offX + (mod(abs(fr), 2.0) > 0.5 ? offX * 0.5 : 0.0);
+        float hy = center.y + fr * offY;
+        float dist = length(px - vec2(hx, hy));
+        if(dist > r + 2.0) continue;
+        // Hex edge detection
+        float angle = atan(px.y - hy, px.x - hx);
+        float hexDist = r / cos(mod(angle + PI/6.0, PI/3.0) - PI/6.0);
+        float edgeDist = abs(dist - hexDist);
+        float edgeAlpha = smoothstep(1.5, 0.0, edgeDist);
+        float pulse = 0.5 + 0.5 * sin(u_time * 0.001 * 0.6 + fd * 0.5 + fc * 0.2);
+        col += vec3(0.706, 0.627, 0.51) * edgeAlpha * alpha * pulse;
+      }
+    }
   }
-  ctx.closePath();
-  ctx.strokeStyle = `rgba(180, 160, 130, ${alpha})`;
-  ctx.lineWidth = CONFIG.wallWidth;
-  ctx.stroke();
-}
 
-// Initialize glyphs
-function initGlyphs() {
+  // Lamp glows
+  for(int i = 0; i < 5; i++){
+    float flicker = 0.6 + 0.4 * sin(u_time * 0.001 + u_lampPhase[i]);
+    float d = length(px - u_lamps[i]);
+    float r = u_lampRadius[i] * flicker;
+    float glow = exp(-d*d/(r*r*0.5)) * 0.06;
+    col += vec3(1.0, 0.863, 0.627) * glow;
+  }
+
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+function makeShader(type, src){
+  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, makeShader(gl.VERTEX_SHADER, vsrc));
+gl.attachShader(prog, makeShader(gl.FRAGMENT_SHADER, fsrc));
+gl.linkProgram(prog);
+if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) console.error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+
+const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+const aPos = gl.getAttribLocation(prog, 'a_pos');
+gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+const uRes = gl.getUniformLocation(prog, 'u_res');
+const uTime = gl.getUniformLocation(prog, 'u_time');
+const uLamps = gl.getUniformLocation(prog, 'u_lamps');
+const uLampPhase = gl.getUniformLocation(prog, 'u_lampPhase');
+const uLampRadius = gl.getUniformLocation(prog, 'u_lampRadius');
+
+// --- Glyphs (2D overlay) ---
+function initGlyphs(){
   glyphs = [];
-  for (let i = 0; i < CONFIG.glyphCount; i++) {
+  for(let i = 0; i < CONFIG.glyphCount; i++){
     glyphs.push({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      char: CONFIG.glyphChars[Math.floor(Math.random() * CONFIG.glyphChars.length)],
-      size: CONFIG.glyphSize[0] + Math.random() * (CONFIG.glyphSize[1] - CONFIG.glyphSize[0]),
-      alpha: CONFIG.glyphFade[0] + Math.random() * (CONFIG.glyphFade[1] - CONFIG.glyphFade[0]),
-      vx: (Math.random() - 0.5) * CONFIG.driftSpeed,
-      vy: -Math.random() * CONFIG.driftSpeed * 0.5 - 0.05,
-      phase: Math.random() * Math.PI * 2,
-      pulseAmp: 0.3 + Math.random() * 0.7,
-      rotation: (Math.random() - 0.5) * 0.3,
+      x: Math.random()*W, y: Math.random()*H,
+      char: CONFIG.glyphChars[Math.floor(Math.random()*CONFIG.glyphChars.length)],
+      size: CONFIG.glyphSize[0]+Math.random()*(CONFIG.glyphSize[1]-CONFIG.glyphSize[0]),
+      alpha: CONFIG.glyphFade[0]+Math.random()*(CONFIG.glyphFade[1]-CONFIG.glyphFade[0]),
+      vx: (Math.random()-0.5)*CONFIG.driftSpeed,
+      vy: -Math.random()*CONFIG.driftSpeed*0.5-0.05,
+      phase: Math.random()*Math.PI*2,
+      pulseAmp: 0.3+Math.random()*0.7,
+      rotation: (Math.random()-0.5)*0.3,
     });
   }
 }
 
-// Initialize lamps (soft light sources)
-function initLamps() {
+function initLamps(){
   lamps = [];
-  for (let i = 0; i < CONFIG.lampCount; i++) {
+  for(let i = 0; i < CONFIG.lampCount; i++){
     lamps.push({
-      x: W * (0.15 + Math.random() * 0.7),
-      y: H * (0.1 + Math.random() * 0.8),
-      phase: Math.random() * Math.PI * 2,
-      radius: CONFIG.lampRadius * (0.7 + Math.random() * 0.6),
+      x: W*(0.15+Math.random()*0.7), y: H*(0.1+Math.random()*0.8),
+      phase: Math.random()*Math.PI*2,
+      radius: CONFIG.lampRadius*(0.7+Math.random()*0.6)*dpr,
     });
   }
 }
 
-initGlyphs();
-initLamps();
+resize();
+window.addEventListener('resize', () => { resize(); initGlyphs(); initLamps(); });
+initGlyphs(); initLamps();
 
-// Draw corridor layers (receding hexagonal halls)
-function drawCorridors() {
-  const cx = W / 2, cy = H / 2;
-  const hexW = CONFIG.hexRadius * Math.sqrt(3);
-  const hexH = CONFIG.hexRadius * 2;
+function frame(t){
+  time = t;
 
-  for (let d = CONFIG.corridorDepth; d >= 0; d--) {
-    const scale = Math.pow(CONFIG.perspective, d);
-    const alpha = 0.04 + (1 - d / CONFIG.corridorDepth) * 0.1;
-    const r = CONFIG.hexRadius * scale;
-    const offsetX = hexW * scale;
-    const offsetY = hexH * 0.75 * scale;
+  // WebGL pass
+  gl.uniform2f(uRes, W, H);
+  gl.uniform1f(uTime, t);
+  const lampXY = [], lampP = [], lampR = [];
+  for(const l of lamps){ lampXY.push(l.x, H-l.y); lampP.push(l.phase); lampR.push(l.radius); }
+  gl.uniform2fv(uLamps, lampXY);
+  gl.uniform1fv(uLampPhase, lampP);
+  gl.uniform1fv(uLampRadius, lampR);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-    for (let row = -CONFIG.hexRows; row <= CONFIG.hexRows; row++) {
-      for (let col = -CONFIG.hexCols; col <= CONFIG.hexCols; col++) {
-        const x = cx + col * offsetX + (row % 2 ? offsetX / 2 : 0);
-        const y = cy + row * offsetY;
-        // Only draw if on screen
-        if (x > -r && x < W + r && y > -r && y < H + r) {
-          drawHex(x, y, r, alpha * (0.5 + 0.5 * Math.sin(time * CONFIG.pulseSpeed + d * 0.5 + col * 0.2)));
-        }
-      }
-    }
-  }
-}
+  // 2D overlay — glyphs
+  ctx.clearRect(0, 0, W, H);
+  for(const g of glyphs){
+    g.x += g.vx; g.y += g.vy; g.phase += 0.01;
+    if(g.y < -20){g.y=H+20;g.x=Math.random()*W;}
+    if(g.x<-20)g.x=W+20; if(g.x>W+20)g.x=-20;
 
-// Draw lamps (soft radial glow)
-function drawLamps() {
-  for (const lamp of lamps) {
-    const flicker = 0.6 + 0.4 * Math.sin(time * 0.001 + lamp.phase);
-    const [r, g, b] = CONFIG.lampColor;
-    const grad = ctx.createRadialGradient(lamp.x, lamp.y, 0, lamp.x, lamp.y, lamp.radius * flicker);
-    grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.06)`);
-    grad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.02)`);
-    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(lamp.x - lamp.radius, lamp.y - lamp.radius, lamp.radius * 2, lamp.radius * 2);
-  }
-}
-
-// Update and draw glyphs
-function drawGlyphs() {
-  for (const g of glyphs) {
-    g.x += g.vx;
-    g.y += g.vy;
-    g.phase += 0.01;
-
-    // Wrap around
-    if (g.y < -20) { g.y = H + 20; g.x = Math.random() * W; }
-    if (g.x < -20) g.x = W + 20;
-    if (g.x > W + 20) g.x = -20;
-
-    const pulse = g.alpha * (0.5 + 0.5 * Math.sin(time * CONFIG.pulseSpeed * 2 + g.phase) * g.pulseAmp);
-
-    // Proximity to lamps increases visibility slightly
+    const pulse = g.alpha*(0.5+0.5*Math.sin(t*CONFIG.pulseSpeed*2+g.phase)*g.pulseAmp);
     let lampBoost = 0;
-    for (const lamp of lamps) {
-      const dx = g.x - lamp.x, dy = g.y - lamp.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < lamp.radius) {
-        lampBoost = Math.max(lampBoost, (1 - dist / lamp.radius) * 0.15);
-      }
+    for(const l of lamps){
+      const d = Math.hypot(g.x-l.x, g.y-l.y);
+      if(d < l.radius) lampBoost = Math.max(lampBoost, (1-d/l.radius)*0.15);
     }
-
-    const alpha = Math.min(pulse + lampBoost, 0.4);
+    const alpha = Math.min(pulse+lampBoost, 0.4);
     ctx.save();
     ctx.translate(g.x, g.y);
     ctx.rotate(g.rotation);
     ctx.font = `${g.size}px "Courier New", monospace`;
-    ctx.fillStyle = `rgba(200, 190, 170, ${alpha})`;
+    ctx.fillStyle = `rgba(200,190,170,${alpha})`;
     ctx.fillText(g.char, 0, 0);
     ctx.restore();
-
-    // Occasionally change character
-    if (Math.random() < 0.001) {
-      g.char = CONFIG.glyphChars[Math.floor(Math.random() * CONFIG.glyphChars.length)];
-    }
+    if(Math.random()<0.001) g.char = CONFIG.glyphChars[Math.floor(Math.random()*CONFIG.glyphChars.length)];
   }
-}
-
-// Main loop
-function frame(t) {
-  time = t;
-  ctx.fillStyle = 'rgba(8, 7, 10, 0.15)';
-  ctx.fillRect(0, 0, W, H);
-
-  drawCorridors();
-  drawLamps();
-  drawGlyphs();
 
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 </script>
-</body>
-</html>
+</body></html>
