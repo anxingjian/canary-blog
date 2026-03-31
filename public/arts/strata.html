@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>层积 / Strata</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0a; overflow: hidden; cursor: crosshair; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+let time = 0;
+let layers = [];
+let mouseX = -1, mouseY = -1;
+let mouseActive = false;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+canvas.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  mouseActive = true;
+});
+canvas.addEventListener('mouseleave', () => { mouseActive = false; });
+
+// Color palette shifts over time — warm sediment tones
+function getColor(t, depth) {
+  const cycle = t * 0.0003;
+  const h = (25 + Math.sin(cycle) * 20 + depth * 0.3) % 360;
+  const s = 35 + Math.sin(cycle * 1.7) * 15;
+  const l = 55 - depth * 0.15;
+  return `hsla(${h}, ${s}%, ${l}%, `;
+}
+
+class Stratum {
+  constructor(y, t) {
+    this.baseY = y;
+    this.birthTime = t;
+    this.points = [];
+    this.color = getColor(t, 0);
+    this.opacity = 0.7;
+    this.thickness = 1.5 + Math.random() * 2;
+    
+    // Generate organic line across width
+    const segments = 80;
+    for (let i = 0; i <= segments; i++) {
+      const x = (i / segments) * W;
+      const noise = this.fbm(x * 0.003, t * 0.001, 4);
+      this.points.push({ x, y: y + noise * 20 });
+    }
+  }
+
+  // Fractional Brownian Motion
+  fbm(x, y, octaves) {
+    let val = 0, amp = 1, freq = 1, max = 0;
+    for (let i = 0; i < octaves; i++) {
+      val += amp * this.noise(x * freq, y * freq);
+      max += amp;
+      amp *= 0.5;
+      freq *= 2.0;
+    }
+    return val / max;
+  }
+
+  noise(x, y) {
+    const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    return (n - Math.floor(n)) * 2 - 1;
+  }
+
+  draw(currentTime, idx, total) {
+    const age = (currentTime - this.birthTime) * 0.001;
+    // Layers sink down over time
+    const sink = age * 3;
+    // Opacity fades with age
+    const fade = Math.max(0, this.opacity - age * 0.008);
+    if (fade <= 0) return false;
+
+    // Mouse interaction: layers ripple near cursor
+    let mouseDisplace = 0;
+
+    ctx.beginPath();
+    for (let i = 0; i < this.points.length; i++) {
+      const p = this.points[i];
+      let dy = sink;
+      
+      if (mouseActive) {
+        const dx = p.x - mouseX;
+        const dym = (p.y + sink) - mouseY;
+        const dist = Math.sqrt(dx * dx + dym * dym);
+        if (dist < 150) {
+          dy += Math.sin(dist * 0.05 - currentTime * 0.003) * (1 - dist / 150) * 15;
+        }
+      }
+
+      // Subtle breathing
+      const breath = Math.sin(currentTime * 0.001 + p.x * 0.01) * 2;
+      
+      if (i === 0) ctx.moveTo(p.x, p.y + dy + breath);
+      else ctx.lineTo(p.x, p.y + dy + breath);
+    }
+
+    const depth = total - idx;
+    const col = getColor(this.birthTime, depth);
+    ctx.strokeStyle = col + fade + ')';
+    ctx.lineWidth = this.thickness * Math.max(0.3, 1 - age * 0.01);
+    ctx.stroke();
+
+    // Fill a subtle band below
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fillStyle = col + (fade * 0.03) + ')';
+    ctx.fill();
+
+    return true;
+  }
+}
+
+// Add a new stratum periodically
+let lastLayerTime = 0;
+const layerInterval = 800; // ms between new layers
+
+function addLayer(t) {
+  // New layers appear at the top quarter
+  const y = H * 0.15 + Math.random() * H * 0.1;
+  layers.push(new Stratum(y, t));
+  
+  // Keep max ~80 layers for performance
+  if (layers.length > 80) layers.shift();
+}
+
+function draw(timestamp) {
+  time = timestamp || 0;
+  
+  // Semi-transparent clear for subtle trail
+  ctx.fillStyle = 'rgba(10, 10, 10, 0.04)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Add new layers
+  if (time - lastLayerTime > layerInterval) {
+    addLayer(time);
+    lastLayerTime = time;
+  }
+
+  // Draw all layers, oldest first
+  const alive = [];
+  for (let i = 0; i < layers.length; i++) {
+    const ok = layers[i].draw(time, i, layers.length);
+    if (ok) alive.push(layers[i]);
+  }
+  layers = alive;
+
+  // Time indicator — a thin line at top that pulses
+  const pulse = Math.sin(time * 0.002) * 0.3 + 0.5;
+  ctx.fillStyle = `rgba(200, 180, 160, ${pulse * 0.15})`;
+  ctx.fillRect(0, 0, W, 1);
+
+  // Tiny epoch markers
+  if (Math.floor(time / 5000) !== Math.floor((time - 16) / 5000)) {
+    const markerX = W * 0.05 + Math.random() * W * 0.9;
+    ctx.beginPath();
+    ctx.arc(markerX, H * 0.12, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 220, 180, 0.4)';
+    ctx.fill();
+  }
+
+  requestAnimationFrame(draw);
+}
+
+// Seed a few initial layers
+for (let i = 0; i < 10; i++) {
+  addLayer(i * 300);
+}
+
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
