@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>年轮 / Rings</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d0b09; overflow: hidden; cursor: crosshair; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, cx, cy;
+let mouseX = -1, mouseY = -1;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W / 2;
+  cy = H / 2;
+}
+resize();
+window.addEventListener('resize', resize);
+canvas.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+canvas.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1; });
+
+// Seeded random for reproducible rings
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+}
+
+const seed = Date.now() % 100000;
+const rng = mulberry32(seed);
+
+// Generate ring data
+const totalRings = 80 + Math.floor(rng() * 40);
+const rings = [];
+let currentRadius = 3;
+
+// Warm wood palette — from heartwood to sapwood
+const heartColors = [
+  [45, 30, 18],   // dark heartwood
+  [62, 40, 22],
+  [78, 52, 28],
+  [55, 35, 20],
+];
+const sapColors = [
+  [95, 68, 40],
+  [110, 78, 45],
+  [120, 88, 52],
+  [130, 95, 58],
+];
+
+for (let i = 0; i < totalRings; i++) {
+  const t = i / totalRings; // 0 = center, 1 = edge
+  
+  // Ring width varies — good years wide, bad years narrow
+  const isGoodYear = rng() > 0.35;
+  const baseWidth = isGoodYear ? 2.5 + rng() * 4 : 0.8 + rng() * 1.5;
+  
+  // Slight eccentricity — real trees aren't perfect circles
+  const eccX = (rng() - 0.5) * 0.15;
+  const eccY = (rng() - 0.5) * 0.15;
+  
+  // Color transitions from heartwood to sapwood
+  const heartIdx = Math.floor(rng() * heartColors.length);
+  const sapIdx = Math.floor(rng() * sapColors.length);
+  const hc = heartColors[heartIdx];
+  const sc = sapColors[sapIdx];
+  const r = Math.round(hc[0] + (sc[0] - hc[0]) * t);
+  const g = Math.round(hc[1] + (sc[1] - hc[1]) * t);
+  const b = Math.round(hc[2] + (sc[2] - hc[2]) * t);
+  
+  // Density variation — some rings are darker boundaries
+  const isDarkBound = rng() > 0.7;
+  const alpha = isDarkBound ? 0.85 : 0.4 + rng() * 0.3;
+  
+  // Occasional scar or knot
+  const hasScar = rng() > 0.94;
+  const scarAngle = rng() * Math.PI * 2;
+  const scarSpan = 0.1 + rng() * 0.3;
+  
+  rings.push({
+    radius: currentRadius,
+    width: baseWidth,
+    eccX, eccY,
+    r, g, b, alpha,
+    hasScar, scarAngle, scarSpan,
+    isGoodYear,
+    phase: rng() * Math.PI * 2, // wobble phase
+    wobbleAmp: 0.3 + rng() * 1.2,
+  });
+  
+  currentRadius += baseWidth;
+}
+
+const maxRadius = currentRadius;
+
+let time = 0;
+let revealProgress = 0; // animate reveal
+
+function drawRing(ring, scale, breathe) {
+  const segments = 180;
+  ctx.beginPath();
+  
+  for (let s = 0; s <= segments; s++) {
+    const angle = (s / segments) * Math.PI * 2;
+    
+    // Natural wobble — rings aren't perfectly round
+    const wobble = Math.sin(angle * 3 + ring.phase) * ring.wobbleAmp;
+    const breatheOffset = Math.sin(angle * 2 + time * 0.5) * breathe * 2;
+    
+    const r = (ring.radius + wobble + breatheOffset) * scale;
+    const ox = ring.eccX * ring.radius * scale;
+    const oy = ring.eccY * ring.radius * scale;
+    
+    const x = cx + ox + Math.cos(angle) * r;
+    const y = cy + oy + Math.sin(angle) * r;
+    
+    if (s === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  
+  // Check if mouse is near this ring for highlight
+  let highlight = 0;
+  if (mouseX > 0) {
+    const dx = mouseX - cx;
+    const dy = mouseY - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const ringDist = ring.radius * scale;
+    const diff = Math.abs(dist - ringDist);
+    if (diff < 20) {
+      highlight = 1 - diff / 20;
+    }
+  }
+  
+  const hr = Math.min(255, ring.r + highlight * 80);
+  const hg = Math.min(255, ring.g + highlight * 60);
+  const hb = Math.min(255, ring.b + highlight * 40);
+  const ha = Math.min(1, ring.alpha + highlight * 0.4);
+  
+  ctx.strokeStyle = `rgba(${hr},${hg},${hb},${ha})`;
+  ctx.lineWidth = Math.max(0.5, ring.width * scale * 0.6);
+  ctx.stroke();
+  
+  // Draw scar
+  if (ring.hasScar) {
+    ctx.beginPath();
+    const scarR = ring.radius * scale;
+    const startA = ring.scarAngle - ring.scarSpan / 2;
+    const endA = ring.scarAngle + ring.scarSpan / 2;
+    
+    for (let s = 0; s <= 20; s++) {
+      const a = startA + (s / 20) * (endA - startA);
+      const scarWobble = Math.sin(s * 0.8) * 3;
+      const x = cx + Math.cos(a) * (scarR + scarWobble);
+      const y = cy + Math.sin(a) * (scarR + scarWobble);
+      if (s === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = `rgba(30,20,12,${0.6 + highlight * 0.3})`;
+    ctx.lineWidth = 2 * scale;
+    ctx.stroke();
+  }
+}
+
+function draw() {
+  ctx.fillStyle = '#0d0b09';
+  ctx.fillRect(0, 0, W, H);
+  
+  time += 0.01;
+  revealProgress = Math.min(1, revealProgress + 0.008);
+  
+  // Scale to fit screen
+  const maxDim = Math.min(W, H) * 0.42;
+  const scale = maxDim / maxRadius;
+  
+  // Mouse proximity for breathing effect
+  let breathe = 0;
+  if (mouseX > 0) {
+    const dx = mouseX - cx;
+    const dy = mouseY - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    breathe = Math.max(0, 1 - dist / (maxDim * 1.2));
+  }
+  
+  // Subtle overall pulse — like the wood still remembers growing
+  const pulse = Math.sin(time * 0.3) * 0.003 + 1;
+  
+  // Draw rings from outside in for proper overlap
+  const visibleCount = Math.floor(rings.length * revealProgress);
+  
+  for (let i = visibleCount - 1; i >= 0; i--) {
+    drawRing(rings[i], scale * pulse, breathe);
+  }
+  
+  // Subtle radial grain texture
+  if (revealProgress > 0.5) {
+    const grainAlpha = (revealProgress - 0.5) * 0.1;
+    for (let i = 0; i < 200; i++) {
+      const angle = rng() * Math.PI * 2;
+      const dist = rng() * maxDim;
+      const x = cx + Math.cos(angle) * dist;
+      const y = cy + Math.sin(angle) * dist;
+      ctx.fillStyle = `rgba(80,55,30,${grainAlpha * rng()})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  
+  // Center pith — dark, small
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3 * scale, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(25,18,10,0.9)';
+  ctx.fill();
+  
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
