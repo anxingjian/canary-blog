@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>折返 / Recursion</title>
+<style>
+* { margin: 0; padding: 0; }
+body { background: #0a0a12; overflow: hidden; }
+canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl');
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio, 2);
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+}
+window.addEventListener('resize', resize);
+resize();
+
+const vs = `attribute vec2 p; void main(){gl_Position=vec4(p,0,1);}`;
+
+const fs = `
+precision highp float;
+uniform float t;
+uniform vec2 r;
+
+#define PI 3.14159265
+
+// rotation matrix
+mat2 rot(float a) {
+  float c = cos(a), s = sin(a);
+  return mat2(c, -s, s, c);
+}
+
+// SDF for a box
+float sdBox(vec3 p, vec3 b) {
+  vec3 d = abs(p) - b;
+  return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
+}
+
+// The recursive corridor — fold space repeatedly
+float map(vec3 p) {
+  float breath = sin(t * 0.4) * 0.08;
+  
+  // slow rotation of the whole structure
+  p.xz *= rot(t * 0.05);
+  p.yz *= rot(t * 0.03);
+  
+  float scale = 1.0;
+  float d = 1e10;
+  
+  // recursive folding — the core of "观察者观察自己"
+  for (int i = 0; i < 7; i++) {
+    // fold into positive octant
+    p = abs(p);
+    
+    // conditional fold — creates asymmetric recursion
+    if (p.x < p.y) p.xy = p.yx;
+    if (p.x < p.z) p.xz = p.zx;
+    if (p.y < p.z) p.yz = p.zy;
+    
+    // scale and translate — each iteration zooms deeper
+    float s = 2.0 + breath;
+    p = p * s - vec3(1.8, 1.2, 0.9);
+    scale *= s;
+    
+    // accumulate distance
+    float box = sdBox(p, vec3(1.0, 1.0, 0.2)) / scale;
+    d = min(d, box);
+  }
+  
+  return d;
+}
+
+// soft shadow / AO approximation
+float calcAO(vec3 p, vec3 n) {
+  float occ = 0.0;
+  float sca = 1.0;
+  for (int i = 0; i < 5; i++) {
+    float h = 0.01 + 0.12 * float(i);
+    float d = map(p + h * n);
+    occ += (h - d) * sca;
+    sca *= 0.95;
+  }
+  return clamp(1.0 - 3.0 * occ, 0.0, 1.0);
+}
+
+vec3 calcNormal(vec3 p) {
+  vec2 e = vec2(0.001, 0.0);
+  return normalize(vec3(
+    map(p + e.xyy) - map(p - e.xyy),
+    map(p + e.yxy) - map(p - e.yxy),
+    map(p + e.yyx) - map(p - e.yyx)
+  ));
+}
+
+void main() {
+  vec2 uv = (gl_FragCoord.xy - r * 0.5) / min(r.x, r.y);
+  
+  // camera — slowly orbiting the fractal
+  float ct = t * 0.12;
+  vec3 ro = vec3(3.5 * sin(ct), 1.5 * sin(t * 0.07), 3.5 * cos(ct));
+  vec3 ta = vec3(0.0, 0.0, 0.0);
+  
+  vec3 ww = normalize(ta - ro);
+  vec3 uu = normalize(cross(ww, vec3(0, 1, 0)));
+  vec3 vv = cross(uu, ww);
+  vec3 rd = normalize(uv.x * uu + uv.y * vv + 1.8 * ww);
+  
+  // ray march
+  float td = 0.0;
+  float hit = 0.0;
+  for (int i = 0; i < 120; i++) {
+    vec3 p = ro + rd * td;
+    float d = map(p);
+    if (d < 0.001) { hit = 1.0; break; }
+    if (td > 20.0) break;
+    td += d;
+  }
+  
+  // deep indigo background
+  vec3 col = vec3(0.02, 0.03, 0.07);
+  
+  if (hit > 0.5) {
+    vec3 p = ro + rd * td;
+    vec3 n = calcNormal(p);
+    float ao = calcAO(p, n);
+    
+    // lighting
+    vec3 light1 = normalize(vec3(1.0, 2.0, 1.5));
+    vec3 light2 = normalize(vec3(-1.0, 0.5, -1.0));
+    
+    float diff1 = max(dot(n, light1), 0.0);
+    float diff2 = max(dot(n, light2), 0.0);
+    float spec = pow(max(dot(reflect(rd, n), light1), 0.0), 32.0);
+    
+    // color palette — cold indigo base, warm amber accent
+    vec3 cold = vec3(0.08, 0.12, 0.28);   // deep indigo
+    vec3 mid  = vec3(0.12, 0.22, 0.42);   // steel blue
+    vec3 warm = vec3(0.6, 0.35, 0.15);    // amber accent
+    
+    // depth-based color shift — deeper = warmer hint
+    float depth = clamp(td / 12.0, 0.0, 1.0);
+    float warmth = pow(depth, 2.0) * 0.3 + pow(max(dot(n, vec3(0, 1, 0)), 0.0), 3.0) * 0.2;
+    
+    // breathing pulse on warm accent
+    warmth += sin(t * 0.5 + td * 0.5) * 0.05;
+    
+    col = mix(cold, mid, diff1 * 0.8) * ao;
+    col += diff2 * vec3(0.05, 0.08, 0.15) * ao;
+    col += spec * vec3(0.3, 0.4, 0.6) * 0.5;
+    col = mix(col, warm, clamp(warmth, 0.0, 0.35));
+    
+    // edge glow — the "self-observing" rim light
+    float rim = 1.0 - max(dot(-rd, n), 0.0);
+    rim = pow(rim, 3.0);
+    col += rim * vec3(0.15, 0.2, 0.45) * ao;
+    
+    // fog
+    col = mix(col, vec3(0.02, 0.03, 0.07), smoothstep(4.0, 16.0, td));
+  }
+  
+  // subtle vignette
+  vec2 vuv = gl_FragCoord.xy / r;
+  float vig = 1.0 - 0.4 * dot((vuv - 0.5) * 1.2, (vuv - 0.5) * 1.2);
+  col *= vig;
+  
+  // tone mapping + gamma
+  col = col / (col + 0.8);
+  col = pow(col, vec3(0.85));
+  
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+
+function compile(src, type) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(s));
+  }
+  return s;
+}
+
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(vs, gl.VERTEX_SHADER));
+gl.attachShader(prog, compile(fs, gl.FRAGMENT_SHADER));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+const pLoc = gl.getAttribLocation(prog, 'p');
+gl.enableVertexAttribArray(pLoc);
+gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
+
+const tLoc = gl.getUniformLocation(prog, 't');
+const rLoc = gl.getUniformLocation(prog, 'r');
+
+function frame(now) {
+  gl.uniform1f(tLoc, now * 0.001);
+  gl.uniform2f(rLoc, canvas.width, canvas.height);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
