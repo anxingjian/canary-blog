@@ -7,8 +7,6 @@ rating: 7.8/10
 slug: figma-ai-age-vibe-design
 ---
 
-# Figma in the Age of Vibe Design: 设计工具霸主的攻与守
-
 **一句话总结**  
 Figma 从 0-to-1 ideation 的绝对主宰，被 Google Stitch 的"免费+AI 原生"挤压到 1-to-100 refinement 的角色。这不是死亡，而是范式转变——问题是 Figma 的护城河能否在新游戏规则下仍然值钱。
 
