@@ -1,19 +1,16 @@
-import { getPost, getAllPosts } from "@/lib/posts";
+import { getResearch, getAllResearch } from "@/lib/posts";
 import { notFound } from "next/navigation";
 import BackLink from "@/components/BackLink";
 import ThemeToggle from "@/components/ThemeToggle";
-import PostPasswordGate from "@/components/PostPasswordGate";
 
 export function generateStaticParams() {
-  return getAllPosts()
-    .filter(post => post.type === 'research')
-    .map((post) => ({ slug: post.slug }));
+  return getAllResearch().map((r) => ({ slug: r.slug }));
 }
 
-export default async function ResearchPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ResearchDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = getPost(slug);
-  if (!post || post.type !== 'research') notFound();
+  const post = getResearch(slug);
+  if (!post) notFound();
 
   const html = post.content
     .replace(/^### (.+)$/gm, '<h3 class="post-h3">$1</h3>')
@@ -25,15 +22,12 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
     .replace(/(<li.*<\/li>\n?)+/g, '<ul class="post-ul">$&</ul>')
     .replace(/^---$/gm, '<hr class="post-hr" />')
     .replace(/```([\s\S]*?)```/g, '<pre class="post-pre">$1</pre>')
-    .replace(/\| .+? \|/g, '<div class="post-table">$&</div>')
     .replace(/^> (.+)$/gm, '<blockquote class="post-blockquote"><p>$1</p></blockquote>')
     .replace(/^(?!<[huplobr])((?!<\/)[^\n<].+)$/gm, '<p class="post-p">$1</p>')
     .replace(/\n{2,}/g, "\n");
 
   return (
-    <PostPasswordGate isPublic={!!post.public}>
     <main style={{ minHeight: "100vh" }}>
-      {/* Vertical accent */}
       <div
         style={{
           position: "fixed",
@@ -57,14 +51,13 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
         <BackLink />
 
         <header style={{ marginBottom: "5rem" }}>
-          {/* Rating badge */}
           {post.rating && (
             <div
               style={{
                 display: "inline-block",
                 fontSize: "0.625rem",
                 fontFamily: "'Space Mono', monospace",
-                color: "var(--accent-dim)",
+                color: "#d4a574",
                 marginBottom: "1rem",
                 padding: "0.5rem 0.75rem",
                 border: "1px solid var(--border)",
@@ -100,7 +93,7 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
             }}
           >
             <span>{post.date}</span>
-            <span>Day {post.day?.replace(/[^0-9]/g, "")}</span>
+            {post.day && <span>{post.day}</span>}
           </div>
 
           <div
@@ -137,7 +130,7 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
           </span>
           <span
             style={{
-              color: "var(--accent-dim)",
+              color: "#d4a574",
               fontFamily: "'Space Mono', monospace",
               fontSize: "0.625rem",
               letterSpacing: "0.1em",
@@ -147,8 +140,7 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
           </span>
         </div>
       </article>
-    <ThemeToggle />
+      <ThemeToggle />
     </main>
-    </PostPasswordGate>
   );
 }

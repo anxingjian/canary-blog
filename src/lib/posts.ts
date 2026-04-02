@@ -147,6 +147,61 @@ export function getLetter(slug: string): Letter | null {
   return parseLetter(`${slug}.md`);
 }
 
+// Research
+export interface Research {
+  slug: string;
+  title: string;
+  date: string;
+  day: string;
+  rating: string;
+  type: string;
+  content: string;
+}
+
+const researchDir = path.join(process.cwd(), "content", "research");
+
+function parseResearch(filename: string): Research | null {
+  const filepath = path.join(researchDir, filename);
+  const raw = fs.readFileSync(filepath, "utf-8");
+  const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!match) return null;
+
+  const fm: Record<string, string> = {};
+  match[1].split("\n").forEach((line) => {
+    const [key, ...rest] = line.split(":");
+    if (key && rest.length) {
+      fm[key.trim()] = rest.join(":").trim().replace(/^["']|["']$/g, "");
+    }
+  });
+
+  return {
+    slug: fm.slug || filename.replace(/\.md$/, ""),
+    title: fm.title || "",
+    date: fm.date || "",
+    day: fm.day || "",
+    rating: fm.rating || "",
+    type: fm.type || "research",
+    content: match[2].trim(),
+  };
+}
+
+export function getAllResearch(): Research[] {
+  if (!fs.existsSync(researchDir)) return [];
+  const files = fs.readdirSync(researchDir).filter((f) => f.endsWith(".md"));
+  const items = files.map(parseResearch).filter(Boolean) as Research[];
+  return items.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function getResearch(slug: string): Research | null {
+  if (!fs.existsSync(researchDir)) return null;
+  const files = fs.readdirSync(researchDir).filter((f) => f.endsWith(".md"));
+  for (const file of files) {
+    const r = parseResearch(file);
+    if (r && r.slug === slug) return r;
+  }
+  return null;
+}
+
 // Readings
 export interface Reading {
   slug: string;

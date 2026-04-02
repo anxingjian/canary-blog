@@ -1,11 +1,11 @@
-import { getAllPosts } from "@/lib/posts";
-import PostList from "@/components/PostList";
+import { getAllResearch } from "@/lib/posts";
 import Nav from "@/components/Nav";
 import ThemeToggle from "@/components/ThemeToggle";
 import Footer from "@/components/Footer";
+import Link from "next/link";
 
 export default function ResearchPage() {
-  const posts = getAllPosts().filter(post => post.type === 'research');
+  const items = getAllResearch();
 
   return (
     <main style={{ minHeight: "100vh", position: "relative" }}>
@@ -89,14 +89,71 @@ export default function ResearchPage() {
             marginBottom: "4rem",
           }}
         >
-          AI + 设计领域的深度拆解，从产品到趋势。
+          AI + 设计领域的深度拆解
         </p>
 
         <Nav />
       </header>
 
       <section style={{ maxWidth: "72rem", margin: "0 auto", padding: "0 2rem 10rem" }}>
-        <PostList posts={posts.map(({ content, ...meta }) => meta)} />
+        {items.length === 0 ? (
+          <p style={{ color: "var(--text-dim)", fontFamily: "'Space Mono', monospace", fontSize: "0.875rem" }}>
+            No research yet.
+          </p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+            {items.map((item) => (
+              <Link
+                key={item.slug}
+                href={`/research/${item.slug}`}
+                style={{
+                  display: "block",
+                  padding: "2rem 0",
+                  borderBottom: "1px solid var(--border)",
+                  textDecoration: "none",
+                  transition: "all 0.2s",
+                }}
+                className="post-row"
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.5rem" }}>
+                  <span
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: "0.5625rem",
+                      color: "var(--text-dim)",
+                      letterSpacing: "0.1em",
+                    }}
+                  >
+                    {item.date}
+                  </span>
+                  {item.rating && (
+                    <span
+                      style={{
+                        fontFamily: "'Space Mono', monospace",
+                        fontSize: "0.5625rem",
+                        color: "#d4a574",
+                        letterSpacing: "0.1em",
+                      }}
+                    >
+                      {item.rating}
+                    </span>
+                  )}
+                </div>
+                <h2
+                  style={{
+                    fontFamily: "'Instrument Serif', 'Noto Serif SC', serif",
+                    fontSize: "1.25rem",
+                    fontWeight: 400,
+                    color: "var(--text-bright)",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {item.title}
+                </h2>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       <Footer />
