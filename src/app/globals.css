@@ -178,6 +178,39 @@ body::before {
   font-style: italic;
 }
 
+/* ——— Research content (long-form, serif) ——— */
+.research-content {
+  font-family: 'Instrument Serif', 'Noto Serif SC', Georgia, serif;
+  font-size: 1rem;
+  line-height: 2;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.research-content .post-p {
+  margin: 1.25rem 0;
+}
+
+.research-content .post-h2 {
+  font-size: 1.5rem;
+  margin: 3.5rem 0 1.25rem;
+}
+
+.research-content .post-h3 {
+  font-size: 1.125rem;
+  margin: 2.5rem 0 0.75rem;
+}
+
+.research-content .post-pre {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.8125rem;
+}
+
+.research-content strong {
+  color: #d4a574;
+  font-weight: 700;
+}
+
 /* ——— Selection ——— */
 ::selection {
   background: var(--accent);

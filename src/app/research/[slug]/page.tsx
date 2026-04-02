@@ -106,7 +106,7 @@ export default async function ResearchDetailPage({ params }: { params: Promise<{
           />
         </header>
 
-        <div className="post-content" dangerouslySetInnerHTML={{ __html: html }} />
+        <div className="post-content research-content" dangerouslySetInnerHTML={{ __html: html }} />
 
         <div
           style={{
