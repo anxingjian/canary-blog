@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collective — Canary</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #0a0a0c; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+const resize = () => { W = canvas.width = innerWidth; H = canvas.height = innerHeight; };
+resize();
+addEventListener('resize', resize);
+
+// Cells — small autonomous agents
+const N = 280;
+const cells = [];
+
+class Cell {
+  constructor() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - 0.5) * 0.8;
+    this.vy = (Math.random() - 0.5) * 0.8;
+    this.radius = 2 + Math.random() * 2;
+    this.baseRadius = this.radius;
+    // Each cell has a "charge" — bioelectric potential
+    this.charge = Math.random() * Math.PI * 2;
+    this.chargeSpeed = 0.005 + Math.random() * 0.01;
+    this.neighbors = 0;
+  }
+
+  update() {
+    this.charge += this.chargeSpeed;
+
+    // Flocking: count neighbors and adjust
+    this.neighbors = 0;
+    let cohX = 0, cohY = 0;
+    let sepX = 0, sepY = 0;
+    let aliVx = 0, aliVy = 0;
+
+    for (let other of cells) {
+      if (other === this) continue;
+      const dx = other.x - this.x;
+      const dy = other.y - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 120) {
+        this.neighbors++;
+        // Cohesion
+        cohX += dx;
+        cohY += dy;
+        // Alignment
+        aliVx += other.vx;
+        aliVy += other.vy;
+
+        if (dist < 25) {
+          // Separation
+          sepX -= dx / (dist + 0.1);
+          sepY -= dy / (dist + 0.1);
+        }
+
+        // Charge synchronization (Kuramoto-like)
+        const phaseDiff = Math.sin(other.charge - this.charge);
+        this.charge += phaseDiff * 0.002;
+      }
+    }
+
+    if (this.neighbors > 0) {
+      this.vx += cohX * 0.00003 + sepX * 0.015 + aliVx * 0.01;
+      this.vy += cohY * 0.00003 + sepY * 0.015 + aliVy * 0.01;
+    }
+
+    // Gentle noise
+    this.vx += (Math.random() - 0.5) * 0.05;
+    this.vy += (Math.random() - 0.5) * 0.05;
+
+    // Speed limit
+    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    const maxSpeed = 1.2;
+    if (speed > maxSpeed) {
+      this.vx = (this.vx / speed) * maxSpeed;
+      this.vy = (this.vy / speed) * maxSpeed;
+    }
+
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // Wrap
+    if (this.x < -20) this.x = W + 20;
+    if (this.x > W + 20) this.x = -20;
+    if (this.y < -20) this.y = H + 20;
+    if (this.y > H + 20) this.y = -20;
+
+    // Radius grows with neighbors (collective makes you bigger)
+    this.radius = this.baseRadius + this.neighbors * 0.15;
+  }
+
+  draw() {
+    // Color based on charge phase — synchronized cells glow similarly
+    const chargeVal = (Math.sin(this.charge) + 1) / 2;
+
+    // Palette: deep teal → warm amber when clustered
+    const clusterRatio = Math.min(this.neighbors / 12, 1);
+    const r = Math.floor(30 + clusterRatio * 180 + chargeVal * 40);
+    const g = Math.floor(80 + chargeVal * 60 - clusterRatio * 20);
+    const b = Math.floor(120 - clusterRatio * 70 + chargeVal * 20);
+    const alpha = 0.4 + clusterRatio * 0.4;
+
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+    ctx.fill();
+
+    // Glow for clustered cells
+    if (this.neighbors > 4) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius * 3, 0, Math.PI * 2);
+      const gradient = ctx.createRadialGradient(
+        this.x, this.y, this.radius * 0.5,
+        this.x, this.y, this.radius * 3
+      );
+      gradient.addColorStop(0, `rgba(${r},${g},${b},${0.15 * clusterRatio})`);
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
+  }
+}
+
+// Draw connections between nearby synchronized cells
+function drawConnections() {
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < cells.length; i++) {
+    for (let j = i + 1; j < cells.length; j++) {
+      const a = cells[i], b = cells[j];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 60) {
+        // Only connect if charges are somewhat synchronized
+        const phaseDiff = Math.abs(Math.sin(a.charge - b.charge));
+        if (phaseDiff < 0.5) {
+          const alpha = (1 - dist / 60) * (1 - phaseDiff * 2) * 0.25;
+          const clusterRatio = Math.min((a.neighbors + b.neighbors) / 20, 1);
+          const r = Math.floor(30 + clusterRatio * 180);
+          const g = Math.floor(80 + (1 - clusterRatio) * 40);
+          const b2 = Math.floor(120 - clusterRatio * 70);
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(${r},${g},${b2},${alpha})`;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+}
+
+for (let i = 0; i < N; i++) cells.push(new Cell());
+
+function animate() {
+  // Fade trail
+  ctx.fillStyle = 'rgba(10, 10, 12, 0.15)';
+  ctx.fillRect(0, 0, W, H);
+
+  for (const cell of cells) cell.update();
+  drawConnections();
+  for (const cell of cells) cell.draw();
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body>
+</html>
