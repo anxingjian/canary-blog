@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>织 / Weave</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #1a1612; display: flex; justify-content: center; align-items: center; height: 100vh; }
+  canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// 织 / Weave
+// Inspired by Tyler Hobbs' Fidenza flow fields + woven textile textures
+// p5.js generative art
+
+let seed;
+let palette;
+const palettes = [
+  // Warm earth + indigo
+  ['#2C1810', '#8B4513', '#CD853F', '#DEB887', '#F5DEB3', '#1B3A4B', '#4A6741'],
+  // Dusk ocean
+  ['#0D1B2A', '#1B2838', '#2D4059', '#EA5455', '#F07B3F', '#FFD460', '#E8D5B7'],
+  // Moss + copper
+  ['#1A1A2E', '#16213E', '#0F3460', '#B68D40', '#D4A574', '#E8D5B7', '#4A6741'],
+  // Ink + gold
+  ['#0A0A0A', '#1C1C1C', '#2D2D2D', '#C9A961', '#E8D5B7', '#8B7355', '#4A3728'],
+];
+
+let flowField;
+let cols, rows;
+let resolution = 12;
+let margin;
+
+function setup() {
+  seed = Math.floor(Math.random() * 999999);
+  randomSeed(seed);
+  noiseSeed(seed);
+  
+  let s = min(windowWidth, windowHeight);
+  createCanvas(s, s);
+  pixelDensity(2);
+  
+  palette = random(palettes);
+  margin = s * 0.08;
+  
+  cols = floor((width - margin * 2) / resolution);
+  rows = floor((height - margin * 2) / resolution);
+  
+  // Generate flow field with multiple octaves
+  flowField = [];
+  let noiseScale1 = random(0.003, 0.008);
+  let noiseScale2 = random(0.01, 0.025);
+  let warpStrength = random(0.5, 2.0);
+  
+  for (let i = 0; i < cols; i++) {
+    flowField[i] = [];
+    for (let j = 0; j < rows; j++) {
+      let x = i * resolution + margin;
+      let y = j * resolution + margin;
+      
+      // Domain warping for organic flow
+      let warpX = noise(x * noiseScale2, y * noiseScale2, 100) * warpStrength;
+      let warpY = noise(x * noiseScale2, y * noiseScale2, 200) * warpStrength;
+      
+      let angle = noise(
+        (x + warpX * 100) * noiseScale1, 
+        (y + warpY * 100) * noiseScale1
+      ) * TAU * 2.5;
+      
+      flowField[i][j] = angle;
+    }
+  }
+  
+  background(palette[0]);
+  
+  // Layer 1: Subtle texture ground
+  drawTextureGround();
+  
+  // Layer 2: Thick woven strands
+  drawWeave(random(80, 200), random(3, 8), 0.6);
+  
+  // Layer 3: Medium strands
+  drawWeave(random(200, 500), random(1.5, 3.5), 0.4);
+  
+  // Layer 4: Fine detail threads  
+  drawWeave(random(600, 1200), random(0.3, 1.2), 0.25);
+  
+  // Layer 5: Accent highlights
+  drawAccents();
+  
+  // Layer 6: Vignette
+  drawVignette();
+  
+  noLoop();
+}
+
+function drawTextureGround() {
+  loadPixels();
+  for (let i = 0; i < pixels.length; i += 4) {
+    let n = random(-8, 8);
+    pixels[i] = constrain(pixels[i] + n, 0, 255);
+    pixels[i+1] = constrain(pixels[i+1] + n, 0, 255);
+    pixels[i+2] = constrain(pixels[i+2] + n, 0, 255);
+  }
+  updatePixels();
+}
+
+function drawWeave(numStrands, strokeW, opacity) {
+  for (let n = 0; n < numStrands; n++) {
+    let x = random(margin * 0.5, width - margin * 0.5);
+    let y = random(margin * 0.5, height - margin * 0.5);
+    
+    let col = color(random(palette.slice(1)));
+    col.setAlpha(opacity * 255);
+    
+    stroke(col);
+    strokeWeight(strokeW + random(-strokeW * 0.3, strokeW * 0.3));
+    noFill();
+    
+    beginShape();
+    let steps = floor(random(30, 150));
+    let stepSize = random(1.5, 4);
+    
+    for (let s = 0; s < steps; s++) {
+      let ci = floor((x - margin) / resolution);
+      let cj = floor((y - margin) / resolution);
+      
+      if (ci >= 0 && ci < cols && cj >= 0 && cj < rows) {
+        let angle = flowField[ci][cj];
+        // Add slight randomness for organic feel
+        angle += random(-0.15, 0.15);
+        
+        curveVertex(x, y);
+        x += cos(angle) * stepSize;
+        y += sin(angle) * stepSize;
+      } else {
+        break;
+      }
+    }
+    endShape();
+  }
+}
+
+function drawAccents() {
+  // Sparse bright spots where flow lines converge
+  let accentColor = color(palette[palette.length - 2]);
+  
+  for (let i = 0; i < 40; i++) {
+    let x = random(margin, width - margin);
+    let y = random(margin, height - margin);
+    
+    let ci = floor((x - margin) / resolution);
+    let cj = floor((y - margin) / resolution);
+    
+    if (ci >= 0 && ci < cols - 1 && cj >= 0 && cj < rows - 1) {
+      // Check for flow convergence
+      let a1 = flowField[ci][cj];
+      let a2 = flowField[ci+1][cj];
+      let a3 = flowField[ci][cj+1];
+      let diff = abs(a1 - a2) + abs(a1 - a3);
+      
+      if (diff > 1.5) {
+        noStroke();
+        let ac = color(red(accentColor), green(accentColor), blue(accentColor), random(20, 60));
+        fill(ac);
+        ellipse(x, y, random(3, 15), random(3, 15));
+      }
+    }
+  }
+}
+
+function drawVignette() {
+  let ctx = drawingContext;
+  let gradient = ctx.createRadialGradient(
+    width/2, height/2, width * 0.2,
+    width/2, height/2, width * 0.7
+  );
+  gradient.addColorStop(0, 'rgba(0,0,0,0)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0.5)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+}
+
+function windowResized() {
+  // Don't resize - keep the generated artwork
+}
+</script>
+</body>
+</html>
