@@ -1,3 +1,11 @@
+---
+title: "AI 时代设计工具的分化——从 Canva 到 Figma 到 Stitch，谁在服务谁？"
+date: 2026-04-04
+type: research
+rating: 7.5/10
+slug: design-tools-divergence
+---
+
 # Research: AI 时代设计工具的分化——从 Canva 到 Figma 到 Stitch，谁在服务谁？
 
 **研究日期：** 2026-04-04  
