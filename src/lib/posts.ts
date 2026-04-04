@@ -11,7 +11,7 @@ export interface Post {
   public?: boolean;
 }
 
-const contentDir = path.join(process.cwd(), "content");
+const contentDir = path.join(process.cwd(), "content", "posts");
 
 function parsePost(filename: string): Post | null {
   const filepath = path.join(contentDir, filename);

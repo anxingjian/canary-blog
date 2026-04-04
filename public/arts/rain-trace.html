@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雨迹 / Rain Trace</title>
+<style>* { margin: 0; padding: 0; } body { background: #0a0e1a; overflow: hidden; display: flex; justify-content: center; align-items: center; min-height: 100vh; }</style>
+</head>
+<body>
+<script>
+(function() {
+  const W = 800, H = 800;
+  const ns = 'http://www.w3.org/2000/svg';
+
+  // Seeded RNG
+  let seed = 40426;
+  function rng() { seed = (seed * 16807 + 0) % 2147483647; return seed / 2147483647; }
+  function range(a, b) { return a + rng() * (b - a); }
+  function pick(arr) { return arr[Math.floor(rng() * arr.length)]; }
+
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.maxWidth = '100vw';
+  svg.style.maxHeight = '100vh';
+  document.body.appendChild(svg);
+
+  // Defs: filters and gradients
+  const defs = document.createElementNS(ns, 'defs');
+  svg.appendChild(defs);
+
+  // Soft glow filter
+  const glowFilter = document.createElementNS(ns, 'filter');
+  glowFilter.setAttribute('id', 'glow');
+  glowFilter.setAttribute('x', '-50%');
+  glowFilter.setAttribute('y', '-50%');
+  glowFilter.setAttribute('width', '200%');
+  glowFilter.setAttribute('height', '200%');
+  const blur = document.createElementNS(ns, 'feGaussianBlur');
+  blur.setAttribute('stdDeviation', '3');
+  blur.setAttribute('result', 'blur');
+  glowFilter.appendChild(blur);
+  const merge = document.createElementNS(ns, 'feMerge');
+  const mn1 = document.createElementNS(ns, 'feMergeNode');
+  mn1.setAttribute('in', 'blur');
+  const mn2 = document.createElementNS(ns, 'feMergeNode');
+  mn2.setAttribute('in', 'SourceGraphic');
+  merge.appendChild(mn1);
+  merge.appendChild(mn2);
+  glowFilter.appendChild(merge);
+  defs.appendChild(glowFilter);
+
+  // Large glow for light sources
+  const bigGlow = document.createElementNS(ns, 'filter');
+  bigGlow.setAttribute('id', 'bigGlow');
+  bigGlow.setAttribute('x', '-100%');
+  bigGlow.setAttribute('y', '-100%');
+  bigGlow.setAttribute('width', '300%');
+  bigGlow.setAttribute('height', '300%');
+  const blur2 = document.createElementNS(ns, 'feGaussianBlur');
+  blur2.setAttribute('stdDeviation', '30');
+  bigGlow.appendChild(blur2);
+  defs.appendChild(bigGlow);
+
+  // Background: deep night gradient
+  const bgGrad = document.createElementNS(ns, 'radialGradient');
+  bgGrad.setAttribute('id', 'bgGrad');
+  bgGrad.setAttribute('cx', '50%');
+  bgGrad.setAttribute('cy', '60%');
+  bgGrad.setAttribute('r', '70%');
+  const s1 = document.createElementNS(ns, 'stop');
+  s1.setAttribute('offset', '0%');
+  s1.setAttribute('stop-color', '#141c2e');
+  const s2 = document.createElementNS(ns, 'stop');
+  s2.setAttribute('offset', '100%');
+  s2.setAttribute('stop-color', '#080c16');
+  bgGrad.appendChild(s1);
+  bgGrad.appendChild(s2);
+  defs.appendChild(bgGrad);
+
+  const bg = document.createElementNS(ns, 'rect');
+  bg.setAttribute('width', W);
+  bg.setAttribute('height', H);
+  bg.setAttribute('fill', 'url(#bgGrad)');
+  svg.appendChild(bg);
+
+  // Warm light sources behind the glass (city lights)
+  const warmColors = [
+    { h: 35, s: 85, l: 60 },   // amber
+    { h: 25, s: 80, l: 55 },   // orange-gold
+    { h: 45, s: 70, l: 65 },   // pale gold
+    { h: 15, s: 75, l: 50 },   // warm copper
+    { h: 200, s: 40, l: 45 },  // cool accent (neon sign)
+    { h: 340, s: 50, l: 55 },  // pink neon
+  ];
+
+  // Layer 1: Distant blurred city lights
+  const lightsGroup = document.createElementNS(ns, 'g');
+  lightsGroup.setAttribute('opacity', '0.6');
+  svg.appendChild(lightsGroup);
+
+  for (let i = 0; i < 12; i++) {
+    const cx = range(100, 700);
+    const cy = range(200, 650);
+    const r = range(40, 120);
+    const c = pick(warmColors);
+    const circle = document.createElementNS(ns, 'circle');
+    circle.setAttribute('cx', cx);
+    circle.setAttribute('cy', cy);
+    circle.setAttribute('r', r);
+    circle.setAttribute('fill', `hsla(${c.h}, ${c.s}%, ${c.l}%, ${range(0.08, 0.2)})`);
+    circle.setAttribute('filter', 'url(#bigGlow)');
+    lightsGroup.appendChild(circle);
+  }
+
+  // Layer 2: Smaller sharper lights
+  for (let i = 0; i < 25; i++) {
+    const cx = range(50, 750);
+    const cy = range(150, 750);
+    const r = range(2, 8);
+    const c = pick(warmColors);
+    const circle = document.createElementNS(ns, 'circle');
+    circle.setAttribute('cx', cx);
+    circle.setAttribute('cy', cy);
+    circle.setAttribute('r', r);
+    circle.setAttribute('fill', `hsla(${c.h}, ${c.s}%, ${c.l}%, ${range(0.3, 0.7)})`);
+    circle.setAttribute('filter', 'url(#glow)');
+    lightsGroup.appendChild(circle);
+  }
+
+  // Layer 3: Rain streaks on glass
+  const rainGroup = document.createElementNS(ns, 'g');
+  svg.appendChild(rainGroup);
+
+  // Main streaks: thin vertical paths with slight wobble
+  for (let i = 0; i < 180; i++) {
+    const x = range(-20, 820);
+    const startY = range(-50, 400);
+    const length = range(80, 500);
+    const drift = range(-15, 15); // horizontal drift
+    const segments = Math.floor(range(4, 12));
+
+    let d = `M ${x} ${startY}`;
+    for (let s = 1; s <= segments; s++) {
+      const t = s / segments;
+      const sx = x + drift * t + range(-3, 3);
+      const sy = startY + length * t;
+      d += ` L ${sx.toFixed(1)} ${sy.toFixed(1)}`;
+    }
+
+    // Color: mostly cool blue-white, occasionally picking up warm light
+    let strokeColor;
+    const warmChance = rng();
+    if (warmChance < 0.25) {
+      const c = pick(warmColors);
+      strokeColor = `hsla(${c.h}, ${c.s * 0.6}%, ${c.l + 15}%, ${range(0.08, 0.25)})`;
+    } else {
+      const hue = range(200, 230);
+      strokeColor = `hsla(${hue}, ${range(20, 50)}%, ${range(65, 85)}%, ${range(0.06, 0.2)})`;
+    }
+
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('stroke', strokeColor);
+    path.setAttribute('stroke-width', range(0.5, 2.5).toFixed(1));
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-linecap', 'round');
+    rainGroup.appendChild(path);
+  }
+
+  // Layer 4: Water droplets on glass (small circles with refraction)
+  for (let i = 0; i < 60; i++) {
+    const cx = range(30, 770);
+    const cy = range(30, 770);
+    const r = range(2, 7);
+
+    // Droplet: slightly bright edge, transparent center
+    const dropGrad = document.createElementNS(ns, 'radialGradient');
+    const dropId = `drop${i}`;
+    dropGrad.setAttribute('id', dropId);
+    dropGrad.setAttribute('cx', '35%');
+    dropGrad.setAttribute('cy', '35%');
+    const ds1 = document.createElementNS(ns, 'stop');
+    ds1.setAttribute('offset', '0%');
+    ds1.setAttribute('stop-color', `hsla(210, 30%, 90%, 0.4)`);
+    const ds2 = document.createElementNS(ns, 'stop');
+    ds2.setAttribute('offset', '60%');
+    ds2.setAttribute('stop-color', `hsla(210, 20%, 70%, 0.15)`);
+    const ds3 = document.createElementNS(ns, 'stop');
+    ds3.setAttribute('offset', '100%');
+    const c = pick(warmColors);
+    ds3.setAttribute('stop-color', `hsla(${c.h}, ${c.s * 0.5}%, ${c.l}%, 0.1)`);
+    dropGrad.appendChild(ds1);
+    dropGrad.appendChild(ds2);
+    dropGrad.appendChild(ds3);
+    defs.appendChild(dropGrad);
+
+    const circle = document.createElementNS(ns, 'circle');
+    circle.setAttribute('cx', cx);
+    circle.setAttribute('cy', cy);
+    circle.setAttribute('r', r);
+    circle.setAttribute('fill', `url(#${dropId})`);
+    circle.setAttribute('stroke', `hsla(210, 30%, 80%, ${range(0.1, 0.3)})`);
+    circle.setAttribute('stroke-width', '0.5');
+    rainGroup.appendChild(circle);
+  }
+
+  // Layer 5: A few prominent streaks that caught the light
+  for (let i = 0; i < 8; i++) {
+    const x = range(100, 700);
+    const startY = range(50, 300);
+    const length = range(200, 550);
+    const drift = range(-8, 8);
+    const segments = Math.floor(range(8, 16));
+
+    let d = `M ${x} ${startY}`;
+    for (let s = 1; s <= segments; s++) {
+      const t = s / segments;
+      // Slight curve using bezier-like wobble
+      const wobble = Math.sin(t * Math.PI * range(1, 3)) * range(3, 10);
+      const sx = x + drift * t + wobble;
+      const sy = startY + length * t;
+      d += ` L ${sx.toFixed(1)} ${sy.toFixed(1)}`;
+    }
+
+    const c = pick(warmColors.slice(0, 4)); // only warm ones
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('stroke', `hsla(${c.h}, ${c.s}%, ${c.l + 10}%, ${range(0.15, 0.35)})`);
+    path.setAttribute('stroke-width', range(1.5, 3.5).toFixed(1));
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('filter', 'url(#glow)');
+    rainGroup.appendChild(path);
+  }
+
+  // Layer 6: Subtle glass texture overlay (very faint noise-like dots)
+  const noiseGroup = document.createElementNS(ns, 'g');
+  noiseGroup.setAttribute('opacity', '0.04');
+  svg.appendChild(noiseGroup);
+  for (let i = 0; i < 400; i++) {
+    const c = document.createElementNS(ns, 'circle');
+    c.setAttribute('cx', range(0, W));
+    c.setAttribute('cy', range(0, H));
+    c.setAttribute('r', range(0.3, 1.2));
+    c.setAttribute('fill', '#fff');
+    noiseGroup.appendChild(c);
+  }
+
+  // Layer 7: Very subtle vignette
+  const vigGrad = document.createElementNS(ns, 'radialGradient');
+  vigGrad.setAttribute('id', 'vig');
+  vigGrad.setAttribute('cx', '50%');
+  vigGrad.setAttribute('cy', '50%');
+  vigGrad.setAttribute('r', '50%');
+  const v1 = document.createElementNS(ns, 'stop');
+  v1.setAttribute('offset', '50%');
+  v1.setAttribute('stop-color', 'transparent');
+  const v2 = document.createElementNS(ns, 'stop');
+  v2.setAttribute('offset', '100%');
+  v2.setAttribute('stop-color', 'rgba(0,0,0,0.5)');
+  vigGrad.appendChild(v1);
+  vigGrad.appendChild(v2);
+  defs.appendChild(vigGrad);
+
+  const vig = document.createElementNS(ns, 'rect');
+  vig.setAttribute('width', W);
+  vig.setAttribute('height', H);
+  vig.setAttribute('fill', 'url(#vig)');
+  svg.appendChild(vig);
+})();
+</script>
+</body>
+</html>
