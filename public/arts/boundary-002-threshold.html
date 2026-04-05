@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阈值 / Threshold</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; }
+  canvas { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+function resize() {
+  W = canvas.width = window.innerWidth * dpr;
+  H = canvas.height = window.innerHeight * dpr;
+  boundaryX = W * 0.5;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// --- Boundary ---
+let boundaryX = W * 0.5;
+let targetBoundaryX = W * 0.5;
+let pressure = 0; // 0..1 accumulation
+let breaching = false;
+let breachTimer = 0;
+const BREACH_DURATION = 90; // frames
+const PRESSURE_THRESHOLD = 0.85;
+
+// --- Particles ---
+const COUNT = 350;
+const particles = [];
+
+class Particle {
+  constructor() {
+    this.reset(true);
+  }
+  reset(init) {
+    // Spawn on left side
+    this.x = Math.random() * W * 0.4;
+    this.y = Math.random() * H;
+    this.vx = 0.3 + Math.random() * 0.8;
+    this.vy = (Math.random() - 0.5) * 0.3;
+    this.size = 1 + Math.random() * 2;
+    this.life = 0;
+    this.state = 'approaching'; // approaching | waiting | breaching | free
+    this.warmth = Math.random(); // color variation
+    this.wobble = Math.random() * Math.PI * 2;
+    this.wobbleSpeed = 0.01 + Math.random() * 0.03;
+    if (init) {
+      this.x = Math.random() * W;
+      this.life = Math.random() * 300;
+      if (this.x > boundaryX) this.state = 'free';
+    }
+  }
+}
+
+for (let i = 0; i < COUNT; i++) particles.push(new Particle());
+
+// Mouse controls boundary position
+let mx = -1;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX * dpr;
+  targetBoundaryX = Math.max(W * 0.2, Math.min(W * 0.8, mx));
+});
+document.addEventListener('mouseleave', () => { mx = -1; });
+
+// Touch support
+document.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  targetBoundaryX = Math.max(W * 0.2, Math.min(W * 0.8, t.clientX * dpr));
+}, { passive: false });
+
+let time = 0;
+
+function draw() {
+  // Fade
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.06)';
+  ctx.fillRect(0, 0, W, H);
+  time++;
+
+  // Smooth boundary movement
+  boundaryX += (targetBoundaryX - boundaryX) * 0.02;
+
+  // Count particles waiting at boundary
+  let waitCount = 0;
+  for (const p of particles) {
+    if (p.state === 'waiting') waitCount++;
+  }
+
+  // Pressure builds with waiting particles
+  const waitRatio = waitCount / COUNT;
+  if (!breaching) {
+    pressure += waitRatio * 0.004;
+    pressure = Math.min(1, pressure);
+    // Natural slow decay
+    pressure *= 0.998;
+
+    if (pressure >= PRESSURE_THRESHOLD) {
+      breaching = true;
+      breachTimer = BREACH_DURATION;
+    }
+  } else {
+    breachTimer--;
+    if (breachTimer <= 0) {
+      breaching = false;
+      pressure = 0.1;
+    }
+  }
+
+  // --- Draw boundary ---
+  // Boundary is a vertical zone that vibrates with pressure
+  const bWidth = 2 + pressure * 20;
+  const bAlpha = 0.08 + pressure * 0.25;
+
+  // Boundary color shifts: calm blue → stressed amber → breach red
+  let bHue, bSat, bLit;
+  if (!breaching) {
+    bHue = 220 - pressure * 180; // blue → warm
+    bSat = 40 + pressure * 40;
+    bLit = 30 + pressure * 25;
+  } else {
+    const bt = 1 - breachTimer / BREACH_DURATION;
+    bHue = 40 - bt * 40;
+    bSat = 80 - bt * 30;
+    bLit = 55 - bt * 20;
+  }
+
+  // Draw boundary as a shimmering vertical band
+  for (let y = 0; y < H; y += 3) {
+    const wobble = Math.sin(y * 0.008 + time * 0.02) * bWidth * 0.5;
+    const breakGap = breaching ? Math.sin(y * 0.015 + time * 0.08) * 15 : 0;
+    const localAlpha = bAlpha * (0.5 + 0.5 * Math.sin(y * 0.01 + time * 0.015));
+
+    if (breaching && Math.abs(breakGap) > 10) continue; // gaps in boundary
+
+    ctx.fillStyle = `hsla(${bHue}, ${bSat}%, ${bLit}%, ${localAlpha})`;
+    ctx.fillRect(boundaryX + wobble - bWidth / 2, y, bWidth, 3);
+  }
+
+  // Pressure glow on the left side of boundary
+  if (pressure > 0.2) {
+    const glowW = pressure * W * 0.08;
+    const g = ctx.createLinearGradient(boundaryX - glowW, 0, boundaryX, 0);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, `hsla(${bHue}, ${bSat}%, ${bLit + 10}%, ${pressure * 0.08})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(boundaryX - glowW, 0, glowW, H);
+  }
+
+  // --- Update and draw particles ---
+  for (const p of particles) {
+    p.life++;
+    p.wobble += p.wobbleSpeed;
+
+    const wobbleY = Math.sin(p.wobble) * 0.5;
+
+    switch (p.state) {
+      case 'approaching':
+        p.x += p.vx;
+        p.y += p.vy + wobbleY;
+        // Slow down near boundary
+        if (p.x > boundaryX - 60) {
+          p.vx *= 0.96;
+        }
+        if (p.x >= boundaryX - 8) {
+          p.state = 'waiting';
+          p.vx = 0;
+        }
+        break;
+
+      case 'waiting':
+        // Jitter against the boundary
+        p.x = boundaryX - 8 + Math.sin(time * 0.05 + p.wobble) * 4;
+        p.y += wobbleY * 0.3;
+        // Keep vertical bounds
+        if (p.y < 0) p.y = H;
+        if (p.y > H) p.y = 0;
+
+        if (breaching) {
+          // Probability of breaking through increases with breach progress
+          if (Math.random() < 0.04 + (1 - breachTimer / BREACH_DURATION) * 0.06) {
+            p.state = 'breaching';
+            p.vx = 2 + Math.random() * 4;
+            p.vy = (Math.random() - 0.5) * 2;
+          }
+        }
+        break;
+
+      case 'breaching':
+        p.x += p.vx;
+        p.y += p.vy + wobbleY;
+        p.vx *= 0.98;
+        if (p.x > boundaryX + 40) {
+          p.state = 'free';
+          p.vx = 0.2 + Math.random() * 0.5;
+        }
+        break;
+
+      case 'free':
+        p.x += p.vx * 0.3;
+        p.y += wobbleY * 0.5;
+        p.vx *= 0.999;
+        // Drift gently in the free zone
+        if (p.x > W + 10 || p.life > 800) {
+          p.reset(false);
+        }
+        break;
+    }
+
+    // Wrap Y
+    if (p.y < -5) p.y = H + 5;
+    if (p.y > H + 5) p.y = -5;
+
+    // --- Color ---
+    let h, s, l, a;
+    const base = p.warmth;
+
+    switch (p.state) {
+      case 'approaching':
+        // Cool teal-blue
+        h = 190 + base * 30;
+        s = 50 + base * 20;
+        l = 40 + base * 15;
+        a = 0.5 + base * 0.3;
+        break;
+      case 'waiting':
+        // Warming up — compressed energy
+        h = 190 - pressure * 150 + base * 20;
+        s = 60 + pressure * 25;
+        l = 45 + pressure * 15;
+        a = 0.6 + pressure * 0.3;
+        break;
+      case 'breaching':
+        // White-hot burst
+        h = 45 + base * 15;
+        s = 90;
+        l = 70 + base * 15;
+        a = 0.9;
+        break;
+      case 'free':
+        // Warm afterglow, slowly cooling
+        const age = Math.min(1, (p.life - 300) / 500);
+        h = 35 + age * 160 + base * 20; // warm → cool again
+        s = 60 - age * 30;
+        l = 55 - age * 20;
+        a = 0.6 - age * 0.4;
+        break;
+    }
+
+    if (a < 0.02) continue;
+
+    const sz = p.size * (p.state === 'breaching' ? 1.5 : 1);
+
+    // Glow for breaching / waiting under pressure
+    if ((p.state === 'breaching' || (p.state === 'waiting' && pressure > 0.5)) && a > 0.3) {
+      const gr = sz * (p.state === 'breaching' ? 8 : 4);
+      const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, gr);
+      glow.addColorStop(0, `hsla(${h}, ${s}%, ${l}%, ${a * 0.2})`);
+      glow.addColorStop(1, `hsla(${h}, ${s}%, ${l}%, 0)`);
+      ctx.fillStyle = glow;
+      ctx.fillRect(p.x - gr, p.y - gr, gr * 2, gr * 2);
+    }
+
+    // Core
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, sz, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${h}, ${s}%, ${l}%, ${a})`;
+    ctx.fill();
+  }
+
+  // --- Breach flash ---
+  if (breaching && breachTimer > BREACH_DURATION - 5) {
+    const flashA = (BREACH_DURATION - breachTimer + 1) / 5 * 0.08;
+    ctx.fillStyle = `rgba(255, 230, 180, ${flashA})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // --- Pressure indicator (subtle) ---
+  if (pressure > 0.1) {
+    const barH = H * pressure * 0.6;
+    const barY = H * 0.2;
+    ctx.fillStyle = `hsla(${bHue}, ${bSat}%, ${bLit}%, 0.06)`;
+    ctx.fillRect(12, barY + H * 0.6 - barH, 3, barH);
+  }
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
