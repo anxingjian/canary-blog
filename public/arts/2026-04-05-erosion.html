@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Erosion</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0c0b0f; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// Erosion — layered terrain ribbons dissolving over time
+// Using WebGL for GPU-accelerated rendering
+
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl', { alpha: false, antialias: true });
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio, 2);
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  gl.viewport(0, 0, canvas.width, canvas.height);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// --- Shaders ---
+const vertSrc = `
+attribute vec2 a_pos;
+void main() {
+  gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
+
+const fragSrc = `
+precision highp float;
+uniform vec2 u_res;
+uniform float u_time;
+
+// Simplex-ish noise
+vec3 mod289(vec3 x) { return x - floor(x * (1.0/289.0)) * 289.0; }
+vec2 mod289(vec2 x) { return x - floor(x * (1.0/289.0)) * 289.0; }
+vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+
+float snoise(vec2 v) {
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                     -0.577350269189626, 0.024390243902439);
+  vec2 i  = floor(v + dot(v, C.yy));
+  vec2 x0 = v - i + dot(i, C.xx);
+  vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz;
+  x12.xy -= i1;
+  i = mod289(i);
+  vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+  m = m*m; m = m*m;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+  vec3 g;
+  g.x = a0.x * x0.x + h.x * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+
+float fbm(vec2 p, float t) {
+  float f = 0.0;
+  float amp = 0.5;
+  float freq = 1.0;
+  for (int i = 0; i < 5; i++) {
+    f += amp * snoise(p * freq + vec2(t * 0.03, t * 0.02));
+    freq *= 2.1;
+    amp *= 0.48;
+  }
+  return f;
+}
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_res;
+  vec2 p = (gl_FragCoord.xy - u_res * 0.5) / min(u_res.x, u_res.y);
+  
+  float t = u_time;
+  
+  // Palette — muted earth tones with cool shadows
+  vec3 col_deep   = vec3(0.047, 0.043, 0.059);   // near-black violet
+  vec3 col_shadow = vec3(0.12, 0.10, 0.14);       // dark purple-grey
+  vec3 col_stone  = vec3(0.28, 0.24, 0.22);       // warm stone
+  vec3 col_sand   = vec3(0.52, 0.46, 0.38);       // desert sand
+  vec3 col_light  = vec3(0.72, 0.65, 0.55);       // pale warm
+  vec3 col_cream  = vec3(0.85, 0.80, 0.72);       // cream highlight
+
+  // Create layered terrain ribbons
+  float layers = 0.0;
+  vec3 color = col_deep;
+  
+  // 12 horizontal strata layers
+  for (int i = 0; i < 12; i++) {
+    float fi = float(i);
+    float yBase = -0.5 + fi * 0.09;
+    
+    // Each layer has its own noise pattern
+    float erosion = fbm(vec2(p.x * 2.5 + fi * 1.7, fi * 0.3), t + fi * 0.5);
+    float detail = snoise(vec2(p.x * 8.0 + fi * 3.3, t * 0.05 + fi)) * 0.04;
+    
+    // Layer boundary with erosion
+    float edge = yBase + erosion * 0.12 + detail;
+    
+    // Soft layer transition
+    float mask = smoothstep(edge - 0.008, edge + 0.003, p.y);
+    
+    // Dissolve effect — parts of each layer are eaten away
+    float dissolve = snoise(vec2(p.x * 6.0 + fi * 2.1, p.y * 4.0 + t * 0.04));
+    float holes = smoothstep(0.2 + sin(t * 0.02 + fi) * 0.15, 0.6, dissolve);
+    
+    mask *= holes;
+    
+    // Color per layer — gradient from deep to light
+    float layerT = fi / 11.0;
+    vec3 layerColor;
+    if (layerT < 0.2) {
+      layerColor = mix(col_shadow, col_stone, layerT * 5.0);
+    } else if (layerT < 0.5) {
+      layerColor = mix(col_stone, col_sand, (layerT - 0.2) / 0.3);
+    } else if (layerT < 0.8) {
+      layerColor = mix(col_sand, col_light, (layerT - 0.5) / 0.3);
+    } else {
+      layerColor = mix(col_light, col_cream, (layerT - 0.8) / 0.2);
+    }
+    
+    // Subtle color variation within each layer
+    float colorNoise = snoise(vec2(p.x * 3.0, fi * 5.0 + t * 0.01)) * 0.06;
+    layerColor += colorNoise;
+    
+    color = mix(color, layerColor, mask);
+  }
+  
+  // Particles — tiny grains falling (erosion debris)
+  for (int i = 0; i < 30; i++) {
+    float fi = float(i);
+    float seed = fi * 7.31;
+    float px = fract(sin(seed) * 43758.5453) * 2.0 - 1.0;
+    float py = fract(sin(seed * 1.7) * 22578.345);
+    py = mod(py - t * (0.02 + fract(sin(seed * 3.1) * 1234.5) * 0.03), 1.4) - 0.7;
+    px += sin(t * 0.1 + fi) * 0.02; // slight drift
+    
+    float d = length(p - vec2(px, py));
+    float grain = smoothstep(0.004, 0.001, d);
+    color += grain * col_sand * 0.5;
+  }
+  
+  // Vignette
+  float vig = 1.0 - dot(uv - 0.5, uv - 0.5) * 1.2;
+  color *= vig;
+  
+  // Film grain
+  float grain = (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233)) + t) * 43758.5453) - 0.5) * 0.03;
+  color += grain;
+  
+  gl_FragColor = vec4(color, 1.0);
+}`;
+
+// --- Setup ---
+function createShader(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(s));
+  }
+  return s;
+}
+
+const prog = gl.createProgram();
+gl.attachShader(prog, createShader(gl.VERTEX_SHADER, vertSrc));
+gl.attachShader(prog, createShader(gl.FRAGMENT_SHADER, fragSrc));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+// Fullscreen quad
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+const aPos = gl.getAttribLocation(prog, 'a_pos');
+gl.enableVertexAttribArray(aPos);
+gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+const uRes = gl.getUniformLocation(prog, 'u_res');
+const uTime = gl.getUniformLocation(prog, 'u_time');
+
+function render(now) {
+  gl.uniform2f(uRes, canvas.width, canvas.height);
+  gl.uniform1f(uTime, now * 0.001);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
