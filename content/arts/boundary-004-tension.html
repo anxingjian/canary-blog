@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>张力 / Tension</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #FFF8F0; overflow: hidden; cursor: crosshair; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, cx, cy;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W / 2;
+  cy = H / 2;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Spring palette
+const innerColors = ['#FFB7C5', '#F4A6B0', '#FFD1DC', '#FFDEAD'];
+const outerColors = ['#A8D8B9', '#87CEEB', '#B5D8CC', '#C8A2C8'];
+
+// Elastic boundary — a closed curve defined by radial control points
+const N = 120;
+const baseRadius = Math.min(W, H) * 0.28;
+let radii = new Float64Array(N);
+let velocities = new Float64Array(N);
+const rest = baseRadius;
+const stiffness = 0.012;
+const damping = 0.96;
+const neighborCoupling = 0.4;
+
+for (let i = 0; i < N; i++) {
+  radii[i] = rest + (Math.random() - 0.5) * 10;
+  velocities[i] = 0;
+}
+
+// Particles
+class Particle {
+  constructor(inside) {
+    this.inside = inside;
+    const angle = Math.random() * Math.PI * 2;
+    if (inside) {
+      const r = Math.random() * rest * 0.7;
+      this.x = cx + Math.cos(angle) * r;
+      this.y = cy + Math.sin(angle) * r;
+      this.color = innerColors[Math.floor(Math.random() * innerColors.length)];
+    } else {
+      const r = rest * 1.3 + Math.random() * rest * 0.8;
+      this.x = cx + Math.cos(angle) * r;
+      this.y = cy + Math.sin(angle) * r;
+      this.color = outerColors[Math.floor(Math.random() * outerColors.length)];
+    }
+    this.vx = (Math.random() - 0.5) * 0.8;
+    this.vy = (Math.random() - 0.5) * 0.8;
+    this.r = 2 + Math.random() * 3.5;
+    this.opacity = 0.25 + Math.random() * 0.45;
+    this.phase = Math.random() * Math.PI * 2;
+  }
+
+  update(t) {
+    // Gentle drift
+    this.vx += (Math.random() - 0.5) * 0.06;
+    this.vy += (Math.random() - 0.5) * 0.06;
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // Distance from center
+    const dx = this.x - cx;
+    const dy = this.y - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
+
+    // Get boundary radius at this angle
+    const idx = ((angle / (Math.PI * 2) % 1) + 1) % 1 * N;
+    const i0 = Math.floor(idx) % N;
+    const i1 = (i0 + 1) % N;
+    const frac = idx - Math.floor(idx);
+    const boundaryR = radii[i0] * (1 - frac) + radii[i1] * frac;
+
+    // Pressure on boundary — particles push outward (inside) or inward (outside)
+    if (this.inside && dist > boundaryR * 0.85) {
+      // Push back in, and push boundary out
+      const force = (dist - boundaryR * 0.85) * 0.02;
+      this.vx -= (dx / dist) * force;
+      this.vy -= (dy / dist) * force;
+      // Push boundary
+      const bi = Math.round(((angle / (Math.PI * 2) % 1) + 1) % 1 * N) % N;
+      velocities[bi] += force * 0.5;
+    } else if (!this.inside && dist < boundaryR * 1.15) {
+      const force = (boundaryR * 1.15 - dist) * 0.02;
+      this.vx += (dx / dist) * force;
+      this.vy += (dy / dist) * force;
+      const bi = Math.round(((angle / (Math.PI * 2) % 1) + 1) % 1 * N) % N;
+      velocities[bi] -= force * 0.5;
+    }
+
+    // Keep on screen
+    if (this.x < 20) this.vx += 0.3;
+    if (this.x > W - 20) this.vx -= 0.3;
+    if (this.y < 20) this.vy += 0.3;
+    if (this.y > H - 20) this.vy -= 0.3;
+
+    this.opacity = 0.25 + Math.sin(t * 0.001 + this.phase) * 0.15;
+  }
+
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = this.opacity;
+    ctx.fill();
+  }
+}
+
+const particles = [];
+for (let i = 0; i < 250; i++) particles.push(new Particle(true));
+for (let i = 0; i < 250; i++) particles.push(new Particle(false));
+
+// Mouse interaction — distort boundary
+let mouse = { x: cx, y: cy, pressing: false };
+canvas.addEventListener('mousedown', e => { mouse.pressing = true; mouse.x = e.clientX; mouse.y = e.clientY; });
+canvas.addEventListener('mouseup', () => mouse.pressing = false);
+canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+canvas.addEventListener('touchstart', e => { mouse.pressing = true; mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; }, { passive: true });
+canvas.addEventListener('touchend', () => mouse.pressing = false);
+canvas.addEventListener('touchmove', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; }, { passive: true });
+
+function updateBoundary(t) {
+  // Spring physics for each control point
+  for (let i = 0; i < N; i++) {
+    // Restoring force to rest radius
+    const displacement = radii[i] - rest;
+    let force = -stiffness * displacement;
+
+    // Neighbor coupling (surface tension!)
+    const prev = (i - 1 + N) % N;
+    const next = (i + 1) % N;
+    force += neighborCoupling * (radii[prev] - radii[i]);
+    force += neighborCoupling * (radii[next] - radii[i]);
+
+    // Subtle breathing
+    force += Math.sin(t * 0.0008 + i * 0.15) * 0.015;
+
+    velocities[i] += force;
+    velocities[i] *= damping;
+  }
+
+  // Mouse distortion
+  if (mouse.pressing) {
+    const mdx = mouse.x - cx;
+    const mdy = mouse.y - cy;
+    const mAngle = Math.atan2(mdy, mdx);
+    const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
+
+    for (let i = 0; i < N; i++) {
+      const angle = (i / N) * Math.PI * 2;
+      let diff = angle - mAngle;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      const influence = Math.exp(-diff * diff * 8);
+      velocities[i] += (mDist - radii[i]) * influence * 0.03;
+    }
+  }
+
+  for (let i = 0; i < N; i++) {
+    radii[i] += velocities[i];
+  }
+}
+
+function drawBoundary(t) {
+  // Draw filled regions with subtle gradients
+  // Inner region
+  const innerGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rest);
+  innerGrad.addColorStop(0, 'rgba(255, 209, 220, 0.08)');
+  innerGrad.addColorStop(0.7, 'rgba(255, 183, 197, 0.04)');
+  innerGrad.addColorStop(1, 'rgba(255, 183, 197, 0)');
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = innerGrad;
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const idx = i % N;
+    const angle = (idx / N) * Math.PI * 2;
+    const r = radii[idx];
+    const x = cx + Math.cos(angle) * r;
+    const y = cy + Math.sin(angle) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Boundary line — multiple layers for glow
+  for (let layer = 3; layer >= 0; layer--) {
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const idx = i % N;
+      const angle = (idx / N) * Math.PI * 2;
+      const r = radii[idx];
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = layer === 0
+      ? 'rgba(200, 162, 200, 0.6)'
+      : `rgba(200, 162, 200, ${0.05 * (4 - layer)})`;
+    ctx.lineWidth = layer === 0 ? 1.5 : 3 + layer * 4;
+    ctx.globalAlpha = 1;
+    ctx.stroke();
+  }
+
+  // Tension indicators — small tangent marks where stress is high
+  ctx.globalAlpha = 0.4;
+  for (let i = 0; i < N; i += 3) {
+    const prev = (i - 1 + N) % N;
+    const next = (i + 1) % N;
+    const stress = Math.abs(radii[prev] - 2 * radii[i] + radii[next]);
+    if (stress > 0.8) {
+      const angle = (i / N) * Math.PI * 2;
+      const r = radii[i];
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      const len = Math.min(stress * 3, 15);
+      // Perpendicular to radius
+      const nx = -Math.sin(angle) * len;
+      const ny = Math.cos(angle) * len;
+      ctx.beginPath();
+      ctx.moveTo(x - nx, y - ny);
+      ctx.lineTo(x + nx, y + ny);
+      ctx.strokeStyle = `rgba(244, 166, 176, ${Math.min(stress * 0.15, 0.6)})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+}
+
+// Floating text
+function drawTitle(t) {
+  ctx.globalAlpha = 0.12 + Math.sin(t * 0.0005) * 0.03;
+  ctx.font = `${Math.min(W, H) * 0.06}px "Georgia", serif`;
+  ctx.fillStyle = '#C8A2C8';
+  ctx.textAlign = 'center';
+  ctx.fillText('張力', cx, H * 0.92);
+  ctx.font = `${Math.min(W, H) * 0.02}px "Georgia", serif`;
+  ctx.fillText('Tension', cx, H * 0.96);
+}
+
+let frame = 0;
+function animate(t) {
+  // Soft fade trail
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#FFF8F0';
+  ctx.fillRect(0, 0, W, H);
+
+  updateBoundary(t);
+  drawBoundary(t);
+
+  for (const p of particles) {
+    p.update(t);
+    p.draw();
+  }
+
+  drawTitle(t);
+  ctx.globalAlpha = 1;
+
+  frame++;
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
