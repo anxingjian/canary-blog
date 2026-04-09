@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>消融 / Dissolve</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #FFF8F0; overflow: hidden; cursor: pointer; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, cx, cy;
+let dissolveProgress = 0; // 0 = solid boundary, 1 = fully dissolved
+let particles = [];
+let boundaryPoints = [];
+const NUM_PARTICLES = 300;
+const BOUNDARY_SEGMENTS = 120;
+let mouseDown = false;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W / 2;
+  cy = H / 2;
+}
+
+// Warm palette (inside) and cool palette (outside)
+const warmColors = ['#FFB7C5', '#FFDEAD', '#FFD4A3', '#FFC8A2'];
+const coolColors = ['#87CEEB', '#A8D8B9', '#C8A2C8', '#B8D4E3'];
+
+function initBoundary() {
+  boundaryPoints = [];
+  const baseRadius = Math.min(W, H) * 0.25;
+  for (let i = 0; i < BOUNDARY_SEGMENTS; i++) {
+    const angle = (i / BOUNDARY_SEGMENTS) * Math.PI * 2;
+    const r = baseRadius + Math.sin(angle * 3) * 15 + Math.cos(angle * 5) * 10;
+    boundaryPoints.push({
+      angle,
+      baseR: r,
+      noise: Math.random() * Math.PI * 2,
+      dissolved: 0, // per-segment dissolution
+      dissolveSpeed: 0.3 + Math.random() * 0.7
+    });
+  }
+}
+
+function initParticles() {
+  particles = [];
+  const baseRadius = Math.min(W, H) * 0.25;
+  for (let i = 0; i < NUM_PARTICLES; i++) {
+    const inside = i < NUM_PARTICLES / 2;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = inside
+      ? Math.random() * baseRadius * 0.85
+      : baseRadius * 1.2 + Math.random() * baseRadius * 0.8;
+    particles.push({
+      x: cx + Math.cos(angle) * dist,
+      y: cy + Math.sin(angle) * dist,
+      vx: (Math.random() - 0.5) * 0.8,
+      vy: (Math.random() - 0.5) * 0.8,
+      r: 2 + Math.random() * 3,
+      inside,
+      color: inside
+        ? warmColors[Math.floor(Math.random() * warmColors.length)]
+        : coolColors[Math.floor(Math.random() * coolColors.length)],
+      alpha: 0.4 + Math.random() * 0.4,
+      freed: false, // whether this particle has crossed the dissolved boundary
+      glowTimer: 0
+    });
+  }
+}
+
+function getBoundaryR(angle, time) {
+  // Find nearest segment
+  const idx = ((angle / (Math.PI * 2)) * BOUNDARY_SEGMENTS + BOUNDARY_SEGMENTS) % BOUNDARY_SEGMENTS;
+  const i0 = Math.floor(idx) % BOUNDARY_SEGMENTS;
+  const i1 = (i0 + 1) % BOUNDARY_SEGMENTS;
+  const t = idx - Math.floor(idx);
+  const p0 = boundaryPoints[i0];
+  const p1 = boundaryPoints[i1];
+  const r0 = p0.baseR * (1 - p0.dissolved * 0.6) + Math.sin(time * 0.5 + p0.noise) * 5 * (1 - p0.dissolved);
+  const r1 = p1.baseR * (1 - p1.dissolved * 0.6) + Math.sin(time * 0.5 + p1.noise) * 5 * (1 - p1.dissolved);
+  return r0 * (1 - t) + r1 * t;
+}
+
+function getSegmentDissolved(angle) {
+  const idx = ((angle / (Math.PI * 2)) * BOUNDARY_SEGMENTS + BOUNDARY_SEGMENTS) % BOUNDARY_SEGMENTS;
+  const i0 = Math.floor(idx) % BOUNDARY_SEGMENTS;
+  const i1 = (i0 + 1) % BOUNDARY_SEGMENTS;
+  const t = idx - Math.floor(idx);
+  return boundaryPoints[i0].dissolved * (1 - t) + boundaryPoints[i1].dissolved * t;
+}
+
+function update(time) {
+  // Dissolve progresses over time — click to accelerate
+  const dissolveRate = mouseDown ? 0.008 : 0.001;
+  dissolveProgress = Math.min(1, dissolveProgress + dissolveRate);
+
+  // Update boundary dissolution — spreads from random seed points
+  for (const bp of boundaryPoints) {
+    if (dissolveProgress > 0.05) {
+      const target = Math.min(1, dissolveProgress * bp.dissolveSpeed * 1.5);
+      bp.dissolved += (target - bp.dissolved) * 0.02;
+    }
+  }
+
+  // Update particles
+  for (const p of particles) {
+    const dx = p.x - cx;
+    const dy = p.y - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
+    const boundaryR = getBoundaryR(angle, time);
+    const segDissolved = getSegmentDissolved(angle);
+
+    // Boundary interaction
+    if (!p.freed && segDissolved < 0.7) {
+      // Boundary still intact at this angle — constrain
+      if (p.inside && dist > boundaryR - 5) {
+        const pushBack = (boundaryR - 5 - dist) * 0.05;
+        p.vx += (dx / dist) * pushBack;
+        p.vy += (dy / dist) * pushBack;
+      } else if (!p.inside && dist < boundaryR + 5) {
+        const pushOut = (dist - boundaryR - 5) * 0.05;
+        p.vx -= (dx / dist) * pushOut;
+        p.vy -= (dy / dist) * pushOut;
+      }
+    } else if (segDissolved >= 0.7 && !p.freed) {
+      p.freed = true;
+      p.glowTimer = 1;
+    }
+
+    // Freed particles drift toward the other side gently
+    if (p.freed) {
+      const targetDist = p.inside ? boundaryR * 1.5 : boundaryR * 0.5;
+      const pull = (targetDist - dist) * 0.0003;
+      p.vx += (dx / (dist || 1)) * pull;
+      p.vy += (dy / (dist || 1)) * pull;
+      p.glowTimer *= 0.995;
+    }
+
+    // Gentle brownian motion
+    p.vx += (Math.random() - 0.5) * 0.15;
+    p.vy += (Math.random() - 0.5) * 0.15;
+
+    // Damping
+    p.vx *= 0.98;
+    p.vy *= 0.98;
+
+    p.x += p.vx;
+    p.y += p.vy;
+
+    // Keep on screen
+    if (p.x < 10) p.vx += 0.5;
+    if (p.x > W - 10) p.vx -= 0.5;
+    if (p.y < 10) p.vy += 0.5;
+    if (p.y > H - 10) p.vy -= 0.5;
+  }
+}
+
+function draw(time) {
+  // Soft warm background
+  ctx.fillStyle = '#FFF8F0';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw boundary — segments with varying dissolution
+  ctx.beginPath();
+  for (let i = 0; i <= BOUNDARY_SEGMENTS; i++) {
+    const bp = boundaryPoints[i % BOUNDARY_SEGMENTS];
+    const r = bp.baseR * (1 - bp.dissolved * 0.6) + Math.sin(time * 0.5 + bp.noise) * 5 * (1 - bp.dissolved);
+    const x = cx + Math.cos(bp.angle) * r;
+    const y = cy + Math.sin(bp.angle) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+
+  // Boundary fill — subtle gradient
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(W, H) * 0.3);
+  grad.addColorStop(0, 'rgba(255, 222, 173, 0.08)');
+  grad.addColorStop(1, 'rgba(168, 216, 185, 0.05)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Draw boundary line with dissolution gaps
+  for (let i = 0; i < BOUNDARY_SEGMENTS; i++) {
+    const bp0 = boundaryPoints[i];
+    const bp1 = boundaryPoints[(i + 1) % BOUNDARY_SEGMENTS];
+    const avgDissolved = (bp0.dissolved + bp1.dissolved) / 2;
+
+    if (avgDissolved > 0.9) continue; // fully dissolved — no line
+
+    const r0 = bp0.baseR * (1 - bp0.dissolved * 0.6) + Math.sin(time * 0.5 + bp0.noise) * 5 * (1 - bp0.dissolved);
+    const r1 = bp1.baseR * (1 - bp1.dissolved * 0.6) + Math.sin(time * 0.5 + bp1.noise) * 5 * (1 - bp1.dissolved);
+    const x0 = cx + Math.cos(bp0.angle) * r0;
+    const y0 = cy + Math.sin(bp0.angle) * r0;
+    const x1 = cx + Math.cos(bp1.angle) * r1;
+    const y1 = cy + Math.sin(bp1.angle) * r1;
+
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.strokeStyle = `rgba(180, 160, 140, ${(1 - avgDissolved) * 0.6})`;
+    ctx.lineWidth = (1 - avgDissolved) * 2;
+    ctx.stroke();
+
+    // Dissolution sparkles at breaking points
+    if (avgDissolved > 0.3 && avgDissolved < 0.85) {
+      const sparkle = Math.sin(time * 3 + i) * 0.5 + 0.5;
+      ctx.beginPath();
+      ctx.arc((x0 + x1) / 2, (y0 + y1) / 2, 2 + sparkle * 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${sparkle * 0.8})`;
+      ctx.fill();
+    }
+  }
+
+  // Draw particles
+  for (const p of particles) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+
+    // Glow when freshly freed
+    if (p.glowTimer > 0.1) {
+      ctx.shadowColor = p.inside ? '#FFB7C5' : '#87CEEB';
+      ctx.shadowBlur = p.glowTimer * 15;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
+    // Color blending for freed particles
+    let alpha = p.alpha;
+    if (p.freed && dissolveProgress > 0.8) {
+      // Colors start mixing — warm and cool converge
+      alpha *= 0.7 + Math.sin(time + p.x * 0.01) * 0.3;
+    }
+
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = alpha;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+  }
+
+  // Late-stage: draw soft connecting lines between nearby freed particles of different types
+  if (dissolveProgress > 0.5) {
+    const freed = particles.filter(p => p.freed);
+    for (let i = 0; i < freed.length; i++) {
+      for (let j = i + 1; j < freed.length; j++) {
+        if (freed[i].inside === freed[j].inside) continue;
+        const dx = freed[i].x - freed[j].x;
+        const dy = freed[i].y - freed[j].y;
+        const d = dx * dx + dy * dy;
+        if (d < 3000) {
+          ctx.beginPath();
+          ctx.moveTo(freed[i].x, freed[i].y);
+          ctx.lineTo(freed[j].x, freed[j].y);
+          ctx.strokeStyle = `rgba(200, 180, 200, ${(1 - d / 3000) * 0.15 * dissolveProgress})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  // Title overlay (fades in late)
+  if (dissolveProgress > 0.6) {
+    const titleAlpha = Math.min(0.15, (dissolveProgress - 0.6) * 0.3);
+    ctx.fillStyle = `rgba(150, 130, 120, ${titleAlpha})`;
+    ctx.font = '14px "Noto Serif SC", Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('边界终将消融', cx, H - 40);
+  }
+}
+
+function loop(ts) {
+  const time = ts * 0.001;
+  update(time);
+  draw(time);
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', resize);
+canvas.addEventListener('mousedown', () => mouseDown = true);
+canvas.addEventListener('mouseup', () => mouseDown = false);
+canvas.addEventListener('touchstart', () => mouseDown = true);
+canvas.addEventListener('touchend', () => mouseDown = false);
+
+resize();
+initBoundary();
+initParticles();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
