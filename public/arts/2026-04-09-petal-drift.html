@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Petal Drift</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #FFF5EC; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+  canvas { display: block; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Petal Drift — Fidenza-inspired flow field with spring color blocks
+// Technique: flow field → thick curved rectangles, collision grid, probability palette
+
+const PALETTE = [
+  // [r, g, b, weight]
+  [255, 183, 197, 28],  // sakura pink
+  [255, 155, 170, 12],  // deeper cherry
+  [168, 216, 185, 22],  // tender green
+  [120, 195, 150, 8],   // leaf green
+  [135, 206, 235, 18],  // sky blue
+  [100, 180, 225, 6],   // deeper blue
+  [255, 210, 140, 14],  // apricot yellow
+  [255, 235, 180, 8],   // pale gold
+  [200, 162, 200, 7],   // lavender
+  [255, 248, 240, 5],   // cream highlight
+];
+
+// Build weighted list
+let weightedColors = [];
+for (let p of PALETTE) {
+  for (let i = 0; i < p[3]; i++) {
+    weightedColors.push([p[0], p[1], p[2]]);
+  }
+}
+
+function pickColor() {
+  return weightedColors[Math.floor(Math.random() * weightedColors.length)];
+}
+
+let W, H, cols, rows, flowField;
+const SCALE = 24;
+const CELL = 6; // collision grid cell
+let collisionGrid;
+let collisionW, collisionH;
+let curves = [];
+let seed;
+
+function setup() {
+  seed = Math.floor(Math.random() * 99999);
+  randomSeed(seed);
+  noiseSeed(seed);
+
+  // Fixed aspect ratio canvas
+  const aspect = 4 / 5;
+  const maxH = windowHeight * 0.92;
+  const maxW = windowWidth * 0.92;
+  if (maxW / maxH > aspect) {
+    H = Math.floor(maxH);
+    W = Math.floor(H * aspect);
+  } else {
+    W = Math.floor(maxW);
+    H = Math.floor(W / aspect);
+  }
+
+  createCanvas(W, H);
+  pixelDensity(1);
+  noLoop();
+
+  cols = Math.ceil(W / SCALE);
+  rows = Math.ceil(H / SCALE);
+
+  // Collision grid
+  collisionW = Math.ceil(W / CELL);
+  collisionH = Math.ceil(H / CELL);
+  collisionGrid = new Uint8Array(collisionW * collisionH);
+
+  generateFlowField();
+  generateCurves();
+  drawAll();
+}
+
+function generateFlowField() {
+  flowField = new Float32Array(cols * rows);
+  const zOff = random(1000);
+  const turbulence = random([0.6, 0.8, 1.0, 1.2]);
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      let angle = noise(x * 0.06 * turbulence, y * 0.06 * turbulence, zOff) * TWO_PI * 2.5;
+      flowField[y * cols + x] = angle;
+    }
+  }
+}
+
+function getAngle(x, y) {
+  let col = constrain(Math.floor(x / SCALE), 0, cols - 1);
+  let row = constrain(Math.floor(y / SCALE), 0, rows - 1);
+  return flowField[row * cols + col];
+}
+
+function checkCollision(x, y, halfW) {
+  // Check a small area around the point
+  let cx = Math.floor(x / CELL);
+  let cy = Math.floor(y / CELL);
+  let r = Math.ceil(halfW / CELL) + 1;
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      let gx = cx + dx;
+      let gy = cy + dy;
+      if (gx >= 0 && gx < collisionW && gy >= 0 && gy < collisionH) {
+        if (collisionGrid[gy * collisionW + gx]) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function markCollision(x, y, halfW) {
+  let cx = Math.floor(x / CELL);
+  let cy = Math.floor(y / CELL);
+  let r = Math.ceil(halfW / CELL);
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      let gx = cx + dx;
+      let gy = cy + dy;
+      if (gx >= 0 && gx < collisionW && gy >= 0 && gy < collisionH) {
+        collisionGrid[gy * collisionW + gx] = 1;
+      }
+    }
+  }
+}
+
+function generateCurves() {
+  // Size categories with probability
+  const sizes = [
+    { w: random(40, 70), prob: 0.15 },   // jumbo
+    { w: random(25, 40), prob: 0.25 },   // large
+    { w: random(14, 25), prob: 0.35 },   // medium
+    { w: random(6, 14), prob: 0.25 },    // small
+  ];
+
+  const margin = 30;
+  let attempts = 0;
+  const maxAttempts = 3000;
+  const maxCurves = 280;
+
+  while (curves.length < maxCurves && attempts < maxAttempts) {
+    attempts++;
+
+    let x = random(margin, W - margin);
+    let y = random(margin, H - margin);
+
+    // Pick size
+    let r = random();
+    let cumProb = 0;
+    let blockW = sizes[2].w;
+    for (let s of sizes) {
+      cumProb += s.prob;
+      if (r < cumProb) { blockW = s.w; break; }
+    }
+
+    let halfW = blockW / 2;
+
+    if (checkCollision(x, y, halfW + 3)) continue;
+
+    // Trace curve
+    let points = [{ x, y }];
+    let cx = x, cy = y;
+    let stepSize = 2;
+    let maxSteps = Math.floor(random(15, 80));
+
+    for (let i = 0; i < maxSteps; i++) {
+      let angle = getAngle(cx, cy);
+      cx += cos(angle) * stepSize;
+      cy += sin(angle) * stepSize;
+
+      if (cx < margin || cx > W - margin || cy < margin || cy > H - margin) break;
+      if (checkCollision(cx, cy, halfW + 2)) break;
+
+      points.push({ x: cx, y: cy });
+    }
+
+    if (points.length < 5) continue;
+
+    // Mark collision
+    for (let pt of points) {
+      markCollision(pt.x, pt.y, halfW + 1);
+    }
+
+    let col = pickColor();
+    // Slight color variation
+    col = [
+      constrain(col[0] + random(-8, 8), 0, 255),
+      constrain(col[1] + random(-8, 8), 0, 255),
+      constrain(col[2] + random(-8, 8), 0, 255),
+    ];
+
+    curves.push({ points, width: blockW, color: col });
+  }
+}
+
+function drawAll() {
+  // Warm cream background
+  background(255, 248, 238);
+
+  // Paper texture via tiny scattered dots
+  noStroke();
+  for (let i = 0; i < 8000; i++) {
+    fill(random(240, 255), random(230, 245), random(220, 238), random(20, 50));
+    ellipse(random(W), random(H), random(1, 3));
+  }
+
+  // Sort curves: larger ones first (back to front by size)
+  curves.sort((a, b) => b.width - a.width);
+
+  for (let curve of curves) {
+    drawCurve(curve);
+  }
+
+  // Subtle vignette
+  drawVignette();
+}
+
+function drawCurve(curve) {
+  let { points, width: w, color: col } = curve;
+
+  // Choose style
+  let style = random();
+
+  if (style < 0.6) {
+    // Solid block with soft edges
+    drawSolidBlock(points, w, col);
+  } else if (style < 0.85) {
+    // Soft shape: many parallel lines with noise offset
+    drawSoftShape(points, w, col);
+  } else {
+    // Semi-transparent layered block
+    drawLayeredBlock(points, w, col);
+  }
+}
+
+function drawSolidBlock(points, w, col) {
+  noStroke();
+  let alpha = random(160, 230);
+  fill(col[0], col[1], col[2], alpha);
+
+  // Draw as connected quads
+  beginShape();
+  // Forward pass (left edge)
+  for (let i = 0; i < points.length; i++) {
+    let angle = i < points.length - 1
+      ? atan2(points[i + 1].y - points[i].y, points[i + 1].x - points[i].x)
+      : atan2(points[i].y - points[i - 1].y, points[i].x - points[i - 1].x);
+    let perpAngle = angle + HALF_PI;
+    vertex(points[i].x + cos(perpAngle) * w / 2, points[i].y + sin(perpAngle) * w / 2);
+  }
+  // Backward pass (right edge)
+  for (let i = points.length - 1; i >= 0; i--) {
+    let angle = i < points.length - 1
+      ? atan2(points[i + 1].y - points[i].y, points[i + 1].x - points[i].x)
+      : atan2(points[i].y - points[i - 1].y, points[i].x - points[i - 1].x);
+    let perpAngle = angle - HALF_PI;
+    vertex(points[i].x + cos(perpAngle) * w / 2, points[i].y + sin(perpAngle) * w / 2);
+  }
+  endShape(CLOSE);
+
+  // Highlight edge (light translucent white on one side)
+  stroke(255, 255, 255, random(30, 60));
+  strokeWeight(1.5);
+  noFill();
+  beginShape();
+  for (let i = 0; i < points.length; i++) {
+    let angle = i < points.length - 1
+      ? atan2(points[i + 1].y - points[i].y, points[i + 1].x - points[i].x)
+      : atan2(points[i].y - points[i - 1].y, points[i].x - points[i - 1].x);
+    let perpAngle = angle + HALF_PI;
+    vertex(points[i].x + cos(perpAngle) * w * 0.35, points[i].y + sin(perpAngle) * w * 0.35);
+  }
+  endShape();
+}
+
+function drawSoftShape(points, w, col) {
+  // Many parallel lines with noise offset — hand-drawn texture
+  let lineCount = Math.floor(w / 1.5);
+  let alpha = random(100, 180);
+  stroke(col[0], col[1], col[2], alpha);
+  strokeWeight(1.2);
+  noFill();
+
+  for (let l = 0; l < lineCount; l++) {
+    let offset = map(l, 0, lineCount - 1, -w / 2, w / 2);
+    beginShape();
+    for (let i = 0; i < points.length; i++) {
+      let angle = i < points.length - 1
+        ? atan2(points[i + 1].y - points[i].y, points[i + 1].x - points[i].x)
+        : atan2(points[i].y - points[i - 1].y, points[i].x - points[i - 1].x);
+      let perpAngle = angle + HALF_PI;
+      let noiseOff = (noise(i * 0.1, l * 0.3) - 0.5) * 4;
+      vertex(
+        points[i].x + cos(perpAngle) * (offset + noiseOff),
+        points[i].y + sin(perpAngle) * (offset + noiseOff)
+      );
+    }
+    endShape();
+  }
+}
+
+function drawLayeredBlock(points, w, col) {
+  noStroke();
+  // Multiple translucent layers
+  for (let layer = 0; layer < 3; layer++) {
+    let layerW = w * map(layer, 0, 2, 1.1, 0.5);
+    let alpha = map(layer, 0, 2, 40, 120);
+    fill(col[0], col[1], col[2], alpha);
+
+    beginShape();
+    for (let i = 0; i < points.length; i++) {
+      let angle = i < points.length - 1
+        ? atan2(points[i + 1].y - points[i].y, points[i + 1].x - points[i].x)
+        : atan2(points[i].y - points[i - 1].y, points[i].x - points[i - 1].x);
+      let perpAngle = angle + HALF_PI;
+      vertex(points[i].x + cos(perpAngle) * layerW / 2, points[i].y + sin(perpAngle) * layerW / 2);
+    }
+    for (let i = points.length - 1; i >= 0; i--) {
+      let angle = i < points.length - 1
+        ? atan2(points[i + 1].y - points[i].y, points[i + 1].x - points[i].x)
+        : atan2(points[i].y - points[i - 1].y, points[i].x - points[i - 1].x);
+      let perpAngle = angle - HALF_PI;
+      vertex(points[i].x + cos(perpAngle) * layerW / 2, points[i].y + sin(perpAngle) * layerW / 2);
+    }
+    endShape(CLOSE);
+  }
+}
+
+function drawVignette() {
+  // Soft warm vignette
+  noStroke();
+  let cx = W / 2, cy = H / 2;
+  let maxR = dist(0, 0, cx, cy);
+  for (let r = maxR; r > maxR * 0.5; r -= 4) {
+    let alpha = map(r, maxR * 0.5, maxR, 0, 25);
+    fill(240, 220, 200, alpha);
+    ellipse(cx, cy, r * 2, r * 2);
+  }
+}
+
+function mousePressed() {
+  // Regenerate on click
+  collisionGrid = new Uint8Array(collisionW * collisionH);
+  curves = [];
+  seed = Math.floor(Math.random() * 99999);
+  randomSeed(seed);
+  noiseSeed(seed);
+  generateFlowField();
+  generateCurves();
+  drawAll();
+}
+
+function windowResized() {
+  // Keep fixed aspect, just center
+}
+</script>
+</body>
+</html>
