@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>潮汐 / Tides</title>
+<style>body{margin:0;overflow:hidden;background:#050505}canvas{display:block;width:100vw;height:100vh}</style>
+</head><body>
+<canvas id="c" width="800" height="800"></canvas>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+const W=800,H=800;
+const LAYERS=24,noiseSeeds=[];
+for(let i=0;i<LAYERS;i++)noiseSeeds.push(Math.random()*1000);
+const start=performance.now();
+function animate(){
+  const t=(performance.now()-start)/1000;
+  ctx.fillStyle="#050505";ctx.fillRect(0,0,W,H);
+  const marginY=H*0.08,usableH=H-marginY*2;
+  for(let layer=0;layer<LAYERS;layer++){
+    const baseY=marginY+(layer/(LAYERS-1))*usableH,seed=noiseSeeds[layer];
+    ctx.beginPath();
+    for(let i=0;i<=80;i++){
+      const x=(i/80)*W,nx=i*0.04+seed,nt=t*0.3+layer*0.15;
+      const n=Math.sin(nx+nt)*0.5+Math.sin(nx*2.3+nt*1.4+2.1)*0.25+Math.sin(nx*4.1+nt*0.7+5.3)*0.125;
+      const y=baseY+n*usableH*0.04;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    const alpha=0.15+Math.sin(t*0.2+layer*0.5)*0.05;
+    const b=Math.floor(180+Math.sin(layer*0.3+t*0.1)*40);
+    ctx.strokeStyle=`rgba(${b},${b},${b+8},${alpha})`;ctx.lineWidth=0.5;ctx.stroke();
+  }
+  for(let c=0;c<3;c++){
+    const cl=Math.floor(LAYERS*(0.3+c*0.2)),baseY=marginY+(cl/(LAYERS-1))*usableH,seed=noiseSeeds[cl];
+    ctx.beginPath();
+    for(let i=0;i<=80;i++){
+      const x=(i/80)*W,nx=i*0.04+seed,nt=t*0.3+cl*0.15;
+      const n=Math.sin(nx+nt)*0.5+Math.sin(nx*2.3+nt*1.4+2.1)*0.25+Math.sin(nx*4.1+nt*0.7+5.3)*0.125;
+      const y=baseY+n*usableH*0.04;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    const ca=0.3+Math.sin(t*0.15+c)*0.1;
+    ctx.strokeStyle=`rgba(220,218,210,${ca})`;ctx.lineWidth=0.8;ctx.stroke();
+  }
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+</script></body></html>
