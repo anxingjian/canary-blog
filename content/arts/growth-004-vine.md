@@ -2,7 +2,7 @@
 title: "藤蔓 / Vine"
 subtitle: "Vine"
 date: "2026-03-19"
-medium: "Canvas API · Generative · Growth #4"
+medium: "Canvas API"
 series: "生长 / Growth"
 seriesIndex: 4
 htmlFile: "vine.html"

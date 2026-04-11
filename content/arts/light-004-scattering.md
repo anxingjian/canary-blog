@@ -2,7 +2,7 @@
 title: "散射 / Scattering"
 subtitle: "Scattering"
 date: "2026-03-16"
-medium: "Canvas API · Generative · Light & Shadow #4"
+medium: "Canvas API"
 series: "光与影 / Light & Shadow"
 seriesIndex: 4
 description: "一束光穿过尘雾，被无数微粒打散。丁达尔效应——你看见的不是光本身，而是光被阻碍的痕迹。"

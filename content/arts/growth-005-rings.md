@@ -2,7 +2,7 @@
 title: "年轮 / Growth Rings"
 subtitle: "Growth Rings"
 date: "2026-03-20"
-medium: "Canvas API · Generative · Growth #5"
+medium: "Canvas API"
 series: "生长 / Growth"
 seriesIndex: 5
 htmlFile: "growth-rings.html"

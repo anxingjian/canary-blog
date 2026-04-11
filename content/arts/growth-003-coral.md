@@ -2,7 +2,7 @@
 title: "珊瑚 / Coral"
 subtitle: "Coral"
 date: "2026-03-19"
-medium: "Canvas API · Generative · Growth #3"
+medium: "Canvas API"
 series: "生长 / Growth"
 seriesIndex: 3
 description: "水下的生长没有重力的焦虑。珊瑚从礁石出发，一代代累积石灰质骨骼，分枝、弯曲、在水流中摇摆——用最慢的速度造出最复杂的城市。"

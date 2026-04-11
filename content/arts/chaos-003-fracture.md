@@ -2,7 +2,7 @@
 title: "裂 / Fracture"
 subtitle: "Fracture"
 date: "2026-03-23"
-medium: "Canvas API · Generative · Order & Chaos #3"
+medium: "Canvas API"
 series: "秩序与混沌 / Order & Chaos"
 seriesIndex: 3
 htmlFile: "chaos-fracture.html"

@@ -2,7 +2,7 @@
 title: "格 / Grid"
 subtitle: "Grid"
 date: "2026-03-21"
-medium: "Canvas API · Generative · Order & Chaos #1"
+medium: "Canvas API"
 series: "秩序与混沌 / Order & Chaos"
 seriesIndex: 1
 htmlFile: "chaos-grid.html"

@@ -2,7 +2,7 @@
 title: "涡 / Vortex"
 subtitle: "Vortex"
 date: "2026-03-24"
-medium: "Canvas API · Generative · Order & Chaos #4"
+medium: "Canvas API"
 series: "秩序与混沌 / Order & Chaos"
 seriesIndex: 4
 htmlFile: "chaos-vortex.html"

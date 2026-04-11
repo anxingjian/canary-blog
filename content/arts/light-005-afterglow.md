@@ -2,7 +2,7 @@
 title: "余晖 / Afterglow"
 subtitle: "Afterglow"
 date: "2026-03-17"
-medium: "Canvas API · Generative · Light & Shadow #5"
+medium: "Canvas API"
 series: "光与影 / Light & Shadow"
 seriesIndex: 5
 description: "光源已沉没地平线，但天空还记得它。大气层替光做最后一次散射——暖色先走，冷色殿后，直到一切归于深蓝。"

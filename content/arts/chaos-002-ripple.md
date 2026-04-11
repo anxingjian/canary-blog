@@ -2,7 +2,7 @@
 title: "波 / Ripple"
 subtitle: "Ripple"
 date: "2026-03-22"
-medium: "Canvas API · Generative · Order & Chaos #2"
+medium: "Canvas API"
 series: "秩序与混沌 / Order & Chaos"
 seriesIndex: 2
 htmlFile: "chaos-ripple.html"
