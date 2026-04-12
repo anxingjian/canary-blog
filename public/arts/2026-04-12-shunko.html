@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>春光 / Shunkō</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #FFF8F0; }
+  canvas { display: block; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+</head>
+<body>
+<script>
+// 春光 / Shunkō — Canary 2026-04-12
+// Technique: Recursive subdivision + packing with rounded soft blocks
+// Each subdivision decides: fill with color block, or split again
+// Fidenza-inspired: probabilistic palette, collision via subdivision, thick color areas
+// Spring palette on warm cream background
+
+const PALETTE = [
+  { hex: '#FFB7C5', w: 4 },  // 樱粉
+  { hex: '#F9A8B8', w: 2 },  // 深樱粉
+  { hex: '#A8D8B9', w: 3 },  // 嫩绿
+  { hex: '#7EC8A0', w: 1 },  // 深绿
+  { hex: '#87CEEB', w: 3 },  // 天蓝
+  { hex: '#6DB8D9', w: 1 },  // 深天蓝
+  { hex: '#FFDEAD', w: 3 },  // 杏黄
+  { hex: '#FFD29E', w: 1 },  // 深杏黄
+  { hex: '#C8A2C8', w: 1 },  // 薰衣草
+  { hex: '#FFE4E1', w: 2 },  // 浅粉
+  { hex: '#B5EAD7', w: 1 },  // 薄荷
+];
+
+const BG = '#FFF8F0';
+const MARGIN = 0.06; // canvas margin ratio
+
+let blocks = [];
+let seed;
+
+function weightedRandom(palette) {
+  let total = 0;
+  for (let p of palette) total += p.w;
+  let r = Math.random() * total;
+  for (let p of palette) {
+    r -= p.w;
+    if (r <= 0) return p.hex;
+  }
+  return palette[0].hex;
+}
+
+function subdivide(x, y, w, h, depth) {
+  // Minimum block size
+  let minDim = min(width, height) * 0.025;
+  if (w < minDim || h < minDim) return;
+  
+  // Probability of stopping increases with depth
+  let stopProb = map(depth, 0, 7, 0.05, 0.85);
+  // Also stop more likely for small blocks
+  let areaProp = (w * h) / (width * height);
+  if (areaProp < 0.003) stopProb = 0.9;
+  
+  if (depth > 1 && Math.random() < stopProb) {
+    // Decide: fill or leave empty
+    let fillProb = 0.72;
+    if (Math.random() < fillProb) {
+      let col = weightedRandom(PALETTE);
+      let alpha = random(0.35, 0.82);
+      let cornerR = random(3, min(w, h) * 0.35);
+      blocks.push({ x, y, w, h, col, alpha, cornerR, depth });
+    }
+    // else: leave empty (background shows through = light/air)
+    return;
+  }
+  
+  // Split direction: prefer splitting the longer side
+  let splitH = (w > h) ? (Math.random() < 0.75) : (Math.random() < 0.25);
+  
+  // Split ratio — avoid extreme splits
+  let ratio = random(0.3, 0.7);
+  let gap = random(2, 6); // breathing space between blocks
+  
+  if (splitH) {
+    // Horizontal split (divide width)
+    let w1 = w * ratio - gap / 2;
+    let w2 = w * (1 - ratio) - gap / 2;
+    subdivide(x, y, w1, h, depth + 1);
+    subdivide(x + w * ratio + gap / 2, y, w2, h, depth + 1);
+  } else {
+    // Vertical split (divide height)
+    let h1 = h * ratio - gap / 2;
+    let h2 = h * (1 - ratio) - gap / 2;
+    subdivide(x, y, w1 = w, h1, depth + 1);
+    subdivide(x, y + h * ratio + gap / 2, w, h2, depth + 1);
+  }
+}
+
+function setup() {
+  seed = Math.floor(Math.random() * 999999);
+  randomSeed(seed);
+  noiseSeed(seed);
+  
+  let sz = min(windowWidth, windowHeight);
+  createCanvas(sz, sz);
+  pixelDensity(2);
+  
+  let m = sz * MARGIN;
+  subdivide(m, m, sz - m * 2, sz - m * 2, 0);
+  
+  // Sort blocks: larger in back, smaller in front
+  blocks.sort((a, b) => (b.w * b.h) - (a.w * a.h));
+  
+  // === Draw ===
+  background(BG);
+  
+  // Soft warm gradient on background
+  noStroke();
+  for (let y = 0; y < height; y += 2) {
+    let a = map(y, 0, height, 0, 12);
+    fill(255, 230, 200, a);
+    rect(0, y, width, 2);
+  }
+  
+  // Draw blocks
+  for (let b of blocks) {
+    let c = color(b.col);
+    
+    // Main block
+    c.setAlpha(b.alpha * 255);
+    fill(c);
+    noStroke();
+    rect(b.x, b.y, b.w, b.h, b.cornerR);
+    
+    // Inner highlight — lighter top-left for light direction
+    let hc = color(255, 255, 255, b.alpha * 50);
+    fill(hc);
+    let inset = 2;
+    let hlH = b.h * random(0.15, 0.35);
+    rect(b.x + inset, b.y + inset, b.w - inset * 2, hlH, b.cornerR, b.cornerR, 0, 0);
+    
+    // Subtle border — slightly darker version of the color
+    let bc = color(b.col);
+    bc.setAlpha(b.alpha * 35);
+    noFill();
+    stroke(bc);
+    strokeWeight(0.5);
+    rect(b.x, b.y, b.w, b.h, b.cornerR);
+  }
+  
+  // Second pass: add some overlapping translucent accents
+  let numAccents = floor(random(8, 18));
+  for (let i = 0; i < numAccents; i++) {
+    let ax = random(width * 0.1, width * 0.9);
+    let ay = random(height * 0.1, height * 0.9);
+    let aw = random(width * 0.02, width * 0.12);
+    let ah = random(height * 0.02, height * 0.08);
+    let ac = color(weightedRandom(PALETTE));
+    ac.setAlpha(random(15, 45));
+    noStroke();
+    fill(ac);
+    rect(ax, ay, aw, ah, random(2, min(aw, ah) * 0.4));
+  }
+  
+  // Floating particles — pollen / light motes
+  let numParticles = floor(random(150, 300));
+  noStroke();
+  for (let i = 0; i < numParticles; i++) {
+    let px = random(width);
+    let py = random(height);
+    let ps = random(1, 3);
+    let pc = color(weightedRandom(PALETTE));
+    pc.setAlpha(random(25, 80));
+    fill(pc);
+    ellipse(px, py, ps, ps);
+  }
+  
+  // White sparkle particles
+  for (let i = 0; i < 60; i++) {
+    let px = random(width);
+    let py = random(height);
+    fill(255, 255, 255, random(50, 140));
+    ellipse(px, py, random(1, 2.5), random(1, 2.5));
+  }
+  
+  // Soft vignette-like fade at edges using transparent BG overlay
+  for (let i = 0; i < 30; i++) {
+    let a = map(i, 0, 30, 8, 0);
+    let c = color(BG);
+    c.setAlpha(a);
+    noFill();
+    stroke(c);
+    strokeWeight(4);
+    rect(i * 3, i * 3, width - i * 6, height - i * 6, 0);
+  }
+  
+  noLoop();
+}
+</script>
+</body>
+</html>
