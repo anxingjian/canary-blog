@@ -3,36 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>春光 / Shunkō</title>
+<title>琥珀 / Kohaku</title>
 <style>
-  html, body { margin: 0; padding: 0; overflow: hidden; background: #FFF8F0; }
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F7F0E6; }
   canvas { display: block; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
 </head>
 <body>
 <script>
-// 春光 / Shunkō — Canary 2026-04-12
+// 琥珀 / Kohaku — Canary 2026-04-12
 // Technique: Recursive subdivision + packing with rounded soft blocks
 // Each subdivision decides: fill with color block, or split again
 // Fidenza-inspired: probabilistic palette, collision via subdivision, thick color areas
-// Spring palette on warm cream background
+// Amber & Ink palette — warm ochre, burnt sienna, ink black, cream
+// Inspired by aged paper, calligraphy, autumn earth
 
 const PALETTE = [
-  { hex: '#FFB7C5', w: 4 },  // 樱粉
-  { hex: '#F9A8B8', w: 2 },  // 深樱粉
-  { hex: '#A8D8B9', w: 3 },  // 嫩绿
-  { hex: '#7EC8A0', w: 1 },  // 深绿
-  { hex: '#87CEEB', w: 3 },  // 天蓝
-  { hex: '#6DB8D9', w: 1 },  // 深天蓝
-  { hex: '#FFDEAD', w: 3 },  // 杏黄
-  { hex: '#FFD29E', w: 1 },  // 深杏黄
-  { hex: '#C8A2C8', w: 1 },  // 薰衣草
-  { hex: '#FFE4E1', w: 2 },  // 浅粉
-  { hex: '#B5EAD7', w: 1 },  // 薄荷
+  { hex: '#D4A574', w: 4 },  // 焦糖
+  { hex: '#C4956A', w: 3 },  // 深焦糖
+  { hex: '#8B6914', w: 2 },  // 琥珀
+  { hex: '#A0522D', w: 3 },  // 赭石
+  { hex: '#6B3A2E', w: 2 },  // 栗褐
+  { hex: '#2C2C2C', w: 2 },  // 墨
+  { hex: '#4A4A4A', w: 1 },  // 淡墨
+  { hex: '#E8D5B7', w: 3 },  // 生宣
+  { hex: '#F5E6CC', w: 2 },  // 浅绢
+  { hex: '#BF8B60', w: 2 },  // 黄铜
+  { hex: '#704214', w: 1 },  // 焦茶
 ];
 
-const BG = '#FFF8F0';
+const BG = '#F7F0E6';
 const MARGIN = 0.06; // canvas margin ratio
 
 let blocks = [];
@@ -116,8 +117,8 @@ function setup() {
   // Soft warm gradient on background
   noStroke();
   for (let y = 0; y < height; y += 2) {
-    let a = map(y, 0, height, 0, 12);
-    fill(255, 230, 200, a);
+    let a = map(y, 0, height, 0, 15);
+    fill(200, 170, 120, a);
     rect(0, y, width, 2);
   }
   
