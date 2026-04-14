@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>韵 / Rhythm</title>
+<style>
+* { margin: 0; padding: 0; }
+body { background: #FFF8F0; overflow: hidden; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, cx, cy;
+let t = 0;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W / 2;
+  cy = H / 2;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Breath cycle: 4 phases repeating
+// inhale (expand) -> hold -> exhale (contract) -> release
+const cycleDuration = 360; // frames per full cycle
+const phases = [
+  { name: 'inhale', start: 0, end: 0.3 },
+  { name: 'hold', start: 0.3, end: 0.45 },
+  { name: 'exhale', start: 0.45, end: 0.75 },
+  { name: 'release', start: 0.75, end: 1.0 }
+];
+
+function getPhase(progress) {
+  for (const p of phases) {
+    if (progress >= p.start && progress < p.end) {
+      return { ...p, local: (progress - p.start) / (p.end - p.start) };
+    }
+  }
+  return { ...phases[3], local: 1 };
+}
+
+// Concentric rings that breathe
+const ringCount = 12;
+
+// Particles that orbit
+const particles = [];
+for (let i = 0; i < 60; i++) {
+  particles.push({
+    angle: Math.random() * Math.PI * 2,
+    ringIndex: Math.floor(Math.random() * ringCount),
+    speed: 0.003 + Math.random() * 0.008,
+    size: 1.5 + Math.random() * 2.5,
+    phase: Math.random() * Math.PI * 2
+  });
+}
+
+// Trail history for each ring
+const trailAlpha = [];
+for (let i = 0; i < ringCount; i++) {
+  trailAlpha.push(0);
+}
+
+function easeInOutSine(x) {
+  return -(Math.cos(Math.PI * x) - 1) / 2;
+}
+
+function draw() {
+  t++;
+  const progress = (t % cycleDuration) / cycleDuration;
+  const phase = getPhase(progress);
+
+  // Background with subtle fade
+  ctx.fillStyle = 'rgba(255, 248, 240, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+
+  const baseRadius = Math.min(W, H) * 0.06;
+  const maxRadius = Math.min(W, H) * 0.42;
+
+  // Breath scale
+  let breathScale;
+  if (phase.name === 'inhale') {
+    breathScale = 0.4 + 0.6 * easeInOutSine(phase.local);
+  } else if (phase.name === 'hold') {
+    breathScale = 1.0 + 0.02 * Math.sin(phase.local * Math.PI * 4); // subtle tremor
+  } else if (phase.name === 'exhale') {
+    breathScale = 1.0 - 0.5 * easeInOutSine(phase.local);
+  } else { // release
+    breathScale = 0.5 - 0.1 * easeInOutSine(phase.local);
+  }
+
+  // Colors shift with phase
+  const colors = {
+    inhale: { r: 168, g: 216, b: 185 },   // tender green
+    hold: { r: 135, g: 206, b: 235 },      // sky blue
+    exhale: { r: 255, g: 183, b: 197 },    // cherry pink
+    release: { r: 200, g: 162, b: 200 }    // lavender
+  };
+
+  const currentColor = colors[phase.name];
+  const nextPhase = phases[(phases.indexOf(phases.find(p => p.name === phase.name)) + 1) % 4];
+  const nextColor = colors[nextPhase.name];
+
+  // Blend colors
+  const blend = phase.local;
+  const cr = Math.round(currentColor.r * (1 - blend * 0.3) + nextColor.r * blend * 0.3);
+  const cg = Math.round(currentColor.g * (1 - blend * 0.3) + nextColor.g * blend * 0.3);
+  const cb = Math.round(currentColor.b * (1 - blend * 0.3) + nextColor.b * blend * 0.3);
+
+  // Draw concentric rings
+  for (let i = 0; i < ringCount; i++) {
+    const ringProgress = i / ringCount;
+    const delay = i * 0.05;
+    const delayedScale = breathScale + 0.1 * Math.sin(t * 0.02 - i * 0.5);
+    const radius = baseRadius + (maxRadius - baseRadius) * ringProgress * delayedScale;
+
+    const alpha = 0.08 + 0.15 * (1 - ringProgress);
+    const lineWidth = 1 + (1 - ringProgress) * 2;
+
+    // Wavy ring
+    ctx.beginPath();
+    const segments = 120;
+    for (let j = 0; j <= segments; j++) {
+      const a = (j / segments) * Math.PI * 2;
+      const wave = Math.sin(a * 6 + t * 0.03 - i * 0.8) * (3 + i * 0.8) * breathScale;
+      const r = radius + wave;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      if (j === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${alpha})`;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  }
+
+  // Draw orbiting particles
+  for (const p of particles) {
+    p.angle += p.speed * (0.5 + breathScale * 0.8);
+    const ringProgress = p.ringIndex / ringCount;
+    const delay = p.ringIndex * 0.05;
+    const delayedScale = breathScale + 0.1 * Math.sin(t * 0.02 - p.ringIndex * 0.5);
+    const radius = baseRadius + (maxRadius - baseRadius) * ringProgress * delayedScale;
+    const wave = Math.sin(p.angle * 6 + t * 0.03 - p.ringIndex * 0.8) * (3 + p.ringIndex * 0.8) * breathScale;
+
+    const x = cx + Math.cos(p.angle) * (radius + wave);
+    const y = cy + Math.sin(p.angle) * (radius + wave);
+
+    const pAlpha = 0.3 + 0.4 * Math.sin(t * 0.05 + p.phase);
+    const pSize = p.size * (0.6 + breathScale * 0.6);
+
+    ctx.beginPath();
+    ctx.arc(x, y, pSize, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${pAlpha})`;
+    ctx.fill();
+  }
+
+  // Center glow — the breath core
+  const glowRadius = baseRadius * breathScale * 1.5;
+  const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowRadius + 30);
+  grd.addColorStop(0, `rgba(${cr}, ${cg}, ${cb}, 0.25)`);
+  grd.addColorStop(0.5, `rgba(${cr}, ${cg}, ${cb}, 0.08)`);
+  grd.addColorStop(1, `rgba(${cr}, ${cg}, ${cb}, 0)`);
+  ctx.beginPath();
+  ctx.arc(cx, cy, glowRadius + 30, 0, Math.PI * 2);
+  ctx.fillStyle = grd;
+  ctx.fill();
+
+  // Phase indicator — subtle text
+  if (t % cycleDuration < 10 || (t % cycleDuration > cycleDuration * 0.3 - 5 && t % cycleDuration < cycleDuration * 0.3 + 5) ||
+      (t % cycleDuration > cycleDuration * 0.45 - 5 && t % cycleDuration < cycleDuration * 0.45 + 5) ||
+      (t % cycleDuration > cycleDuration * 0.75 - 5 && t % cycleDuration < cycleDuration * 0.75 + 5)) {
+    const labels = { inhale: '吸', hold: '屏', exhale: '呼', release: '释' };
+    const fadeFrame = Math.min(t % cycleDuration, 10) / 10;
+    ctx.font = `${14}px "PingFang SC", sans-serif`;
+    ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${0.3 * fadeFrame})`;
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[phase.name], cx, cy + maxRadius * breathScale + 50);
+  }
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
