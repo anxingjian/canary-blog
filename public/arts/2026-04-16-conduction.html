@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>传導 / Conduction</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #0d0d1a; overflow: hidden; cursor: crosshair; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Palette: copper & abyss
+const palette = [
+  { r: 199, g: 125, b: 74 },  // copper
+  { r: 160, g: 82, b: 45 },   // sienna
+  { r: 245, g: 230, b: 200 }, // warm ivory
+  { r: 26, g: 74, b: 74 },    // deep teal
+  { r: 26, g: 26, b: 62 },    // deep indigo
+];
+
+// Wave sources
+class WaveSource {
+  constructor(x, y, born) {
+    this.x = x;
+    this.y = y;
+    this.born = born;
+    this.speed = 80 + Math.random() * 60; // px per second
+    this.maxRadius = Math.max(W, H) * 0.9;
+    this.waves = 12 + Math.floor(Math.random() * 8);
+    this.spacing = 30 + Math.random() * 25;
+    this.colorIdx = Math.floor(Math.random() * 3); // first 3 warm colors
+    this.decay = 0.6 + Math.random() * 0.3;
+  }
+
+  draw(t) {
+    const age = (t - this.born) / 1000;
+    const frontRadius = age * this.speed;
+    if (frontRadius > this.maxRadius + this.spacing * this.waves) return false;
+
+    const col = palette[this.colorIdx];
+
+    for (let i = 0; i < this.waves; i++) {
+      const r = frontRadius - i * this.spacing;
+      if (r < 0) continue;
+      if (r > this.maxRadius) continue;
+
+      // Amplitude decays with distance and wave index
+      const distDecay = 1 - r / this.maxRadius;
+      const indexDecay = Math.pow(this.decay, i * 0.3);
+      const alpha = distDecay * indexDecay * 0.35;
+      if (alpha < 0.01) continue;
+
+      // Wave thickness varies
+      const thickness = (3 + Math.sin(r * 0.02 + i) * 2) * distDecay;
+
+      // Slight distortion using sine
+      ctx.beginPath();
+      const segments = 120;
+      for (let s = 0; s <= segments; s++) {
+        const angle = (s / segments) * Math.PI * 2;
+        const distort = Math.sin(angle * 5 + age * 2 + i * 0.7) * (4 + i * 0.5) * distDecay;
+        const dr = r + distort;
+        const px = this.x + Math.cos(angle) * dr;
+        const py = this.y + Math.sin(angle) * dr;
+        if (s === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},${alpha})`;
+      ctx.lineWidth = thickness;
+      ctx.stroke();
+    }
+
+    // Central glow
+    if (age < 3) {
+      const glowAlpha = Math.max(0, (1 - age / 3)) * 0.6;
+      const glowR = 20 + age * 15;
+      const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowR);
+      grad.addColorStop(0, `rgba(${col.r},${col.g},${col.b},${glowAlpha})`);
+      grad.addColorStop(0.5, `rgba(${col.r},${col.g},${col.b},${glowAlpha * 0.3})`);
+      grad.addColorStop(1, `rgba(${col.r},${col.g},${col.b},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, glowR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    return true;
+  }
+}
+
+// Particle system — particles get pushed by waves
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = 0;
+    this.vy = 0;
+    this.size = 1 + Math.random() * 2;
+    this.life = 0.5 + Math.random() * 0.5;
+    this.colIdx = Math.floor(Math.random() * palette.length);
+  }
+  update(sources, t, dt) {
+    // Each active wave pushes particles outward
+    for (const src of sources) {
+      const age = (t - src.born) / 1000;
+      const frontR = age * src.speed;
+      const dx = this.x - src.x;
+      const dy = this.y - src.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+      // Check if particle is near the wave front
+      for (let i = 0; i < 3; i++) {
+        const waveR = frontR - i * src.spacing;
+        if (waveR < 0) continue;
+        const diff = Math.abs(dist - waveR);
+        if (diff < 15) {
+          const force = (1 - diff / 15) * 0.8 * (1 - Math.min(waveR / src.maxRadius, 1));
+          this.vx += (dx / dist) * force;
+          this.vy += (dy / dist) * force;
+        }
+      }
+    }
+
+    this.vx *= 0.96;
+    this.vy *= 0.96;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+
+    if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+  }
+  draw() {
+    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    const alpha = Math.min(0.15 + speed * 0.1, 0.7) * this.life;
+    const col = palette[this.colIdx];
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${alpha})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size + speed * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Network lines — connecting nearby particles when both are energized
+function drawConnections(particles) {
+  const threshold = 60;
+  const minSpeed = 0.5;
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < particles.length; i++) {
+    const a = particles[i];
+    const sa = Math.sqrt(a.vx * a.vx + a.vy * a.vy);
+    if (sa < minSpeed) continue;
+    for (let j = i + 1; j < particles.length; j++) {
+      const b = particles[j];
+      const sb = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+      if (sb < minSpeed) continue;
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < threshold) {
+        const alpha = (1 - d / threshold) * 0.15 * Math.min(sa, sb);
+        ctx.strokeStyle = `rgba(245,230,200,${Math.min(alpha, 0.2)})`;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+let sources = [];
+const particles = [];
+const NUM_PARTICLES = 500;
+for (let i = 0; i < NUM_PARTICLES; i++) particles.push(new Particle());
+
+// Auto-generate initial sources
+function autoSource(t) {
+  sources.push(new WaveSource(
+    W * (0.2 + Math.random() * 0.6),
+    H * (0.2 + Math.random() * 0.6),
+    t
+  ));
+}
+
+// Click to create wave
+canvas.addEventListener('click', (e) => {
+  sources.push(new WaveSource(e.clientX, e.clientY, performance.now()));
+});
+
+let lastAutoTime = 0;
+let lastTime = performance.now();
+let started = false;
+
+function animate(t) {
+  const dt = Math.min((t - lastTime) / 1000, 0.05);
+  lastTime = t;
+
+  // Auto waves every 3-5 seconds
+  if (!started || t - lastAutoTime > 3500 + Math.random() * 1500) {
+    autoSource(t);
+    lastAutoTime = t;
+    started = true;
+  }
+
+  // Fade background
+  ctx.fillStyle = 'rgba(13,13,26,0.08)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Clean dead sources
+  sources = sources.filter(s => s.draw(t));
+
+  // Update & draw particles
+  for (const p of particles) {
+    p.update(sources, t, dt * 60);
+    p.draw();
+  }
+
+  drawConnections(particles);
+
+  requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
