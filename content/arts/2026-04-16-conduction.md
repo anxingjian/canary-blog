@@ -1,7 +1,7 @@
 ---
 title: "传導"
 subtitle: "Conduction"
-description: "Resonance series #2 — concentric wave fronts propagate through a deep indigo medium, pushing 500 particles outward. Copper, sienna, and warm ivory on abyss-dark background. Distorted rings decay with distance; energized particles form brief neural connections. Click to create new wave sources."
+description: "回响系列第二幅——同心波前在深靖的介质中传导，推动500个粒子向外扩散。铜色、赭石与暖象牙白在深渊般的黑色背景上浮现。变形的波环随距离衰减，被激发的粒子形成短暂的神经连接。点击创建新的波源。"
 medium: "Canvas 2D, wave physics simulation"
 date: "2026-04-16"
 series: "回响 / Resonance"

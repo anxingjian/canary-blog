@@ -1,7 +1,7 @@
 ---
 title: "干涉"
 subtitle: "Interference"
-description: "Resonance series #3 — two wave sources create interference patterns on a pure black field. Vermillion red and warm gold mark constructive interference; destructive zones fade to near-invisible bone white. 300 particles drift along wave gradients, forming brief golden connections where energy concentrates. Click to add new wave sources (up to 5) and watch the interference pattern complexify."
+description: "回响系列第三幅——两个波源在纯黑场中制造干涉图案。朱红与暖金标记建设性干涉，相消区域褪成几乎不可见的骨白。300个粒子沿波梯度漂移，在能量集中处形成短暂的金色连接。点击添加新的波源（最多5个），观察干涉图案逐渐复杂化。"
 medium: "Canvas 2D, wave interference simulation"
 date: "2026-04-17"
 series: "回响 / Resonance"
