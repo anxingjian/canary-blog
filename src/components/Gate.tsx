@@ -4,8 +4,8 @@ import { useState } from "react";
 
 const ENTRIES = [
   { name: "Arts", href: "/arts" },
-  { name: "Essays", href: "/essays" },
   { name: "Journal", href: "/journal" },
+  { name: "Research", href: "/research" },
 ];
 
 const STATUS_LINES = [
