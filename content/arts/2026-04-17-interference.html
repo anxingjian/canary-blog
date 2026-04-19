@@ -6,7 +6,7 @@
 <title>干涉 / Interference</title>
 <style>
 * { margin: 0; padding: 0; }
-body { background: #0a0a12; overflow: hidden; cursor: crosshair; }
+body { background: #08080e; overflow: hidden; cursor: crosshair; }
 canvas { display: block; }
 </style>
 </head>
@@ -16,6 +16,8 @@ canvas { display: block; }
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 let W, H;
+let time = 0;
+let sources = [];
 
 function resize() {
   W = canvas.width = window.innerWidth;
@@ -24,247 +26,111 @@ function resize() {
 resize();
 window.addEventListener('resize', resize);
 
-// Two color families — warm vs cool, subtle difference
-const WARM = [
-  { r: 199, g: 135, b: 84 },   // copper
-  { r: 220, g: 180, b: 130 },  // pale gold
-  { r: 180, g: 110, b: 60 },   // dark copper
-];
-const COOL = [
-  { r: 140, g: 160, b: 190 },  // cool silver
-  { r: 170, g: 185, b: 210 },  // pale steel
-  { r: 110, g: 130, b: 160 },  // slate
-];
+// Start with two sources
+sources.push({ x: 0.3, y: 0.4 });
+sources.push({ x: 0.7, y: 0.6 });
 
-class WaveSource {
-  constructor(x, y, t, family) {
-    this.x = x; this.y = y;
-    this.born = t;
-    this.family = family; // 0=warm, 1=cool
-    this.speed = 70 + Math.random() * 50;
-    this.maxRadius = Math.max(W, H) * 0.85;
-    this.waves = 14 + Math.floor(Math.random() * 6);
-    this.spacing = 25 + Math.random() * 20;
-    this.colIdx = Math.floor(Math.random() * 3);
-    this.decay = 0.65 + Math.random() * 0.25;
-    this.distortFreq = 3 + Math.floor(Math.random() * 4);
-    this.distortPhase = Math.random() * Math.PI * 2;
-  }
-
-  draw(t) {
-    const age = (t - this.born) / 1000;
-    const frontR = age * this.speed;
-    if (frontR > this.maxRadius + this.spacing * this.waves) return false;
-
-    const palette = this.family === 0 ? WARM : COOL;
-    const col = palette[this.colIdx];
-
-    for (let i = 0; i < this.waves; i++) {
-      const r = frontR - i * this.spacing;
-      if (r < 0 || r > this.maxRadius) continue;
-
-      const distDecay = 1 - r / this.maxRadius;
-      const indexDecay = Math.pow(this.decay, i * 0.3);
-      const alpha = distDecay * indexDecay * 0.3;
-      if (alpha < 0.008) continue;
-
-      const thickness = (2.5 + Math.sin(r * 0.02 + i) * 1.5) * distDecay;
-
-      ctx.beginPath();
-      const segments = 100;
-      for (let s = 0; s <= segments; s++) {
-        const angle = (s / segments) * Math.PI * 2;
-        const distort = Math.sin(angle * this.distortFreq + age * 1.8 + i * 0.6 + this.distortPhase) 
-                       * (5 + i * 0.4) * distDecay;
-        const dr = r + distort;
-        const px = this.x + Math.cos(angle) * dr;
-        const py = this.y + Math.sin(angle) * dr;
-        if (s === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},${alpha})`;
-      ctx.lineWidth = Math.max(0.5, thickness);
-      ctx.stroke();
-    }
-
-    // Source glow
-    if (age < 4) {
-      const glowA = Math.max(0, (1 - age / 4)) * 0.5;
-      const glowR = 15 + age * 12;
-      const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowR);
-      grad.addColorStop(0, `rgba(${col.r},${col.g},${col.b},${glowA})`);
-      grad.addColorStop(0.5, `rgba(${col.r},${col.g},${col.b},${glowA * 0.25})`);
-      grad.addColorStop(1, `rgba(${col.r},${col.g},${col.b},0)`);
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, glowR, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    return true;
-  }
+// Wave function from a source
+function wave(sx, sy, px, py, t, freq) {
+  const dx = px - sx, dy = py - sy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  return Math.sin(dist * freq - t) / (1 + dist * 0.8);
 }
 
-// Particles pushed by waves — respond to interference
-class Particle {
-  constructor() { this.reset(); }
-  reset() {
-    this.x = Math.random() * W;
-    this.y = Math.random() * H;
-    this.vx = 0; this.vy = 0;
-    this.size = 1 + Math.random() * 1.8;
-    this.life = 0.4 + Math.random() * 0.6;
-  }
-  update(sources, t, dt) {
-    let totalForceX = 0, totalForceY = 0;
-    let warmForce = 0, coolForce = 0;
+function draw() {
+  time += 0.03;
 
-    for (const src of sources) {
-      const age = (t - src.born) / 1000;
-      const frontR = age * src.speed;
-      const dx = this.x - src.x;
-      const dy = this.y - src.y;
-      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  // Full clear with slight persistence
+  ctx.fillStyle = 'rgba(8,8,14,0.25)';
+  ctx.fillRect(0, 0, W, H);
 
-      for (let i = 0; i < 4; i++) {
-        const waveR = frontR - i * src.spacing;
-        if (waveR < 0) continue;
-        const diff = Math.abs(dist - waveR);
-        if (diff < 18) {
-          const force = (1 - diff / 18) * 0.7 * (1 - Math.min(waveR / src.maxRadius, 1));
-          totalForceX += (dx / dist) * force;
-          totalForceY += (dy / dist) * force;
-          if (src.family === 0) warmForce += force;
-          else coolForce += force;
+  const cols = Math.floor(W / 4);
+  const rows = Math.floor(H / 4);
+  const cellW = W / cols;
+  const cellH = H / rows;
+  const freq = 25;
+
+  // Draw interference field as displaced dots/dashes
+  for (let row = 0; row < rows; row++) {
+    const py = (row + 0.5) / rows;
+
+    ctx.beginPath();
+    let started = false;
+
+    for (let col = 0; col < cols; col++) {
+      const px = (col + 0.5) / cols;
+
+      // Sum waves from all sources
+      let val = 0;
+      for (const s of sources) {
+        val += wave(s.x, s.y, px, py, time, freq);
+      }
+
+      // Displacement based on wave value
+      const displaceY = val * cellH * 3;
+      const screenX = col * cellW + cellW / 2;
+      const screenY = row * cellH + cellH / 2 + displaceY;
+
+      // Color: warm when constructive (high |val|), dim when destructive
+      const absVal = Math.abs(val);
+      const constructive = absVal > 0.5;
+
+      if (constructive) {
+        // Draw bright dots at constructive interference
+        const intensity = Math.min(absVal * 0.8, 1);
+        const r = 180 + intensity * 60;
+        const g = 150 + intensity * 50;
+        const b = 110 + intensity * 30;
+        
+        ctx.fillStyle = `rgba(${r|0},${g|0},${b|0},${intensity * 0.7})`;
+        ctx.fillRect(screenX - 1.2, screenY - 1.2, 2.4, 2.4);
+
+        // Glow for strong constructive
+        if (absVal > 1.0) {
+          ctx.fillStyle = `rgba(${r|0},${g|0},${b|0},${intensity * 0.15})`;
+          ctx.beginPath();
+          ctx.arc(screenX, screenY, 4 + intensity * 3, 0, Math.PI * 2);
+          ctx.fill();
         }
+      } else {
+        // Faint dot at destructive interference
+        ctx.fillStyle = `rgba(100,100,120,${absVal * 0.15})`;
+        ctx.fillRect(screenX - 0.5, screenY - 0.5, 1, 1);
       }
     }
-
-    // In interference zones (both warm and cool forces), particles get extra energy
-    if (warmForce > 0.1 && coolForce > 0.1) {
-      const interference = Math.min(warmForce, coolForce) * 2;
-      totalForceX *= (1 + interference);
-      totalForceY *= (1 + interference);
-      this.interferenceGlow = interference;
-    } else {
-      this.interferenceGlow = 0;
-    }
-
-    this.warmRatio = warmForce / (warmForce + coolForce + 0.001);
-    this.vx = (this.vx + totalForceX) * 0.95;
-    this.vy = (this.vy + totalForceY) * 0.95;
-    this.x += this.vx * dt;
-    this.y += this.vy * dt;
-
-    if (this.x < -20 || this.x > W + 20 || this.y < -20 || this.y > H + 20) this.reset();
   }
-  draw() {
-    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-    const alpha = Math.min(0.12 + speed * 0.12, 0.65) * this.life;
 
-    // Color blends between warm and cool based on which waves are pushing it
-    const w = this.warmRatio || 0.5;
-    const r = 140 + w * 60;
-    const g = 150 + w * 20;
-    const b = 170 - w * 60;
-
-    // Extra glow in interference zones
-    if (this.interferenceGlow > 0.15) {
-      const glowR = 4 + this.interferenceGlow * 8;
-      const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowR);
-      grad.addColorStop(0, `rgba(240,220,190,${this.interferenceGlow * 0.3})`);
-      grad.addColorStop(1, 'rgba(240,220,190,0)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, glowR, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.fillStyle = `rgba(${r|0},${g|0},${b|0},${alpha})`;
+  // Draw source indicators
+  for (let i = 0; i < sources.length; i++) {
+    const s = sources[i];
+    const sx = s.x * W, sy = s.y * H;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 2 + i);
+    
+    const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 12 + pulse * 6);
+    grad.addColorStop(0, `rgba(220,190,140,${0.4 + pulse * 0.2})`);
+    grad.addColorStop(0.5, `rgba(220,190,140,0.08)`);
+    grad.addColorStop(1, 'rgba(220,190,140,0)');
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size + speed * 0.2, 0, Math.PI * 2);
+    ctx.arc(sx, sy, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = `rgba(240,220,180,${0.6 + pulse * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 2, 0, Math.PI * 2);
     ctx.fill();
   }
-}
 
-// Connection lines between energized nearby particles
-function drawConnections(particles) {
-  const threshold = 55;
-  ctx.lineWidth = 0.4;
-  for (let i = 0; i < particles.length; i += 2) {
-    const a = particles[i];
-    const sa = Math.sqrt(a.vx * a.vx + a.vy * a.vy);
-    if (sa < 0.4) continue;
-    for (let j = i + 2; j < particles.length; j += 2) {
-      const b = particles[j];
-      const sb = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
-      if (sb < 0.4) continue;
-      const dx = a.x - b.x, dy = a.y - b.y;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (d < threshold) {
-        const alpha = (1 - d / threshold) * 0.1 * Math.min(sa, sb);
-        ctx.strokeStyle = `rgba(220,200,170,${Math.min(alpha, 0.15)})`;
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
-        ctx.stroke();
-      }
-    }
-  }
-}
-
-let sources = [];
-const particles = [];
-const NUM_PARTICLES = 450;
-for (let i = 0; i < NUM_PARTICLES; i++) particles.push(new Particle());
-
-let familyCounter = 0;
-function autoSource(t) {
-  sources.push(new WaveSource(
-    W * (0.15 + Math.random() * 0.7),
-    H * (0.15 + Math.random() * 0.7),
-    t, familyCounter % 2
-  ));
-  familyCounter++;
+  requestAnimationFrame(draw);
 }
 
 canvas.addEventListener('click', (e) => {
-  sources.push(new WaveSource(e.clientX, e.clientY, performance.now(), familyCounter % 2));
-  familyCounter++;
+  if (sources.length < 5) {
+    sources.push({ x: e.clientX / W, y: e.clientY / H });
+  }
 });
 
-let lastAutoTime = 0;
-let lastTime = performance.now();
-let started = false;
-
-function animate(t) {
-  const dt = Math.min((t - lastTime) / 1000, 0.05);
-  lastTime = t;
-
-  // Alternate warm and cool wave sources every 3-5s
-  if (!started || t - lastAutoTime > 3000 + Math.random() * 2000) {
-    autoSource(t);
-    lastAutoTime = t;
-    started = true;
-  }
-
-  ctx.fillStyle = 'rgba(10,10,18,0.07)';
-  ctx.fillRect(0, 0, W, H);
-
-  sources = sources.filter(s => s.draw(t));
-
-  for (const p of particles) {
-    p.update(sources, t, dt * 60);
-    p.draw();
-  }
-
-  drawConnections(particles);
-  requestAnimationFrame(animate);
-}
-
-window.addEventListener('resize', resize);
-requestAnimationFrame(animate);
+draw();
 </script>
 </body>
 </html>
