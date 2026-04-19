@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>泛音 / Overtone</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #08080f; overflow: hidden; cursor: crosshair; }
+* { margin: 0; padding: 0; }
+body { background: #0a0a0a; overflow: hidden; cursor: crosshair; }
 canvas { display: block; }
 </style>
 </head>
@@ -15,211 +15,143 @@ canvas { display: block; }
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-let W, H, cx, cy;
+let W, H;
 let time = 0;
 let harmonics = 3;
-const MAX_HARMONICS = 12;
-let particles = [];
-
-// Palette — deep indigo field, teal/violet harmonics, warm node glow
-const BG = [8, 8, 15];
-const COLORS = [
-  [45, 212, 191],   // teal
-  [139, 92, 246],   // violet
-  [210, 140, 80],   // copper
-  [80, 160, 210],   // steel blue
-  [200, 100, 140],  // dusty rose
-  [160, 200, 80],   // moss
-  [210, 180, 100],  // amber
-  [100, 140, 200],  // slate
-  [180, 120, 200],  // lavender
-  [200, 160, 120],  // sand
-  [120, 200, 180],  // seafoam
-  [200, 130, 100],  // terra
-];
-const SILVER = [200, 210, 230];
+const MAX_H = 12;
 
 function resize() {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
-  cx = W / 2;
-  cy = H / 2;
-  initParticles();
 }
+resize();
+window.addEventListener('resize', resize);
 
-function initParticles() {
-  particles = [];
-  const count = Math.min(400, Math.floor(W * H / 4000));
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const radius = 30 + Math.random() * Math.min(W, H) * 0.4;
-    particles.push({
-      angle,
-      radius,
-      x: cx + Math.cos(angle) * radius,
-      y: cy + Math.sin(angle) * radius,
-      speed: 0.001 + Math.random() * 0.003,
-      size: 0.8 + Math.random() * 1.5,
-      harmonic: Math.floor(Math.random() * harmonics) + 1
-    });
-  }
-}
-
-function rgba(c, a) {
-  return `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
-}
-
-function lerp(a, b, t) { return a + (b - a) * t; }
-function lerpColor(c1, c2, t) {
-  return [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)];
-}
-
+// Draw horizontal strings vibrating at harmonic frequencies
+// Minimal: just lines, brightness, and thickness encode information
 function draw() {
-  time += 0.012;
+  time += 0.01;
 
-  // Soft trail fade
-  ctx.fillStyle = `rgba(${BG[0]},${BG[1]},${BG[2]},0.06)`;
+  // Very soft fade for ghosting effect
+  ctx.fillStyle = 'rgba(10,10,10,0.05)';
   ctx.fillRect(0, 0, W, H);
 
-  const maxR = Math.min(W, H) * 0.42;
-  const baseR = maxR * 0.08;
+  const marginX = W * 0.12;
+  const marginY = H * 0.08;
+  const stringW = W - marginX * 2;
+  const availH = H - marginY * 2;
 
-  // Draw harmonic rings
+  // Each harmonic is a horizontal string
   for (let n = 1; n <= harmonics; n++) {
-    const col = COLORS[(n - 1) % COLORS.length];
-    const ringR = baseR + (maxR - baseR) * (n / MAX_HARMONICS);
+    const y0 = marginY + (availH / (harmonics + 1)) * n;
+    const amplitude = Math.min(availH / (harmonics + 1) * 0.35, 40);
 
-    // Ring oscillation — radius breathes at harmonic frequency
-    const breath = Math.sin(n * time * 0.8) * (8 + 4 / n);
-    const r = ringR + breath;
+    // Standing wave: sin(n*pi*x/L) * cos(n*omega*t)
+    // Amplitude decreases with harmonic number
+    const amp = amplitude / Math.sqrt(n);
+    const envelope = Math.cos(n * 0.7 * time);
 
-    // Wave pattern along the ring — standing wave with n nodes
-    const segments = 360;
+    // Warmth increases slightly with harmonic number
+    const base = 180;
+    const r = base + n * 4;
+    const g = base - n * 2;
+    const b = base - n * 6;
+
+    // Ghost trail — previous positions (from envelope)
+    const trailAlpha = 0.04;
     ctx.beginPath();
-    for (let i = 0; i <= segments; i++) {
-      const angle = (i / segments) * Math.PI * 2;
-      const wave = Math.sin(n * angle + time * n * 0.3) * (12 / Math.sqrt(n));
-      const px = cx + Math.cos(angle) * (r + wave);
-      const py = cy + Math.sin(angle) * (r + wave);
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+    for (let px = 0; px <= stringW; px += 2) {
+      const xNorm = px / stringW;
+      const spatial = Math.sin(n * Math.PI * xNorm);
+      const prevEnv = Math.cos(n * 0.7 * (time - 0.3));
+      const y = y0 + spatial * amp * prevEnv;
+      if (px === 0) ctx.moveTo(marginX, y);
+      else ctx.lineTo(marginX + px, y);
     }
-    ctx.closePath();
-
-    // Glow
-    ctx.strokeStyle = rgba(col, 0.06);
-    ctx.lineWidth = 10;
+    ctx.strokeStyle = `rgba(${r},${g},${b},${trailAlpha})`;
+    ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Main ring
-    ctx.strokeStyle = rgba(col, 0.25 + 0.15 / n);
-    ctx.lineWidth = 2 - n * 0.05;
+    // Main string
+    ctx.beginPath();
+    for (let px = 0; px <= stringW; px += 1.5) {
+      const xNorm = px / stringW;
+      const spatial = Math.sin(n * Math.PI * xNorm);
+      const y = y0 + spatial * amp * envelope;
+      if (px === 0) ctx.moveTo(marginX, y);
+      else ctx.lineTo(marginX + px, y);
+    }
+
+    // Brightness based on energy (amplitude of oscillation)
+    const energy = Math.abs(envelope);
+    const alpha = 0.15 + energy * 0.5;
+    const lw = 0.8 + energy * 1.2;
+
+    ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+    ctx.lineWidth = lw;
     ctx.stroke();
 
-    // Nodes on the ring — where standing wave crosses zero
-    for (let k = 0; k < n * 2; k++) {
-      const nodeAngle = (k / (n * 2)) * Math.PI * 2 + time * 0.1;
-      const pulse = 0.5 + 0.5 * Math.sin(time * 2 + k + n);
-      const nx = cx + Math.cos(nodeAngle) * r;
-      const ny = cy + Math.sin(nodeAngle) * r;
+    // Nodes — fixed points where string doesn't move
+    for (let k = 0; k <= n; k++) {
+      const nodeX = marginX + (k / n) * stringW;
+      const pulse = 0.4 + 0.3 * Math.sin(time * 1.5 + k);
 
-      const grd = ctx.createRadialGradient(nx, ny, 0, nx, ny, 4 + pulse * 3);
-      grd.addColorStop(0, rgba(SILVER, 0.5 + pulse * 0.3));
-      grd.addColorStop(1, rgba(SILVER, 0));
       ctx.beginPath();
-      ctx.arc(nx, ny, 4 + pulse * 3, 0, Math.PI * 2);
-      ctx.fillStyle = grd;
+      ctx.arc(nodeX, y0, 2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(220,210,195,${pulse * 0.6})`;
       ctx.fill();
     }
-  }
 
-  // Central fundamental — pulsing core
-  const corePulse = 0.5 + 0.5 * Math.sin(time * 0.8);
-  const coreR = baseR * (0.8 + corePulse * 0.4);
-  const coreGrd = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 2);
-  coreGrd.addColorStop(0, rgba(SILVER, 0.3 + corePulse * 0.2));
-  coreGrd.addColorStop(0.3, rgba(COLORS[0], 0.1));
-  coreGrd.addColorStop(1, `rgba(${BG[0]},${BG[1]},${BG[2]},0)`);
-  ctx.beginPath();
-  ctx.arc(cx, cy, coreR * 2, 0, Math.PI * 2);
-  ctx.fillStyle = coreGrd;
-  ctx.fill();
+    // Antinodes — max amplitude points, subtle glow when energized
+    for (let k = 0; k < n; k++) {
+      const antiX = marginX + ((k + 0.5) / n) * stringW;
+      const antiY = y0 + Math.sin(n * Math.PI * ((k + 0.5) / n)) * amp * envelope;
 
-  // Core ring
-  ctx.beginPath();
-  ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
-  ctx.strokeStyle = rgba(SILVER, 0.3 + corePulse * 0.2);
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // Particles orbit along harmonic rings
-  for (const p of particles) {
-    const n = Math.min(p.harmonic, harmonics);
-    const col = COLORS[(n - 1) % COLORS.length];
-    const ringR = baseR + (maxR - baseR) * (n / MAX_HARMONICS);
-    const breath = Math.sin(n * time * 0.8) * (8 + 4 / n);
-    const targetR = ringR + breath;
-
-    // Orbit
-    p.angle += p.speed * n * 0.5;
-    const wave = Math.sin(n * p.angle + time * n * 0.3) * (12 / Math.sqrt(n));
-
-    // Smooth radius transition
-    p.radius += (targetR + wave - p.radius) * 0.03;
-
-    p.x = cx + Math.cos(p.angle) * p.radius;
-    p.y = cy + Math.sin(p.angle) * p.radius;
-
-    const distFromRing = Math.abs(p.radius - targetR);
-    const alpha = Math.max(0.1, 0.6 - distFromRing * 0.02);
-
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    ctx.fillStyle = rgba(col, alpha);
-    ctx.fill();
-  }
-
-  // Inter-ring resonance lines — connect close particles on different harmonics
-  for (let i = 0; i < particles.length; i += 3) {
-    for (let j = i + 1; j < particles.length; j += 3) {
-      if (particles[i].harmonic === particles[j].harmonic) continue;
-      const dx = particles[i].x - particles[j].x;
-      const dy = particles[i].y - particles[j].y;
-      const dist = dx * dx + dy * dy;
-      if (dist < 1800 && dist > 100) {
-        const alpha = (1 - dist / 1800) * 0.06;
+      if (energy > 0.3) {
+        const grd = ctx.createRadialGradient(antiX, antiY, 0, antiX, antiY, 8 + energy * 6);
+        grd.addColorStop(0, `rgba(${r},${g},${b},${energy * 0.15})`);
+        grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
         ctx.beginPath();
-        ctx.moveTo(particles[i].x, particles[i].y);
-        ctx.lineTo(particles[j].x, particles[j].y);
-        ctx.strokeStyle = rgba(SILVER, alpha);
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
+        ctx.arc(antiX, antiY, 8 + energy * 6, 0, Math.PI * 2);
+        ctx.fillStyle = grd;
+        ctx.fill();
       }
     }
   }
 
+  // Fixed endpoints — the two ends of all strings
+  for (const x of [marginX, marginX + stringW]) {
+    ctx.beginPath();
+    ctx.moveTo(x, marginY);
+    ctx.lineTo(x, marginY + availH);
+    ctx.strokeStyle = 'rgba(200,190,175,0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Composite waveform at bottom — sum of all harmonics
+  const compY = H - marginY * 0.6;
+  const compAmp = 20;
+  ctx.beginPath();
+  for (let px = 0; px <= stringW; px += 1.5) {
+    const xNorm = px / stringW;
+    let sum = 0;
+    for (let n = 1; n <= harmonics; n++) {
+      sum += Math.sin(n * Math.PI * xNorm) * Math.cos(n * 0.7 * time) / Math.sqrt(n);
+    }
+    const y = compY + sum * compAmp;
+    if (px === 0) ctx.moveTo(marginX, y);
+    else ctx.lineTo(marginX + px, y);
+  }
+  ctx.strokeStyle = 'rgba(210,195,170,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
   requestAnimationFrame(draw);
 }
 
-resize();
-window.addEventListener('resize', resize);
-
 canvas.addEventListener('click', () => {
-  if (harmonics < MAX_HARMONICS) {
-    harmonics++;
-    // Add particles for new harmonic
-    for (let i = 0; i < 25; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      particles.push({
-        angle,
-        radius: 50 + Math.random() * 100,
-        x: cx, y: cy,
-        speed: 0.001 + Math.random() * 0.003,
-        size: 0.8 + Math.random() * 1.5,
-        harmonic: harmonics
-      });
-    }
-  }
+  if (harmonics < MAX_H) harmonics++;
 });
 
 draw();

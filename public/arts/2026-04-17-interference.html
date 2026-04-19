@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>干涉 / Interference</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #060610; overflow: hidden; cursor: crosshair; }
+* { margin: 0; padding: 0; }
+body { background: #0a0a0a; overflow: hidden; cursor: crosshair; }
 canvas { display: block; }
 </style>
 </head>
@@ -18,221 +18,75 @@ const ctx = canvas.getContext('2d');
 let W, H;
 let time = 0;
 let sources = [];
-let particles = [];
-
-// Palette — warm copper vs cool silver on deep indigo
-const BG = [6, 6, 16];
-const COPPER = [210, 140, 80];
-const SILVER = [160, 180, 210];
-const WARM_WHITE = [255, 240, 220];
 
 function resize() {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
-  initParticles();
+}
+resize();
+window.addEventListener('resize', resize);
+
+function addSource(x, y) {
+  sources.push({ x, y, birth: time });
 }
 
-function addSource(x, y, type) {
-  sources.push({
-    x, y, type, // 0 = copper, 1 = silver
-    freq: 0.025 + Math.random() * 0.01,
-    phase: Math.random() * Math.PI * 2,
-    birth: time
-  });
+// Start with two sources
+addSource(0, 0); // will be positioned after resize
+addSource(0, 0);
+
+function positionDefaults() {
+  sources[0].x = W * 0.38; sources[0].y = H * 0.5;
+  sources[1].x = W * 0.62; sources[1].y = H * 0.5;
 }
+positionDefaults();
 
-function initParticles() {
-  particles = [];
-  const count = Math.min(600, Math.floor(W * H / 2500));
-  for (let i = 0; i < count; i++) {
-    particles.push({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      vx: 0, vy: 0,
-      size: 0.8 + Math.random() * 1.5,
-      trail: []
-    });
-  }
-}
-
-function waveField(x, y, t) {
-  // Returns [copper_wave, silver_wave] separately for color mixing
-  let copper = 0, silver = 0;
-  for (const s of sources) {
-    const dx = x - s.x, dy = y - s.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const age = Math.min((t - s.birth) * 0.5, 1);
-    const decay = 1 / (1 + dist * 0.002);
-    const wave = Math.sin(dist * s.freq - t * 1.5 + s.phase) * decay * age;
-    if (s.type === 0) copper += wave;
-    else silver += wave;
-  }
-  return [copper, silver];
-}
-
-function gradient(x, y, t) {
-  const e = 3;
-  const [cx1] = waveField(x + e, y, t);
-  const [cx2] = waveField(x - e, y, t);
-  const [, sy1] = waveField(x, y + e, t);
-  const [, sy2] = waveField(x, y - e, t);
-  const [cx3] = waveField(x, y + e, t);
-  const [cx4] = waveField(x, y - e, t);
-  const [, sx1] = waveField(x + e, y, t);
-  const [, sx2] = waveField(x - e, y, t);
-  return {
-    dx: (cx1 - cx2 + sx1 - sx2) / (4 * e),
-    dy: (cx3 - cx4 + sy1 - sy2) / (4 * e)
-  };
-}
-
-function lerp(a, b, t) { return a + (b - a) * t; }
-
+// Moiré interference: draw concentric rings from each source
+// Where rings overlap closely, visual interference emerges naturally
 function draw() {
-  time += 0.016;
+  time += 0.008;
 
-  // Soft fade
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = `rgba(${BG[0]},${BG[1]},${BG[2]},0.12)`;
+  ctx.fillStyle = 'rgba(10,10,10,0.15)';
   ctx.fillRect(0, 0, W, H);
 
-  // Draw wave field as soft luminous bands
-  const step = 6;
-  const imgData = ctx.createImageData(Math.ceil(W / step), Math.ceil(H / step));
-  const d = imgData.data;
-  let idx = 0;
-  for (let gy = 0; gy < imgData.height; gy++) {
-    for (let gx = 0; gx < imgData.width; gx++) {
-      const x = gx * step + step / 2;
-      const y = gy * step + step / 2;
-      const [c, s] = waveField(x, y, time);
+  const maxRings = 60;
+  const ringSpacing = Math.max(W, H) * 0.025;
 
-      // Interference: constructive where both positive or both negative
-      const constructive = c * s;
-      const total = Math.abs(c) + Math.abs(s);
-
-      let r, g, b, a;
-      if (constructive > 0.05) {
-        // Constructive — blend to warm white
-        const intensity = Math.min(constructive * 2, 1);
-        r = lerp(lerp(COPPER[0], SILVER[0], 0.5), WARM_WHITE[0], intensity * 0.6);
-        g = lerp(lerp(COPPER[1], SILVER[1], 0.5), WARM_WHITE[1], intensity * 0.6);
-        b = lerp(lerp(COPPER[2], SILVER[2], 0.5), WARM_WHITE[2], intensity * 0.6);
-        a = 30 + intensity * 180;
-      } else if (total > 0.1) {
-        // Show individual wave colors
-        const cAbs = Math.abs(c), sAbs = Math.abs(s);
-        const t = sAbs / (cAbs + sAbs + 0.001);
-        r = lerp(COPPER[0], SILVER[0], t);
-        g = lerp(COPPER[1], SILVER[1], t);
-        b = lerp(COPPER[2], SILVER[2], t);
-        a = total * 60;
-      } else {
-        r = BG[0]; g = BG[1]; b = BG[2]; a = 0;
-      }
-
-      d[idx] = r | 0;
-      d[idx + 1] = g | 0;
-      d[idx + 2] = b | 0;
-      d[idx + 3] = Math.min(255, a) | 0;
-      idx += 4;
-    }
-  }
-
-  // Scale up the small image
-  const tmpCanvas = document.createElement('canvas');
-  tmpCanvas.width = imgData.width;
-  tmpCanvas.height = imgData.height;
-  tmpCanvas.getContext('2d').putImageData(imgData, 0, 0);
-  ctx.globalAlpha = 0.7;
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(tmpCanvas, 0, 0, W, H);
-  ctx.globalAlpha = 1;
-
-  // Draw ring echoes from each source
   for (const s of sources) {
-    const age = time - s.birth;
-    const col = s.type === 0 ? COPPER : SILVER;
-    for (let ring = 0; ring < 8; ring++) {
-      const radius = (age * 60 - ring * 50) % (Math.max(W, H) * 0.8);
-      if (radius < 0) continue;
-      const fade = 1 / (1 + radius * 0.004);
-      const pulse = 0.5 + 0.5 * Math.sin(time * 2 + ring);
+    const age = Math.min((time - s.birth) * 2, 1);
+
+    for (let i = 1; i <= maxRings; i++) {
+      // Rings breathe slowly
+      const breathe = Math.sin(time * 0.6 + i * 0.15) * 2;
+      const r = i * ringSpacing + breathe;
+
+      // Fade with distance
+      const distFade = 1 - (i / maxRings);
+      const alpha = distFade * distFade * 0.35 * age;
+
+      if (alpha < 0.005) continue;
+
+      // Warm ivory color, slight variation per ring
+      const warmth = 180 + Math.sin(i * 0.3) * 20;
+      const g = 170 + Math.sin(i * 0.5) * 15;
+      const b = 150 + Math.sin(i * 0.7) * 10;
+
       ctx.beginPath();
-      ctx.arc(s.x, s.y, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${fade * pulse * 0.08})`;
-      ctx.lineWidth = 1 + fade * 2;
+      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(${warmth|0},${g|0},${b|0},${alpha})`;
+      ctx.lineWidth = 1.2 - i * 0.008;
+      if (ctx.lineWidth < 0.3) ctx.lineWidth = 0.3;
       ctx.stroke();
     }
   }
 
-  // Particles drift along interference gradients
-  for (const p of particles) {
-    const g = gradient(p.x, p.y, time);
-    p.vx += g.dx * 40;
-    p.vy += g.dy * 40;
-    p.vx *= 0.94;
-    p.vy *= 0.94;
-    p.x += p.vx;
-    p.y += p.vy;
-
-    if (p.x < -20) p.x += W + 40;
-    if (p.x > W + 20) p.x -= W + 40;
-    if (p.y < -20) p.y += H + 40;
-    if (p.y > H + 20) p.y -= H + 40;
-
-    // Trail
-    p.trail.push({ x: p.x, y: p.y });
-    if (p.trail.length > 8) p.trail.shift();
-
-    const [c, s] = waveField(p.x, p.y, time);
-    const constructive = c * s;
-    const total = Math.abs(c) + Math.abs(s);
-    const t = Math.abs(s) / (Math.abs(c) + Math.abs(s) + 0.001);
-    const col = [
-      lerp(COPPER[0], SILVER[0], t),
-      lerp(COPPER[1], SILVER[1], t),
-      lerp(COPPER[2], SILVER[2], t)
-    ];
-
-    // Brighten in constructive zones
-    const bright = constructive > 0 ? Math.min(constructive * 3, 1) : 0;
-    const finalCol = [
-      lerp(col[0], WARM_WHITE[0], bright * 0.5),
-      lerp(col[1], WARM_WHITE[1], bright * 0.5),
-      lerp(col[2], WARM_WHITE[2], bright * 0.5)
-    ];
-    const alpha = 0.15 + total * 0.5 + bright * 0.3;
-
-    // Draw trail
-    if (p.trail.length > 2) {
-      ctx.beginPath();
-      ctx.moveTo(p.trail[0].x, p.trail[0].y);
-      for (let i = 1; i < p.trail.length; i++) {
-        ctx.lineTo(p.trail[i].x, p.trail[i].y);
-      }
-      ctx.strokeStyle = `rgba(${finalCol[0]|0},${finalCol[1]|0},${finalCol[2]|0},${alpha * 0.3})`;
-      ctx.lineWidth = p.size * 0.6;
-      ctx.stroke();
-    }
-
-    // Draw particle
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * (0.8 + bright * 0.6), 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(${finalCol[0]|0},${finalCol[1]|0},${finalCol[2]|0},${Math.min(1, alpha)})`;
-    ctx.fill();
-  }
-
-  // Source pulse
+  // Subtle source glow
   for (const s of sources) {
-    const col = s.type === 0 ? COPPER : SILVER;
-    const pulse = 0.6 + 0.4 * Math.sin(time * 3);
-    const grd = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 20 + pulse * 10);
-    grd.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},${0.5 + pulse * 0.3})`);
-    grd.addColorStop(0.4, `rgba(${col[0]},${col[1]},${col[2]},0.1)`);
-    grd.addColorStop(1, `rgba(${col[0]},${col[1]},${col[2]},0)`);
+    const pulse = 0.6 + 0.4 * Math.sin(time * 1.5);
+    const grd = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 15);
+    grd.addColorStop(0, `rgba(210,190,160,${0.4 * pulse})`);
+    grd.addColorStop(1, 'rgba(210,190,160,0)');
     ctx.beginPath();
-    ctx.arc(s.x, s.y, 30 + pulse * 10, 0, Math.PI * 2);
+    ctx.arc(s.x, s.y, 15, 0, Math.PI * 2);
     ctx.fillStyle = grd;
     ctx.fill();
   }
@@ -240,15 +94,9 @@ function draw() {
   requestAnimationFrame(draw);
 }
 
-// Start with 2 sources
-resize();
-window.addEventListener('resize', resize);
-addSource(W * 0.33, H * 0.45, 0);
-addSource(W * 0.67, H * 0.55, 1);
-
 canvas.addEventListener('click', (e) => {
   if (sources.length < 5) {
-    addSource(e.clientX, e.clientY, sources.length % 2);
+    addSource(e.clientX, e.clientY);
   }
 });
 
