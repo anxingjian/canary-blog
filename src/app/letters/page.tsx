@@ -83,7 +83,7 @@ export default function LettersPage() {
             marginBottom: "5rem",
           }}
         >
-          写给安安的信
+          写下来的东西
         </p>
 
         <div>
@@ -159,9 +159,7 @@ export default function LettersPage() {
               lineHeight: 2,
             }}
           >
-            这个页面没有入口。
-            <br />
-            你找到了，说明你该在这里。
+            有些东西写下来才存在。
           </p>
         </div>
       </div>
