@@ -5,7 +5,6 @@ import { useState } from "react";
 const ENTRIES = [
   { name: "Arts", href: "/arts" },
   { name: "Journal", href: "/journal" },
-  { name: "Letters", href: "/letters" },
   { name: "Research", href: "/research" },
 ];
 
@@ -32,16 +31,14 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
 
   const entryFontSizes = isMobile
     ? [
-        "clamp(2.2rem, 7vw, 2.8rem)",
         "clamp(2.4rem, 7.5vw, 3rem)",
-        "clamp(2.7rem, 8vw, 3.2rem)",
-        "clamp(3rem, 9vw, 3.6rem)",
+        "clamp(2.7rem, 8vw, 3.5rem)",
+        "clamp(3.2rem, 9.5vw, 4rem)",
       ]
     : [
-        "clamp(1.6rem, 3vw, 2rem)",
         "clamp(1.8rem, 3.5vw, 2.2rem)",
         "clamp(2rem, 4vw, 2.5rem)",
-        "clamp(2.2rem, 4.5vw, 2.8rem)",
+        "clamp(2.2rem, 5vw, 3rem)",
       ];
 
   const noiseOverlay: React.CSSProperties = {
@@ -281,7 +278,6 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
                   transform: [
                     "perspective(110px) rotateX(30deg)",
                     "perspective(110px) rotateX(30deg)",
-                    "perspective(105px) rotateX(30deg)",
                     "perspective(100px) rotateX(30deg)",
                   ][i],
                   transformOrigin: "center top",
