@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>涨 / Rise</title>
+<style>
+* { margin: 0; padding: 0; }
+body { background: #0a1628; overflow: hidden; cursor: crosshair; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+let mouseX = 0.5, mouseY = 0.3;
+let time = 0;
+
+const ABYSS = '#0a1628';
+const CYAN = [0, 201, 167];
+const SAND = [240, 230, 211];
+const PURPLE = [91, 44, 111];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Sand particles
+class Grain {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = H * 0.6 + Math.random() * H * 0.4;
+    this.restY = this.y;
+    this.size = 1 + Math.random() * 2.5;
+    this.vx = 0;
+    this.vy = 0;
+    this.alpha = 0.3 + Math.random() * 0.5;
+  }
+  update(tideLevel) {
+    // If submerged, get lifted and tumbled
+    if (this.y > tideLevel) {
+      const depth = (this.y - tideLevel) / (H - tideLevel);
+      const lift = depth * 0.3 + 0.05;
+      this.vy -= lift;
+      this.vx += (Math.random() - 0.5) * 0.4;
+      // Tumble toward gravity direction
+      this.vx += (mouseX * W - this.x) * 0.00002;
+    } else {
+      // Above water — fall back
+      this.vy += 0.08;
+    }
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    this.x += this.vx;
+    this.y += this.vy;
+    // Settle back toward rest
+    this.vy += (this.restY - this.y) * 0.001;
+    // Bounds
+    if (this.x < 0) this.x = W;
+    if (this.x > W) this.x = 0;
+    if (this.y > H + 10) this.y = H;
+  }
+  draw(tideLevel) {
+    const submerged = this.y > tideLevel;
+    const c = submerged ? SAND : SAND;
+    const a = submerged ? this.alpha * 0.8 : this.alpha * 0.3;
+    ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+const grains = [];
+for (let i = 0; i < 300; i++) grains.push(new Grain());
+
+// Wave layers
+function drawTide(tideBase) {
+  const layers = 8;
+  for (let i = layers - 1; i >= 0; i--) {
+    const layerY = tideBase + i * (H * 0.05);
+    const progress = i / layers; // 0 = top (brightest), 1 = bottom (darkest)
+
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+
+    for (let x = 0; x <= W; x += 3) {
+      const nx = x / W;
+      // Multiple sine waves for organic feel
+      const wave1 = Math.sin(nx * 4 + time * 0.6 + i * 0.7) * 15;
+      const wave2 = Math.sin(nx * 7 - time * 0.4 + i * 1.2) * 8;
+      const wave3 = Math.sin(nx * 2.5 + time * 0.3) * 20;
+      // Gravity influence from mouse
+      const gravPull = Math.sin((nx - mouseX) * Math.PI) * 30 * (1 - mouseY);
+      const y = layerY + wave1 + wave2 + wave3 + gravPull;
+      ctx.lineTo(x, y);
+    }
+
+    ctx.lineTo(W, H);
+    ctx.closePath();
+
+    // Color interpolation: top layers = cyan, bottom = purple
+    const r = Math.round(CYAN[0] * (1 - progress) + PURPLE[0] * progress);
+    const g = Math.round(CYAN[1] * (1 - progress) + PURPLE[1] * progress);
+    const b = Math.round(CYAN[2] * (1 - progress) + PURPLE[2] * progress);
+    const alpha = 0.08 + progress * 0.06;
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+    ctx.fill();
+  }
+}
+
+// Foam line at tide edge
+function drawFoam(tideBase) {
+  ctx.save();
+  ctx.globalAlpha = 0.4;
+  for (let x = 0; x <= W; x += 2) {
+    const nx = x / W;
+    const wave1 = Math.sin(nx * 4 + time * 0.6) * 15;
+    const wave2 = Math.sin(nx * 7 - time * 0.4) * 8;
+    const wave3 = Math.sin(nx * 2.5 + time * 0.3) * 20;
+    const gravPull = Math.sin((nx - mouseX) * Math.PI) * 30 * (1 - mouseY);
+    const y = tideBase + wave1 + wave2 + wave3 + gravPull;
+
+    // Foam dots along the edge
+    const foamChance = Math.sin(nx * 30 + time * 2) * 0.5 + 0.5;
+    if (Math.random() < foamChance * 0.3) {
+      const size = 1 + Math.random() * 2;
+      const a = 0.2 + Math.random() * 0.4;
+      ctx.fillStyle = `rgba(${SAND[0]},${SAND[1]},${SAND[2]},${a})`;
+      ctx.beginPath();
+      ctx.arc(x + Math.random() * 6 - 3, y + Math.random() * 10 - 5, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+// Deep water caustics
+function drawCaustics(tideBase) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 12; i++) {
+    const cx = (Math.sin(time * 0.2 + i * 2.1) * 0.3 + 0.5) * W;
+    const cy = tideBase + H * 0.15 + Math.cos(time * 0.15 + i * 1.7) * H * 0.1;
+    const radius = 30 + Math.sin(time * 0.3 + i) * 15;
+    const alpha = 0.02 + Math.sin(time * 0.4 + i * 0.9) * 0.015;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    grad.addColorStop(0, `rgba(${CYAN[0]},${CYAN[1]},${CYAN[2]},${alpha})`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+  }
+  ctx.restore();
+}
+
+function frame() {
+  time += 0.016;
+
+  // Tide level oscillates — slowly rising overall
+  const tidePhase = Math.sin(time * 0.15) * 0.08 + 0.02;
+  const baseTide = H * (0.45 - tidePhase);
+
+  // Clear with slight trail
+  ctx.fillStyle = 'rgba(10, 22, 40, 0.15)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Deep water
+  drawCaustics(baseTide);
+  drawTide(baseTide);
+  drawFoam(baseTide);
+
+  // Update and draw grains
+  for (const g of grains) {
+    g.update(baseTide);
+    g.draw(baseTide);
+  }
+
+  // Subtle vignette
+  const vignette = ctx.createRadialGradient(W/2, H/2, W * 0.3, W/2, H/2, W * 0.8);
+  vignette.addColorStop(0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1, 'rgba(10,22,40,0.4)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, W, H);
+
+  requestAnimationFrame(frame);
+}
+
+canvas.addEventListener('mousemove', e => {
+  mouseX = e.clientX / W;
+  mouseY = e.clientY / H;
+});
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  mouseX = e.touches[0].clientX / W;
+  mouseY = e.touches[0].clientY / H;
+}, { passive: false });
+
+frame();
+</script>
+</body>
+</html>
