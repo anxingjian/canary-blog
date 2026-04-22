@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>潮池 / Pool</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #1a1a1a; overflow: hidden; }
+  canvas { display: block; cursor: crosshair; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+let pools = [];
+let time = 0;
+
+// Palette - warm sandstone world
+const SAND = '#c4a882';
+const SAND_DARK = '#a08060';
+const SAND_LIGHT = '#d8c4a8';
+const JADE = '#1a4a3a';
+const JADE_LIGHT = '#2a6a52';
+const SIENNA = '#8b4513';
+const SIENNA_LIGHT = '#a65d2e';
+const BROWN = '#6b5330';
+const ROCK_SHADOW = '#7a6a55';
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  if (pools.length === 0) initPools();
+}
+
+class Anemone {
+  constructor(x, y, pool) {
+    this.x = x;
+    this.y = y;
+    this.pool = pool;
+    this.tentacles = 5 + Math.floor(Math.random() * 4);
+    this.size = 3 + Math.random() * 5;
+    this.phase = Math.random() * Math.PI * 2;
+    this.breathSpeed = 0.3 + Math.random() * 0.4;
+    this.hue = Math.random() > 0.5 ? SIENNA : SIENNA_LIGHT;
+  }
+
+  draw(t) {
+    const breath = Math.sin(t * this.breathSpeed + this.phase) * 0.3 + 0.7;
+    ctx.save();
+    ctx.translate(this.pool.x + this.x, this.pool.y + this.y);
+
+    for (let i = 0; i < this.tentacles; i++) {
+      const angle = (i / this.tentacles) * Math.PI * 2 + Math.sin(t * 0.5 + this.phase) * 0.2;
+      const len = this.size * breath;
+      const sway = Math.sin(t * 0.8 + i + this.phase) * 2;
+
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const cx = Math.cos(angle) * len * 0.5 + sway;
+      const cy = Math.sin(angle) * len * 0.5;
+      const ex = Math.cos(angle) * len + sway;
+      const ey = Math.sin(angle) * len;
+      ctx.quadraticCurveTo(cx, cy, ex, ey);
+      ctx.strokeStyle = this.hue;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.8;
+      ctx.stroke();
+
+      // Tip dot
+      ctx.beginPath();
+      ctx.arc(ex, ey, 1, 0, Math.PI * 2);
+      ctx.fillStyle = SIENNA_LIGHT;
+      ctx.globalAlpha = 0.6;
+      ctx.fill();
+    }
+
+    // Base
+    ctx.beginPath();
+    ctx.arc(0, 0, 2, 0, Math.PI * 2);
+    ctx.fillStyle = SIENNA;
+    ctx.globalAlpha = 0.9;
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+class Alga {
+  constructor(x, y, pool) {
+    this.x = x;
+    this.y = y;
+    this.pool = pool;
+    this.height = 8 + Math.random() * 15;
+    this.segments = 4 + Math.floor(Math.random() * 3);
+    this.phase = Math.random() * Math.PI * 2;
+    this.width = 1 + Math.random() * 1.5;
+  }
+
+  draw(t) {
+    ctx.save();
+    ctx.translate(this.pool.x + this.x, this.pool.y + this.y);
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+
+    for (let i = 1; i <= this.segments; i++) {
+      const frac = i / this.segments;
+      const sway = Math.sin(t * 0.6 + this.phase + frac * 2) * (3 * frac);
+      const px = sway;
+      const py = -this.height * frac;
+      if (i === 1) ctx.lineTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+
+    ctx.strokeStyle = BROWN;
+    ctx.lineWidth = this.width;
+    ctx.globalAlpha = 0.7;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+class Ripple {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.radius = 0;
+    this.maxRadius = 20 + Math.random() * 30;
+    this.speed = 0.3 + Math.random() * 0.2;
+    this.life = 1;
+  }
+
+  update() {
+    this.radius += this.speed;
+    this.life = 1 - this.radius / this.maxRadius;
+    return this.life > 0;
+  }
+
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = JADE_LIGHT;
+    ctx.lineWidth = 0.5;
+    ctx.globalAlpha = this.life * 0.3;
+    ctx.stroke();
+  }
+}
+
+class Pool {
+  constructor(x, y, rx, ry, angle) {
+    this.x = x;
+    this.y = y;
+    this.rx = rx;
+    this.ry = ry;
+    this.angle = angle || Math.random() * Math.PI * 0.3 - 0.15;
+    this.anemones = [];
+    this.algae = [];
+    this.ripples = [];
+    this.bumpPoints = [];
+
+    // Generate organic pool boundary
+    const nBumps = 12 + Math.floor(Math.random() * 8);
+    for (let i = 0; i < nBumps; i++) {
+      this.bumpPoints.push({
+        angle: (i / nBumps) * Math.PI * 2,
+        offset: (Math.random() - 0.5) * 0.25
+      });
+    }
+
+    // Populate
+    const nAnem = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < nAnem; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * 0.6;
+      this.anemones.push(new Anemone(
+        Math.cos(a) * this.rx * r,
+        Math.sin(a) * this.ry * r,
+        this
+      ));
+    }
+
+    const nAlg = 1 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < nAlg; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 0.3 + Math.random() * 0.5;
+      this.algae.push(new Alga(
+        Math.cos(a) * this.rx * r,
+        Math.sin(a) * this.ry * r,
+        this
+      ));
+    }
+  }
+
+  getEdge(angle) {
+    let offset = 0;
+    for (const bp of this.bumpPoints) {
+      const diff = angle - bp.angle;
+      const dist = Math.min(Math.abs(diff), Math.abs(diff + Math.PI * 2), Math.abs(diff - Math.PI * 2));
+      if (dist < 0.5) {
+        offset += bp.offset * (1 - dist / 0.5);
+      }
+    }
+    return 1 + offset;
+  }
+
+  drawShape(scale = 1) {
+    ctx.beginPath();
+    for (let i = 0; i <= 64; i++) {
+      const a = (i / 64) * Math.PI * 2;
+      const e = this.getEdge(a);
+      const px = this.x + Math.cos(a + this.angle) * this.rx * e * scale;
+      const py = this.y + Math.sin(a + this.angle) * this.ry * e * scale;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  }
+
+  draw(t) {
+    // Rock shadow
+    ctx.save();
+    this.drawShape(1.08);
+    ctx.fillStyle = ROCK_SHADOW;
+    ctx.globalAlpha = 0.4;
+    ctx.fill();
+    ctx.restore();
+
+    // Rock rim
+    ctx.save();
+    this.drawShape(1.04);
+    ctx.fillStyle = SAND_DARK;
+    ctx.globalAlpha = 0.7;
+    ctx.fill();
+    ctx.restore();
+
+    // Water body
+    ctx.save();
+    this.drawShape(1);
+    ctx.fillStyle = JADE;
+    ctx.globalAlpha = 0.85;
+    ctx.fill();
+    ctx.restore();
+
+    // Water caustics - subtle light patterns
+    ctx.save();
+    this.drawShape(1);
+    ctx.clip();
+
+    // Caustic lines
+    for (let i = 0; i < 5; i++) {
+      const phase = t * 0.3 + i * 1.5;
+      const y0 = this.y - this.ry + (i / 5) * this.ry * 2;
+      ctx.beginPath();
+      for (let x = -this.rx; x < this.rx; x += 2) {
+        const wave = Math.sin(x * 0.05 + phase) * 3 + Math.sin(x * 0.12 + phase * 1.3) * 2;
+        if (x === -this.rx) ctx.moveTo(this.x + x, y0 + wave);
+        else ctx.lineTo(this.x + x, y0 + wave);
+      }
+      ctx.strokeStyle = JADE_LIGHT;
+      ctx.lineWidth = 0.5;
+      ctx.globalAlpha = 0.15 + Math.sin(t * 0.5 + i) * 0.05;
+      ctx.stroke();
+    }
+
+    // Draw organisms
+    this.algae.forEach(a => a.draw(t));
+    this.anemones.forEach(a => a.draw(t));
+
+    // Ripples
+    if (Math.random() < 0.01) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * 0.7;
+      this.ripples.push(new Ripple(
+        this.x + Math.cos(a) * this.rx * r,
+        this.y + Math.sin(a) * this.ry * r
+      ));
+    }
+    this.ripples = this.ripples.filter(r => {
+      const alive = r.update();
+      if (alive) r.draw();
+      return alive;
+    });
+
+    ctx.restore();
+
+    // Surface reflection highlight
+    ctx.save();
+    this.drawShape(0.85);
+    const grad = ctx.createLinearGradient(
+      this.x - this.rx * 0.5, this.y - this.ry * 0.5,
+      this.x + this.rx * 0.3, this.y + this.ry * 0.3
+    );
+    grad.addColorStop(0, 'rgba(255,255,240,0.08)');
+    grad.addColorStop(1, 'rgba(255,255,240,0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  contains(px, py) {
+    const dx = (px - this.x) / this.rx;
+    const dy = (py - this.y) / this.ry;
+    return dx * dx + dy * dy < 1.3;
+  }
+}
+
+function initPools() {
+  pools = [];
+  // 4-6 initial pools, spread nicely
+  const count = 4 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < count; i++) {
+    const margin = 100;
+    let x, y, attempts = 0, ok = false;
+    while (attempts < 50 && !ok) {
+      x = margin + Math.random() * (W - margin * 2);
+      y = margin + Math.random() * (H - margin * 2);
+      ok = true;
+      for (const p of pools) {
+        const dx = p.x - x;
+        const dy = p.y - y;
+        if (Math.sqrt(dx * dx + dy * dy) < 120) { ok = false; break; }
+      }
+      attempts++;
+    }
+    if (ok) {
+      const rx = 35 + Math.random() * 40;
+      const ry = 25 + Math.random() * 30;
+      pools.push(new Pool(x, y, rx, ry));
+    }
+  }
+}
+
+function drawRockTexture() {
+  // Sandy background
+  ctx.fillStyle = SAND;
+  ctx.fillRect(0, 0, W, H);
+
+  // Rock texture - subtle grain
+  ctx.globalAlpha = 0.03;
+  for (let i = 0; i < 3000; i++) {
+    const x = Math.random() * W;
+    const y = Math.random() * H;
+    const s = Math.random() * 2;
+    ctx.fillStyle = Math.random() > 0.5 ? SAND_DARK : SAND_LIGHT;
+    ctx.fillRect(x, y, s, s);
+  }
+  ctx.globalAlpha = 1;
+
+  // Rock cracks
+  ctx.globalAlpha = 0.06;
+  ctx.strokeStyle = ROCK_SHADOW;
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < 15; i++) {
+    ctx.beginPath();
+    let x = Math.random() * W;
+    let y = Math.random() * H;
+    ctx.moveTo(x, y);
+    const segs = 3 + Math.floor(Math.random() * 5);
+    for (let j = 0; j < segs; j++) {
+      x += (Math.random() - 0.5) * 60;
+      y += (Math.random() - 0.5) * 40;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Offscreen rock texture (static)
+let rockCanvas;
+function cacheRock() {
+  rockCanvas = document.createElement('canvas');
+  rockCanvas.width = W;
+  rockCanvas.height = H;
+  const rctx = rockCanvas.getContext('2d');
+  // swap context temporarily
+  const orig = ctx;
+  // draw rock on offscreen
+  const tmpCanvas = canvas;
+  // simpler: just redraw
+  rockCanvas.width = W;
+  rockCanvas.height = H;
+  const rc = rockCanvas.getContext('2d');
+
+  rc.fillStyle = SAND;
+  rc.fillRect(0, 0, W, H);
+  rc.globalAlpha = 0.03;
+  for (let i = 0; i < 3000; i++) {
+    const x = Math.random() * W;
+    const y = Math.random() * H;
+    const s = Math.random() * 2;
+    rc.fillStyle = Math.random() > 0.5 ? SAND_DARK : SAND_LIGHT;
+    rc.fillRect(x, y, s, s);
+  }
+  rc.globalAlpha = 0.06;
+  rc.strokeStyle = ROCK_SHADOW;
+  rc.lineWidth = 0.5;
+  for (let i = 0; i < 15; i++) {
+    rc.beginPath();
+    let x = Math.random() * W;
+    let y = Math.random() * H;
+    rc.moveTo(x, y);
+    const segs = 3 + Math.floor(Math.random() * 5);
+    for (let j = 0; j < segs; j++) {
+      x += (Math.random() - 0.5) * 60;
+      y += (Math.random() - 0.5) * 40;
+      rc.lineTo(x, y);
+    }
+    rc.stroke();
+  }
+}
+
+function animate() {
+  time += 0.016;
+  ctx.clearRect(0, 0, W, H);
+
+  // Draw cached rock
+  if (rockCanvas) ctx.drawImage(rockCanvas, 0, 0);
+
+  // Wet patches around pools
+  for (const pool of pools) {
+    ctx.save();
+    pool.drawShape(1.3);
+    ctx.fillStyle = SAND_DARK;
+    ctx.globalAlpha = 0.15;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Draw pools sorted by y for slight depth
+  const sorted = [...pools].sort((a, b) => a.y - b.y);
+  for (const pool of sorted) {
+    pool.draw(time);
+  }
+
+  requestAnimationFrame(animate);
+}
+
+canvas.addEventListener('click', (e) => {
+  // Check if clicking inside existing pool
+  for (const p of pools) {
+    if (p.contains(e.clientX, e.clientY)) {
+      // Add ripple burst
+      for (let i = 0; i < 3; i++) {
+        p.ripples.push(new Ripple(
+          e.clientX + (Math.random() - 0.5) * 10,
+          e.clientY + (Math.random() - 0.5) * 10
+        ));
+      }
+      return;
+    }
+  }
+
+  // Create new pool (max 10)
+  if (pools.length < 10) {
+    const rx = 30 + Math.random() * 35;
+    const ry = 20 + Math.random() * 25;
+    pools.push(new Pool(e.clientX, e.clientY, rx, ry));
+  }
+});
+
+window.addEventListener('resize', () => {
+  resize();
+  cacheRock();
+});
+
+resize();
+cacheRock();
+animate();
+</script>
+</body>
+</html>
