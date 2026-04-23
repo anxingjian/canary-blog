@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>转流 / Turn</title>
+<style>
+* { margin: 0; padding: 0; }
+body { background: #0a0a0a; overflow: hidden; cursor: crosshair; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+const INK = '#0a0a0a';
+const VERMILLION = [194, 54, 22];
+const GOLD = [212, 167, 67];
+const MOON = [232, 228, 223];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// State
+let phase = 0; // 0 to 2PI, controls the macro oscillation
+let turnMoment = false;
+let turnTimer = 0;
+let turnX = W/2, turnY = H/2;
+let particles = [];
+let energyLines = [];
+let foamTrails = [];
+
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = 0;
+    this.vy = 0;
+    this.life = 200 + Math.random() * 400;
+    this.maxLife = this.life;
+    this.size = 1 + Math.random() * 2;
+    // Color: weighted random between vermillion and gold
+    const t = Math.random();
+    if (t < 0.6) {
+      this.color = VERMILLION;
+      this.alpha = 0.3 + Math.random() * 0.5;
+    } else if (t < 0.85) {
+      this.color = GOLD;
+      this.alpha = 0.2 + Math.random() * 0.4;
+    } else {
+      this.color = MOON;
+      this.alpha = 0.1 + Math.random() * 0.2;
+    }
+  }
+  update() {
+    // Flow field based on phase
+    const nx = this.x / 200;
+    const ny = this.y / 200;
+    const angle = noise(nx, ny, phase * 0.3) * Math.PI * 4;
+    
+    // Near turn moment: slow down dramatically
+    let speed = 1.5;
+    if (turnMoment) {
+      const dx = this.x - turnX;
+      const dy = this.y - turnY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const influence = Math.max(0, 1 - dist / (Math.max(W,H) * 0.6));
+      speed *= (1 - influence * 0.9);
+      // Add slight spiral toward turn point
+      const toCenter = Math.atan2(dy, dx);
+      const spiral = toCenter + Math.PI * 0.5;
+      this.vx += Math.cos(spiral) * influence * 0.3;
+      this.vy += Math.sin(spiral) * influence * 0.3;
+    }
+    
+    this.vx += Math.cos(angle) * speed * 0.1;
+    this.vy += Math.sin(angle) * speed * 0.1;
+    this.vx *= 0.96;
+    this.vy *= 0.96;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life--;
+    
+    if (this.life <= 0 || this.x < -50 || this.x > W+50 || this.y < -50 || this.y > H+50) {
+      this.reset();
+    }
+  }
+  draw() {
+    const lifeRatio = this.life / this.maxLife;
+    const fade = lifeRatio < 0.2 ? lifeRatio / 0.2 : lifeRatio > 0.8 ? (1 - lifeRatio) / 0.2 : 1;
+    const a = this.alpha * fade;
+    ctx.fillStyle = `rgba(${this.color[0]},${this.color[1]},${this.color[2]},${a})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+class EnergyLine {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.points = [];
+    const startX = Math.random() * W;
+    const startY = Math.random() * H;
+    let x = startX, y = startY;
+    const len = 40 + Math.random() * 80;
+    for (let i = 0; i < len; i++) {
+      this.points.push({x, y});
+      const a = noise(x/150, y/150, phase * 0.3) * Math.PI * 4;
+      x += Math.cos(a) * 3;
+      y += Math.sin(a) * 3;
+    }
+    this.life = 100 + Math.random() * 200;
+    this.maxLife = this.life;
+    this.isVermillion = Math.random() < 0.7;
+  }
+  update() {
+    this.life--;
+    if (this.life <= 0) this.reset();
+  }
+  draw() {
+    if (this.points.length < 2) return;
+    const lifeRatio = this.life / this.maxLife;
+    const fade = lifeRatio < 0.3 ? lifeRatio / 0.3 : lifeRatio > 0.7 ? (1 - lifeRatio) / 0.3 : 1;
+    const color = this.isVermillion ? VERMILLION : GOLD;
+    const a = fade * 0.15;
+    ctx.strokeStyle = `rgba(${color[0]},${color[1]},${color[2]},${a})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+    for (let i = 1; i < this.points.length; i++) {
+      ctx.lineTo(this.points[i].x, this.points[i].y);
+    }
+    ctx.stroke();
+  }
+}
+
+class FoamDot {
+  constructor(x, y) {
+    this.x = x + (Math.random() - 0.5) * 60;
+    this.y = y + (Math.random() - 0.5) * 60;
+    this.size = 1 + Math.random() * 3;
+    this.life = 60 + Math.random() * 120;
+    this.maxLife = this.life;
+    this.drift = (Math.random() - 0.5) * 0.5;
+  }
+  update() {
+    this.life--;
+    this.x += this.drift;
+    this.y += Math.sin(phase * 2 + this.x * 0.01) * 0.3;
+  }
+  draw() {
+    const fade = this.life / this.maxLife;
+    const a = fade * 0.4;
+    ctx.fillStyle = `rgba(${MOON[0]},${MOON[1]},${MOON[2]},${a})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size * fade, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Simplex-ish noise (simple implementation)
+const perm = new Uint8Array(512);
+const grad = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]];
+for (let i = 0; i < 256; i++) perm[i] = i;
+for (let i = 255; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [perm[i], perm[j]] = [perm[j], perm[i]];
+}
+for (let i = 0; i < 256; i++) perm[i + 256] = perm[i];
+
+function noise(x, y, z) {
+  // Simple value noise with interpolation
+  const ix = Math.floor(x) & 255;
+  const iy = Math.floor(y) & 255;
+  const iz = Math.floor(z || 0) & 255;
+  const fx = x - Math.floor(x);
+  const fy = y - Math.floor(y);
+  const fz = (z || 0) - Math.floor(z || 0);
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  const sz = fz * fz * (3 - 2 * fz);
+  
+  function hash(a, b, c) {
+    return perm[perm[perm[a & 255] + (b & 255)] + (c & 255)] / 255;
+  }
+  
+  const n000 = hash(ix, iy, iz);
+  const n100 = hash(ix+1, iy, iz);
+  const n010 = hash(ix, iy+1, iz);
+  const n110 = hash(ix+1, iy+1, iz);
+  const n001 = hash(ix, iy, iz+1);
+  const n101 = hash(ix+1, iy, iz+1);
+  const n011 = hash(ix, iy+1, iz+1);
+  const n111 = hash(ix+1, iy+1, iz+1);
+  
+  return n000*(1-sx)*(1-sy)*(1-sz) + n100*sx*(1-sy)*(1-sz) +
+         n010*(1-sx)*sy*(1-sz) + n110*sx*sy*(1-sz) +
+         n001*(1-sx)*(1-sy)*sz + n101*sx*(1-sy)*sz +
+         n011*(1-sx)*sy*sz + n111*sx*sy*sz;
+}
+
+// Init
+for (let i = 0; i < 600; i++) particles.push(new Particle());
+for (let i = 0; i < 15; i++) energyLines.push(new EnergyLine());
+
+// Click handler — trigger the turn
+canvas.addEventListener('click', (e) => {
+  turnMoment = true;
+  turnTimer = 180; // frames
+  turnX = e.clientX;
+  turnY = e.clientY;
+  // Spawn foam at click point
+  for (let i = 0; i < 30; i++) {
+    foamTrails.push(new FoamDot(turnX, turnY));
+  }
+});
+
+// Draw the tension membrane (gold surface)
+function drawMembrane() {
+  const centerY = H * 0.45 + Math.sin(phase) * 20;
+  const tension = turnMoment ? Math.max(0.3, turnTimer / 180) : 1;
+  
+  ctx.beginPath();
+  ctx.moveTo(0, centerY);
+  for (let x = 0; x <= W; x += 5) {
+    const wave1 = Math.sin(x * 0.008 + phase * 2) * 15 * tension;
+    const wave2 = Math.sin(x * 0.015 - phase * 1.3) * 8 * tension;
+    const wave3 = noise(x * 0.005, phase * 0.5, 0) * 30 * tension;
+    const y = centerY + wave1 + wave2 + wave3;
+    ctx.lineTo(x, y);
+  }
+  
+  const a = 0.12 + (turnMoment ? 0.15 * (1 - turnTimer/180) : 0);
+  ctx.strokeStyle = `rgba(${GOLD[0]},${GOLD[1]},${GOLD[2]},${a})`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Second line slightly offset
+  ctx.beginPath();
+  ctx.moveTo(0, centerY + 4);
+  for (let x = 0; x <= W; x += 5) {
+    const wave1 = Math.sin(x * 0.008 + phase * 2 + 0.5) * 12 * tension;
+    const wave2 = Math.sin(x * 0.015 - phase * 1.3 + 0.3) * 6 * tension;
+    const wave3 = noise(x * 0.005, phase * 0.5 + 1, 0) * 25 * tension;
+    const y = centerY + 4 + wave1 + wave2 + wave3;
+    ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = `rgba(${GOLD[0]},${GOLD[1]},${GOLD[2]},${a * 0.6})`;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+// Deep vermillion glow
+function drawDeepGlow() {
+  if (!turnMoment) return;
+  const progress = 1 - turnTimer / 180;
+  const r = Math.max(W, H) * 0.4 * progress;
+  const gradient = ctx.createRadialGradient(turnX, turnY, 0, turnX, turnY, r);
+  gradient.addColorStop(0, `rgba(${VERMILLION[0]},${VERMILLION[1]},${VERMILLION[2]},${0.08 * progress})`);
+  gradient.addColorStop(0.5, `rgba(${VERMILLION[0]},${VERMILLION[1]},${VERMILLION[2]},${0.03 * progress})`);
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// Main loop
+function animate() {
+  // Slow fade instead of clear — creates ink wash effect
+  ctx.fillStyle = 'rgba(10,10,10,0.08)';
+  ctx.fillRect(0, 0, W, H);
+  
+  phase += 0.008;
+  
+  if (turnMoment) {
+    turnTimer--;
+    if (turnTimer <= 0) turnMoment = false;
+  }
+  
+  drawDeepGlow();
+  drawMembrane();
+  
+  for (const line of energyLines) {
+    line.update();
+    line.draw();
+  }
+  
+  for (const p of particles) {
+    p.update();
+    p.draw();
+  }
+  
+  foamTrails = foamTrails.filter(f => f.life > 0);
+  for (const f of foamTrails) {
+    f.update();
+    f.draw();
+  }
+  
+  requestAnimationFrame(animate);
+}
+
+// Initial black fill
+ctx.fillStyle = INK;
+ctx.fillRect(0, 0, W, H);
+
+animate();
+</script>
+</body>
+</html>
