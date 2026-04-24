@@ -10,7 +10,7 @@ const experiments = [
     subtitle: "Afterimage",
     desc: "十幅名画，一条长廊，GLSL shader 动画背景",
     href: "/experiments/afterimage",
-    image: "/canary-blog/arts/afterimage.png",
+    image: "/canary-blog/arts/afterimage.jpg",
     tone: "warm",
   },
   {

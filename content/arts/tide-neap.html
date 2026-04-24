@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小潮 / Neap</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #2d2d3f; overflow: hidden; cursor: crosshair; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+const resize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
+window.addEventListener('resize', resize);
+resize();
+
+// Colors
+const DEEP = [45, 45, 63];
+const SAGE = [123, 138, 110];
+const CLAY = [194, 149, 107];
+const LIME = [212, 207, 199];
+
+let mx = W / 2, my = H / 2;
+let mouseInfluence = 0;
+window.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; mouseInfluence = 1; });
+window.addEventListener('touchmove', e => { mx = e.touches[0].clientX; my = e.touches[0].clientY; mouseInfluence = 1; e.preventDefault(); }, { passive: false });
+
+// Simplex-like noise via layered sin
+function noise(x, y, t) {
+  return Math.sin(x * 1.7 + t * 0.3) * 0.5
+       + Math.sin(y * 2.3 - t * 0.2 + x * 0.8) * 0.3
+       + Math.sin(x * 3.1 + y * 1.9 + t * 0.5) * 0.2;
+}
+
+// Focal point — a warm glow slightly off-center where seabed shows through
+const focalX = 0.55;
+const focalY = 0.6;
+
+// Water surface bands — fewer, more distinct
+const BANDS = 12;
+const bands = [];
+for (let i = 0; i < BANDS; i++) {
+  const t = i / (BANDS - 1);
+  // Non-uniform spacing — denser near surface (0.2~0.4 of screen)
+  const y = 0.15 + t * t * 0.7;
+  const amp = 2 + Math.random() * 4;
+  const freq = 0.003 + Math.random() * 0.004;
+  const speed = 0.2 + Math.random() * 0.4;
+  const phase = Math.random() * Math.PI * 2;
+  
+  // Color: surface=LIME, mid=SAGE, deep=mix towards DEEP
+  let color;
+  if (t < 0.2) color = LIME;
+  else if (t < 0.5) {
+    const lt = (t - 0.2) / 0.3;
+    color = LIME.map((c, j) => c + (SAGE[j] - c) * lt);
+  } else if (t < 0.8) {
+    const lt = (t - 0.5) / 0.3;
+    color = SAGE.map((c, j) => c + (DEEP[j] - c) * lt);
+  } else {
+    color = DEEP;
+  }
+  
+  bands.push({ y, amp, freq, speed, phase, color, alpha: 0.25 + t * 0.15 });
+}
+
+// Seabed forms — organic bumps visible through still water
+const SEABED_PTS = 60;
+const seabed = [];
+for (let i = 0; i <= SEABED_PTS; i++) {
+  const x = i / SEABED_PTS;
+  // Organic undulation
+  const h = 0.78 + Math.sin(x * 8) * 0.03 + Math.sin(x * 13 + 2) * 0.02 + Math.sin(x * 21) * 0.01;
+  seabed.push({ x, h });
+}
+
+// Suspended particles — more visible, warmer
+const PARTICLES = 90;
+const particles = [];
+for (let i = 0; i < PARTICLES; i++) {
+  const x = Math.random();
+  const y = 0.25 + Math.random() * 0.55;
+  // Particles near focal point are more numerous
+  const distToFocal = Math.sqrt((x - focalX) ** 2 + (y - focalY) ** 2);
+  const size = distToFocal < 0.25 ? 1 + Math.random() * 2.5 : 0.5 + Math.random() * 1.5;
+  particles.push({
+    x, y, size,
+    phase: Math.random() * Math.PI * 2,
+    alpha: distToFocal < 0.25 ? 0.2 + Math.random() * 0.3 : 0.08 + Math.random() * 0.15,
+    warm: distToFocal < 0.3 // clay colored near focal
+  });
+}
+
+// Water lines — marks on the "shore" area (top 15%)
+const WATERLINES = 6;
+const waterlines = [];
+for (let i = 0; i < WATERLINES; i++) {
+  waterlines.push({
+    y: 0.1 + i * 0.012,
+    startX: 0.05 + Math.random() * 0.15,
+    endX: 0.75 + Math.random() * 0.2,
+    alpha: 0.08 - i * 0.01
+  });
+}
+
+let time = 0;
+
+function draw() {
+  time += 0.006;
+  mouseInfluence *= 0.96;
+
+  // Background — deep water base
+  ctx.fillStyle = '#1e1e2d';
+  ctx.fillRect(0, 0, W, H);
+
+  // Warm focal glow — seabed visibility
+  const glowX = focalX * W;
+  const glowY = focalY * H;
+  const glowR = Math.min(W, H) * 0.45;
+  const glow = ctx.createRadialGradient(glowX, glowY, 0, glowX, glowY, glowR);
+  glow.addColorStop(0, 'rgba(194, 149, 107, 0.12)');
+  glow.addColorStop(0.4, 'rgba(194, 149, 107, 0.06)');
+  glow.addColorStop(0.7, 'rgba(123, 138, 110, 0.03)');
+  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  // Seabed — subtle topography
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (const p of seabed) {
+    const px = p.x * W;
+    const py = (p.h + Math.sin(time * 0.15 + p.x * 5) * 0.003) * H;
+    ctx.lineTo(px, py);
+  }
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  const seabedGrad = ctx.createLinearGradient(0, H * 0.75, 0, H);
+  seabedGrad.addColorStop(0, 'rgba(194, 149, 107, 0.15)');
+  seabedGrad.addColorStop(0.5, 'rgba(158, 132, 100, 0.1)');
+  seabedGrad.addColorStop(1, 'rgba(45, 45, 63, 0.3)');
+  ctx.fillStyle = seabedGrad;
+  ctx.fill();
+
+  // Seabed texture lines
+  ctx.lineWidth = 0.5;
+  ctx.strokeStyle = 'rgba(194, 149, 107, 0.08)';
+  for (let i = 0; i < 15; i++) {
+    const baseY = (0.8 + i * 0.013) * H;
+    ctx.beginPath();
+    for (let x = 0; x < W; x += 4) {
+      const xn = x / W;
+      const y = baseY + Math.sin(xn * 20 + i * 3 + time * 0.1) * 1.5 + Math.sin(xn * 7 - time * 0.05) * 2;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // Water bands — the horizontal strata
+  for (let bi = bands.length - 1; bi >= 0; bi--) {
+    const b = bands[bi];
+    ctx.beginPath();
+
+    for (let x = 0; x <= W; x += 3) {
+      const xn = x / W;
+      // Organic wave — not pure sine
+      const wave = Math.sin(xn / b.freq + time * b.speed + b.phase) * b.amp
+                 + Math.sin(xn * 5 + time * 0.4 + b.phase * 2) * b.amp * 0.3
+                 + noise(xn * 3, b.y * 2, time) * b.amp * 0.5;
+
+      // Focal area: waves are even calmer
+      const distToFocal = Math.abs(xn - focalX);
+      const focalDamp = 1 - Math.exp(-distToFocal * 4) * 0.5;
+
+      // Mouse ripple
+      const mdx = (x - mx) / W;
+      const mdy = (b.y * H + wave - my) / H;
+      const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
+      const mWave = mouseInfluence * Math.exp(-mDist * 6) * Math.sin(time * 4 - mDist * 30) * 8;
+
+      const py = b.y * H + wave * focalDamp + mWave;
+      if (x === 0) ctx.moveTo(x, py); else ctx.lineTo(x, py);
+    }
+
+    ctx.lineTo(W, H + 10);
+    ctx.lineTo(0, H + 10);
+    ctx.closePath();
+
+    // Near focal point, add warm tint
+    const c = b.color;
+    ctx.fillStyle = `rgba(${Math.round(c[0])}, ${Math.round(c[1])}, ${Math.round(c[2])}, ${b.alpha})`;
+    ctx.fill();
+  }
+
+  // Tremor lines on water surface
+  ctx.lineWidth = 0.6;
+  for (let i = 0; i < 5; i++) {
+    const y = (0.18 + i * 0.025) * H;
+    const alpha = 0.15 - i * 0.025;
+    ctx.strokeStyle = `rgba(212, 207, 199, ${Math.max(alpha, 0.02)})`;
+    ctx.beginPath();
+    for (let x = 0; x < W; x += 2) {
+      const xn = x / W;
+      const tremor = Math.sin(time * (0.8 + i * 0.2) + xn * 50 + i * 7) * (0.8 + i * 0.3);
+      const mDx = (x - mx) / W;
+      const mDy = (y - my) / H;
+      const md = Math.sqrt(mDx * mDx + mDy * mDy);
+      const mEffect = mouseInfluence * Math.exp(-md * 8) * Math.sin(time * 5 - md * 30) * 3;
+
+      if (x === 0) ctx.moveTo(x, y + tremor + mEffect);
+      else ctx.lineTo(x, y + tremor + mEffect);
+    }
+    ctx.stroke();
+  }
+
+  // Waterline marks — faint high-tide ghosts
+  ctx.lineWidth = 0.4;
+  for (const wl of waterlines) {
+    ctx.strokeStyle = `rgba(212, 207, 199, ${Math.max(wl.alpha, 0.01)})`;
+    ctx.beginPath();
+    const sx = wl.startX * W;
+    const ex = wl.endX * W;
+    for (let x = sx; x < ex; x += 3) {
+      const xn = (x - sx) / (ex - sx);
+      // Slight undulation
+      const y = wl.y * H + Math.sin(xn * 15 + time * 0.05) * 0.3;
+      // Fade at ends
+      const edgeFade = Math.min(xn * 5, (1 - xn) * 5, 1);
+      if (x === sx) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // Particles
+  for (const p of particles) {
+    // Extremely gentle drift
+    p.x += Math.sin(time * 0.3 + p.phase) * 0.00004;
+    p.y += Math.cos(time * 0.2 + p.phase * 1.5) * 0.00003;
+
+    // Mouse push
+    const pdx = p.x - mx / W;
+    const pdy = p.y - my / H;
+    const pd = Math.sqrt(pdx * pdx + pdy * pdy);
+    if (pd < 0.12) {
+      p.x += pdx * mouseInfluence * 0.002;
+      p.y += pdy * mouseInfluence * 0.002;
+    }
+
+    if (p.x < 0) p.x = 1; if (p.x > 1) p.x = 0;
+    if (p.y < 0.2) p.y = 0.2; if (p.y > 0.8) p.y = 0.8;
+
+    const px = p.x * W;
+    const py = p.y * H;
+    const c = p.warm ? CLAY : LIME;
+    const flicker = 0.8 + Math.sin(time * 2 + p.phase * 3) * 0.2;
+
+    ctx.fillStyle = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${p.alpha * flicker})`;
+    ctx.beginPath();
+    ctx.arc(px, py, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Subtle vignette — darker at edges, guides eye to focal
+  const vig = ctx.createRadialGradient(glowX, glowY * 0.9, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.75);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(20, 20, 35, 0.4)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>

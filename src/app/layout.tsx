@@ -20,8 +20,13 @@ export default function RootLayout({
   return (
     <html lang="zh">
       <head>
+        {/* 关键字体优先加载（display=block），非关键字体降级（display=optional） */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Instrument+Serif:ital@0;1&family=Noto+Serif+SC:wght@300;400;600&family=Young+Serif&family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=block"
+          rel="stylesheet"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Instrument+Serif:ital@0;1&family=Young+Serif&family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=optional"
           rel="stylesheet"
         />
       </head>
