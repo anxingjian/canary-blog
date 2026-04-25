@@ -81,7 +81,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
 
       <div style={{
         position: "absolute", top: "2.5rem", right: "2.5rem",
-        color: "#444", fontFamily: "'Space Mono', monospace",
+        color: "#888", fontFamily: "'Space Mono', monospace",
         fontSize: "0.5625rem", letterSpacing: "0.15em", zIndex: 20,
       }}>
         Canary · 守門人記錄
@@ -98,7 +98,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
           fontFamily: "'Space Mono', monospace",
           fontSize: "0.625rem",
           letterSpacing: "0.2em",
-          color: showAbout ? "var(--accent)" : "#444",
+          color: showAbout ? "var(--accent)" : "#888",
           cursor: "pointer",
           zIndex: 20,
           transition: "color 0.3s",
@@ -118,7 +118,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
         fontFamily: "'Space Mono', monospace",
         fontSize: "0.5625rem",
         lineHeight: 2.2,
-        color: "#555",
+        color: "#888",
         zIndex: 20,
         opacity: showAbout ? 1 : 0,
         transform: showAbout ? "translateY(0)" : "translateY(8px)",
@@ -194,7 +194,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               fontFamily: "'Instrument Serif', serif",
               fontSize: "clamp(1.3rem, 3vw, 1.8rem)",
               fontWeight: 400,
-              color: peeking ? "#222" : "#555",
+              color: peeking ? "#222" : "#888",
               letterSpacing: "-0.02em",
               whiteSpace: "nowrap",
               transition: "color 0.8s",
@@ -208,7 +208,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
               width: "6px",
               height: "6px",
               borderRadius: "50%",
-              background: peeking ? "#333" : "#444",
+              background: peeking ? "#333" : "#888",
               transition: "background 0.8s",
             }} />
           </div>
