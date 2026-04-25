@@ -54,14 +54,22 @@ function ArtEmbed({ art }: { art: Art }) {
 
 function ListItem({ art, index, total }: { art: Art; index: number; total: number }) {
   const [hovered, setHovered] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const num = String(total - index).padStart(2, "0");
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   return (
     <div
       className="arts-list-item"
       style={{
         display: "grid",
-        gridTemplateColumns: "400px 1fr",
+        gridTemplateColumns: isMobile ? "1fr" : "400px 1fr",
         gap: "3rem",
         padding: index === 0 ? "1rem 0 4rem" : "4rem 0",
         borderBottom: "1px solid var(--border)",
