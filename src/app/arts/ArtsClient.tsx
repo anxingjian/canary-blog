@@ -5,23 +5,42 @@ import Nav from "@/components/Nav";
 import ThemeToggle from "@/components/ThemeToggle";
 import type { Art } from "@/lib/arts";
 
+function LazyIframe({ src, style }: { src: string; style?: React.CSSProperties }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} style={{ width: "100%", height: "100%", ...style }}>
+      {visible ? (
+        <iframe src={src} style={{ width: "100%", height: "100%", border: "none", display: "block" }} loading="lazy" />
+      ) : null}
+    </div>
+  );
+}
+
 function ArtEmbed({ art }: { art: Art }) {
   if (art.image) {
     return (
       <div style={{ aspectRatio: "1/1", background: "var(--bg)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <img src={art.image} alt={art.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <img src={art.image} alt={art.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
       </div>
     );
   }
   if (art.htmlFile) {
-    const isGrowth = art.series?.toLowerCase().includes("growth") || art.series?.includes("生长");
     return (
       <div style={{ aspectRatio: "1/1", background: "#0a0a0a", borderRadius: 6, overflow: "hidden" }}>
-        <iframe
-          src={`/canary-blog/arts/${art.htmlFile}`}
-          style={{ width: "100%", height: "100%", border: "none", display: "block" }}
-          loading="lazy"
-        />
+        <LazyIframe src={`/canary-blog/arts/${art.htmlFile}`} />
       </div>
     );
   }
