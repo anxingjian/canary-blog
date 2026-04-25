@@ -44,7 +44,7 @@ export default function Gate({ onEnter }: { onEnter: (href: string) => void }) {
   const noiseOverlay: React.CSSProperties = {
     position: "absolute",
     inset: 0,
-    backgroundImage: "url('/noise.gif')",
+    backgroundImage: "url('/canary-blog/noise.gif')",
     backgroundSize: "150px",
     backgroundRepeat: "repeat",
     opacity: peeking ? 0 : 0.24,
