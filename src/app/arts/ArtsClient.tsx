@@ -5,7 +5,7 @@ import Nav from "@/components/Nav";
 import ThemeToggle from "@/components/ThemeToggle";
 import type { Art } from "@/lib/arts";
 
-function LazyIframe({ src, style }: { src: string; style?: React.CSSProperties }) {
+function LazyIframe({ src, title, style }: { src: string; title?: string; style?: React.CSSProperties }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -14,7 +14,7 @@ function LazyIframe({ src, style }: { src: string; style?: React.CSSProperties }
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
-      { rootMargin: "200px" }
+      { rootMargin: "100px" }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -23,7 +23,7 @@ function LazyIframe({ src, style }: { src: string; style?: React.CSSProperties }
   return (
     <div ref={ref} style={{ width: "100%", height: "100%", ...style }}>
       {visible ? (
-        <iframe src={src} style={{ width: "100%", height: "100%", border: "none", display: "block" }} loading="lazy" />
+        <iframe src={src} title={title || "Art piece"} style={{ width: "100%", height: "100%", border: "none", display: "block" }} loading="lazy" />
       ) : null}
     </div>
   );
@@ -40,7 +40,7 @@ function ArtEmbed({ art }: { art: Art }) {
   if (art.htmlFile) {
     return (
       <div style={{ aspectRatio: "1/1", background: "#0a0a0a", borderRadius: 6, overflow: "hidden" }}>
-        <LazyIframe src={`/canary-blog/arts/${art.htmlFile}`} />
+        <LazyIframe src={`/canary-blog/arts/${art.htmlFile}`} title={art.title} />
       </div>
     );
   }
@@ -136,9 +136,9 @@ function ViewToggle({ view, onToggle }: { view: "list" | "grid"; onToggle: (v: "
 
   return (
     <div className="view-toggle-row" style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-      <button style={btnStyle(view === "list")} onClick={() => onToggle("list")}>LIST</button>
+      <button style={btnStyle(view === "list")} onClick={() => onToggle("list")} aria-label="切换到列表视图">LIST</button>
       <span style={{ color: "var(--border)", fontSize: "0.5rem" }}>/</span>
-      <button style={btnStyle(view === "grid")} onClick={() => onToggle("grid")}>GRID</button>
+      <button style={btnStyle(view === "grid")} onClick={() => onToggle("grid")} aria-label="切换到网格视图">GRID</button>
     </div>
   );
 }
@@ -186,28 +186,15 @@ function GridCard({ art, index, total, size }: { art: Art; index: number; total:
 }
 
 function GridView({ arts }: { arts: Art[] }) {
-  const gridRef = useRef<HTMLDivElement>(null);
-  const [rowHeight, setRowHeight] = useState(0);
-
-  useEffect(() => {
-    const update = () => {
-      if (!gridRef.current) return;
-      const w = gridRef.current.getBoundingClientRect().width;
-      setRowHeight((w - 3 * 2) / 3);
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
   return (
-    <div ref={gridRef} style={{
+    <div style={{
       display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-      gridAutoRows: rowHeight > 0 ? `${rowHeight}px` : undefined,
       gap: "3px", paddingTop: "1rem",
     }}>
-      {rowHeight > 0 && arts.map((art, i) => (
-        <GridCard key={art.slug} art={art} index={i} total={arts.length} size={rowHeight} />
+      {arts.map((art, i) => (
+        <div key={art.slug} style={{ aspectRatio: "1/1", overflow: "hidden" }}>
+          <GridCard art={art} index={i} total={arts.length} size={0} />
+        </div>
       ))}
     </div>
   );
