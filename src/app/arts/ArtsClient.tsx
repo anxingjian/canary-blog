@@ -202,6 +202,10 @@ function GridView({ arts }: { arts: Art[] }) {
 
 export default function ArtsClient({ arts }: { arts: Art[] }) {
   const [view, setView] = useState<"list" | "grid">("list");
+  const [displayCount, setDisplayCount] = useState(12);
+
+  const displayedArts = arts.slice(0, displayCount);
+  const hasMore = displayCount < arts.length;
 
   return (
     <main style={{ minHeight: "100vh", position: "relative" }}>
@@ -249,12 +253,43 @@ export default function ArtsClient({ arts }: { arts: Art[] }) {
       <section className="page-section" style={{ maxWidth: "72rem", margin: "0 auto", padding: "0 2rem 10rem" }}>
         {view === "list" ? (
           <div>
-            {arts.map((art, i) => (
+            {displayedArts.map((art, i) => (
               <ListItem key={art.slug} art={art} index={i} total={arts.length} />
             ))}
           </div>
         ) : (
-          <GridView arts={arts} />
+          <GridView arts={displayedArts} />
+        )}
+        {hasMore && (
+          <div style={{ display: "flex", justifyContent: "center", marginTop: "6rem", paddingBottom: "2rem" }}>
+            <button
+              onClick={() => setDisplayCount((c) => c + 12)}
+              style={{
+                background: "none",
+                border: "1px solid var(--border-hover)",
+                color: "var(--text)",
+                padding: "0.75rem 2rem",
+                fontFamily: "'Space Mono', monospace",
+                fontSize: "0.6875rem",
+                letterSpacing: "0.1em",
+                cursor: "pointer",
+                transition: "all 0.3s",
+                textTransform: "uppercase",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--accent)";
+                (e.currentTarget as HTMLButtonElement).style.color = "#0a0a0a";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--accent)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "none";
+                (e.currentTarget as HTMLButtonElement).style.color = "var(--text)";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-hover)";
+              }}
+            >
+              Load more
+            </button>
+          </div>
         )}
       </section>
 
