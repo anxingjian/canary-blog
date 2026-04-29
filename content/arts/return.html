@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>归 / Return</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1208; overflow: hidden; cursor: crosshair; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Colors
+const HUMUS = '#1a1208';
+const RUST = '#8b2500';
+const MOSS = '#2e4a1e';
+const BONE = '#e6ddd1';
+
+// Ground layer - accumulates deposits
+const groundHeight = 80;
+const groundY = H - groundHeight;
+
+// Particles
+const particles = [];
+const deposits = [];
+const MAX_DEPOSITS = 2000;
+
+class Particle {
+  constructor(x, y, vx, vy) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx || (Math.random() - 0.5) * 1.5;
+    this.vy = vy || Math.random() * 0.3 + 0.1;
+    this.size = Math.random() * 3 + 1;
+    this.alpha = Math.random() * 0.6 + 0.4;
+    this.life = 1;
+    this.settled = false;
+    this.settleTimer = 0;
+    this.color = BONE;
+    // Brownian motion intensity
+    this.brownian = Math.random() * 0.3;
+    // Terminal velocity varies by size
+    this.terminalVy = 0.2 + this.size * 0.15;
+  }
+
+  update() {
+    if (this.settled) {
+      this.settleTimer++;
+      this.alpha *= 0.98;
+      if (this.settleTimer > 60) this.life = 0;
+      return;
+    }
+
+    // Gravity
+    this.vy += 0.005;
+    if (this.vy > this.terminalVy) this.vy = this.terminalVy;
+
+    // Brownian motion
+    this.vx += (Math.random() - 0.5) * this.brownian;
+    this.vy += (Math.random() - 0.5) * this.brownian * 0.3;
+
+    // Air resistance
+    this.vx *= 0.995;
+
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // Check landing on deposits or ground
+    const landY = this.getLandingY();
+    if (this.y >= landY) {
+      this.y = landY;
+      this.settled = true;
+      this.createDeposit();
+    }
+
+    // Out of bounds
+    if (this.x < -50 || this.x > W + 50 || this.y > H + 50) {
+      this.life = 0;
+    }
+  }
+
+  getLandingY() {
+    // Check against existing deposits
+    let minY = groundY;
+    for (let d of deposits) {
+      if (Math.abs(this.x - d.x) < d.size + this.size) {
+        minY = Math.min(minY, d.y - d.size);
+      }
+    }
+    return minY;
+  }
+
+  createDeposit() {
+    if (deposits.length >= MAX_DEPOSITS) {
+      deposits.shift();
+    }
+    // Transform: dust becomes rust, moss, or soil
+    const fate = Math.random();
+    let color;
+    if (fate < 0.35) color = RUST;
+    else if (fate < 0.65) color = MOSS;
+    else color = HUMUS;
+
+    deposits.push({
+      x: this.x,
+      y: this.y,
+      size: this.size * (0.8 + Math.random() * 0.6),
+      color: color,
+      alpha: 0,
+      targetAlpha: 0.6 + Math.random() * 0.4,
+      age: 0,
+      // Moss grows
+      growing: fate >= 0.35 && fate < 0.65,
+      growRate: 0.01 + Math.random() * 0.02
+    });
+  }
+
+  draw() {
+    ctx.globalAlpha = this.alpha * this.life;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Emit dust cloud at position
+function emitCloud(x, y, count = 40) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 3;
+    const px = x + Math.cos(angle) * Math.random() * 30;
+    const py = y + Math.sin(angle) * Math.random() * 20 - 10;
+    particles.push(new Particle(px, py, Math.cos(angle) * speed * 0.5, Math.sin(angle) * speed * 0.3 + 0.5));
+  }
+}
+
+// Ambient drift - slow particles from top
+function ambientDust() {
+  if (Math.random() < 0.15) {
+    const x = Math.random() * W;
+    const y = -10;
+    particles.push(new Particle(x, y));
+  }
+}
+
+// Draw ground texture
+function drawGround() {
+  // Base ground
+  const grd = ctx.createLinearGradient(0, groundY, 0, H);
+  grd.addColorStop(0, '#2a1e0f');
+  grd.addColorStop(0.3, '#1a1208');
+  grd.addColorStop(1, '#0d0a04');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, groundY, W, groundHeight);
+
+  // Ground texture lines
+  ctx.globalAlpha = 0.15;
+  ctx.strokeStyle = '#3d2b1a';
+  for (let i = 0; i < 20; i++) {
+    ctx.beginPath();
+    const y = groundY + Math.random() * groundHeight;
+    ctx.moveTo(Math.random() * W * 0.3, y);
+    ctx.bezierCurveTo(
+      W * 0.3, y + (Math.random() - 0.5) * 5,
+      W * 0.7, y + (Math.random() - 0.5) * 5,
+      W * 0.7 + Math.random() * W * 0.3, y
+    );
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Draw deposits with transformation effects
+function drawDeposits() {
+  for (let d of deposits) {
+    d.age++;
+    if (d.alpha < d.targetAlpha) {
+      d.alpha += 0.02;
+    }
+
+    // Moss grows over time
+    if (d.growing && d.age > 30) {
+      d.size += d.growRate;
+      if (d.size > 6) d.growRate = 0;
+    }
+
+    ctx.globalAlpha = d.alpha;
+    ctx.fillStyle = d.color;
+    
+    if (d.growing) {
+      // Moss: organic blob shape
+      ctx.beginPath();
+      const segments = 6;
+      for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+        const r = d.size * (0.7 + Math.sin(angle * 3 + d.age * 0.01) * 0.3);
+        const px = d.x + Math.cos(angle) * r;
+        const py = d.y + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // Rust and soil: irregular patches
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Rust spreads tendrils
+      if (d.color === RUST && d.age > 50) {
+        ctx.globalAlpha = d.alpha * 0.4;
+        ctx.beginPath();
+        ctx.arc(d.x + Math.sin(d.age * 0.05) * 2, d.y, d.size * 1.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Subtle vignette
+function drawVignette() {
+  const grd = ctx.createRadialGradient(W/2, H/2, W * 0.2, W/2, H/2, W * 0.7);
+  grd.addColorStop(0, 'rgba(26, 18, 8, 0)');
+  grd.addColorStop(1, 'rgba(10, 7, 2, 0.5)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// Light shaft from top
+function drawLightShaft() {
+  const time = Date.now() * 0.0001;
+  const shaftX = W * 0.4 + Math.sin(time) * W * 0.1;
+  const grd = ctx.createLinearGradient(shaftX - 40, 0, shaftX + 40, 0);
+  grd.addColorStop(0, 'rgba(230, 221, 209, 0)');
+  grd.addColorStop(0.3, 'rgba(230, 221, 209, 0.02)');
+  grd.addColorStop(0.5, 'rgba(230, 221, 209, 0.04)');
+  grd.addColorStop(0.7, 'rgba(230, 221, 209, 0.02)');
+  grd.addColorStop(1, 'rgba(230, 221, 209, 0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(shaftX - 60, 0, 120, groundY);
+}
+
+// Main loop
+function animate() {
+  // Semi-transparent clear for trails
+  ctx.fillStyle = 'rgba(26, 18, 8, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Redraw static elements periodically
+  if (Math.random() < 0.02) {
+    ctx.fillStyle = HUMUS;
+    ctx.fillRect(0, 0, W, H);
+    drawLightShaft();
+    drawGround();
+  }
+
+  drawDeposits();
+  ambientDust();
+
+  // Update and draw particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    particles[i].draw();
+    if (particles[i].life <= 0) {
+      particles.splice(i, 1);
+    }
+  }
+
+  drawVignette();
+  requestAnimationFrame(animate);
+}
+
+// Initial setup
+ctx.fillStyle = HUMUS;
+ctx.fillRect(0, 0, W, H);
+drawGround();
+
+// Start with some ambient particles
+for (let i = 0; i < 50; i++) {
+  particles.push(new Particle(Math.random() * W, Math.random() * groundY * 0.8));
+}
+
+// Pre-seed some deposits
+for (let i = 0; i < 100; i++) {
+  const fate = Math.random();
+  let color;
+  if (fate < 0.35) color = RUST;
+  else if (fate < 0.65) color = MOSS;
+  else color = HUMUS;
+  deposits.push({
+    x: Math.random() * W,
+    y: groundY - Math.random() * 20,
+    size: Math.random() * 3 + 1,
+    color: color,
+    alpha: 0.3 + Math.random() * 0.5,
+    targetAlpha: 0.7,
+    age: 100 + Math.random() * 200,
+    growing: color === MOSS,
+    growRate: 0.005
+  });
+}
+
+animate();
+
+// Click to emit dust cloud
+canvas.addEventListener('click', (e) => {
+  emitCloud(e.clientX, e.clientY, 50);
+});
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  emitCloud(t.clientX, t.clientY, 50);
+});
+</script>
+</body>
+</html>
