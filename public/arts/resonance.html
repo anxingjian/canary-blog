@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>共 / Resonance</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #2C2C2C; overflow: hidden; cursor: crosshair; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+let sources = [{ x: 0.35, y: 0.5, freq: 0.04, phase: 0 }, { x: 0.65, y: 0.5, freq: 0.04, phase: 0 }];
+let time = 0;
+let resonancePoints = [];
+let clickRipples = [];
+
+const WINE = [74, 14, 46];
+const GOLD = [212, 169, 75];
+const GRAPHITE = [44, 44, 44];
+const SMOKE = [245, 230, 211];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+canvas.addEventListener('click', (e) => {
+  const x = e.clientX / W;
+  const y = e.clientY / H;
+  clickRipples.push({ x, y, birth: time, strength: 1 });
+  // Shift source frequencies slightly for evolving pattern
+  sources[0].freq = 0.03 + Math.random() * 0.02;
+  sources[1].freq = 0.03 + Math.random() * 0.02;
+});
+
+function waveAt(px, py, t) {
+  let val = 0;
+  for (const s of sources) {
+    const dx = px - s.x * W;
+    const dy = py - s.y * H;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    val += Math.sin(dist * s.freq - t * 3 + s.phase) * Math.exp(-dist * 0.001);
+  }
+  for (const r of clickRipples) {
+    const age = t - r.birth;
+    const dx = px - r.x * W;
+    const dy = py - r.y * H;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const decay = Math.exp(-age * 0.5) * r.strength;
+    val += Math.sin(dist * 0.05 - age * 4) * decay * Math.exp(-dist * 0.002);
+  }
+  return val;
+}
+
+function lerpColor(a, b, t) {
+  return [
+    a[0] + (b[0] - a[0]) * t,
+    a[1] + (b[1] - a[1]) * t,
+    a[2] + (b[2] - a[2]) * t
+  ];
+}
+
+const STEP = 4;
+let imgData;
+
+function draw() {
+  time += 0.016;
+
+  // Clean old ripples
+  clickRipples = clickRipples.filter(r => (time - r.birth) < 8);
+
+  if (!imgData || imgData.width !== W || imgData.height !== H) {
+    imgData = ctx.createImageData(W, H);
+  }
+  const data = imgData.data;
+
+  for (let y = 0; y < H; y += STEP) {
+    for (let x = 0; x < W; x += STEP) {
+      const val = waveAt(x, y, time);
+      const nVal = (val + 2) / 4; // normalize roughly to 0-1
+
+      let color;
+      if (val > 0.8) {
+        // Constructive interference peaks — gold
+        const t = Math.min((val - 0.8) / 1.2, 1);
+        color = lerpColor(SMOKE, GOLD, t);
+      } else if (val > 0) {
+        // Positive — wine to smoke
+        const t = val / 0.8;
+        color = lerpColor(WINE, SMOKE, t * t);
+      } else if (val > -0.8) {
+        // Negative — graphite to wine
+        const t = (val + 0.8) / 0.8;
+        color = lerpColor(GRAPHITE, WINE, t);
+      } else {
+        // Deep destructive — dark graphite
+        const t = Math.min((-val - 0.8) / 1.2, 1);
+        color = lerpColor(GRAPHITE, [20, 18, 22], t);
+      }
+
+      // Fill STEP x STEP block
+      for (let dy = 0; dy < STEP && y + dy < H; dy++) {
+        for (let dx = 0; dx < STEP && x + dx < W; dx++) {
+          const idx = ((y + dy) * W + (x + dx)) * 4;
+          data[idx] = color[0] | 0;
+          data[idx + 1] = color[1] | 0;
+          data[idx + 2] = color[2] | 0;
+          data[idx + 3] = 255;
+        }
+      }
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+
+  // Draw resonance nodes — bright gold dots where constructive interference is strongest
+  for (let y = 0; y < H; y += 20) {
+    for (let x = 0; x < W; x += 20) {
+      const val = waveAt(x, y, time);
+      if (val > 1.3) {
+        const intensity = Math.min((val - 1.3) / 0.7, 1);
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5 + intensity * 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${GOLD[0]}, ${GOLD[1]}, ${GOLD[2]}, ${0.3 + intensity * 0.7})`;
+        ctx.fill();
+      }
+    }
+  }
+
+  // Draw source markers
+  for (const s of sources) {
+    const pulse = 0.5 + 0.5 * Math.sin(time * 3);
+    ctx.beginPath();
+    ctx.arc(s.x * W, s.y * H, 4 + pulse * 3, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${GOLD[0]}, ${GOLD[1]}, ${GOLD[2]}, ${0.6 + pulse * 0.4})`;
+    ctx.fill();
+  }
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
