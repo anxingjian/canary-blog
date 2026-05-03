@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泛 / Overtone</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a1628; overflow: hidden; cursor: crosshair; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Colors
+const ABYSS = '#0a1628';
+const CERULEAN = '#48cae4';
+const TANGERINE = '#f77f00';
+const GHOST = '#eff6ee';
+
+// Harmonics config
+let baseFreq = 0.008; // spatial frequency
+let baseAmp = 0.3; // as fraction of H
+let time = 0;
+let targetFreq = 0.008;
+
+const harmonics = [
+  { n: 1, color: CERULEAN,  alpha: 0.6,  width: 3.5 },
+  { n: 2, color: CERULEAN,  alpha: 0.45, width: 2.5 },
+  { n: 3, color: TANGERINE, alpha: 0.5,  width: 2.0 },
+  { n: 4, color: TANGERINE, alpha: 0.3,  width: 1.5 },
+  { n: 5, color: GHOST,     alpha: 0.35, width: 1.2 },
+  { n: 6, color: GHOST,     alpha: 0.2,  width: 0.8 },
+  { n: 7, color: GHOST,     alpha: 0.12, width: 0.6 },
+];
+
+// Particles — overtone nodes that glow at harmonic intersections
+const particles = [];
+const MAX_PARTICLES = 80;
+
+function spawnParticle(x, y, harmonic) {
+  if (particles.length >= MAX_PARTICLES) return;
+  const colors = [CERULEAN, TANGERINE, GHOST];
+  particles.push({
+    x, y,
+    vx: (Math.random() - 0.5) * 0.5,
+    vy: -Math.random() * 0.8 - 0.2,
+    life: 1,
+    decay: 0.005 + Math.random() * 0.008,
+    r: 1.5 + Math.random() * 2.5,
+    color: colors[Math.min(Math.floor(harmonic / 3), 2)]
+  });
+}
+
+// Wave function for a single harmonic
+function waveY(x, n, t) {
+  const amp = baseAmp * H / (n * 0.8 + 0.2);
+  const freq = baseFreq * n;
+  const speed = 0.02 * Math.sqrt(n);
+  // Add subtle beating between close harmonics
+  const beat = 1 + 0.1 * Math.sin(t * 0.003 * n);
+  return amp * beat * Math.sin(freq * x + t * speed + n * 0.7);
+}
+
+// Composite wave (sum of all harmonics up to n)
+function compositeY(x, maxN, t) {
+  let sum = 0;
+  for (let i = 1; i <= maxN; i++) {
+    sum += waveY(x, i, t) / (i * 0.6 + 0.4);
+  }
+  return sum;
+}
+
+function drawWave(n, color, alpha, width) {
+  ctx.beginPath();
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = width;
+
+  const centerY = H * 0.5;
+  for (let x = 0; x <= W; x += 2) {
+    const y = centerY + waveY(x, n, time);
+    if (x === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+// Draw the composite envelope — a filled area showing the sum
+function drawEnvelope() {
+  ctx.beginPath();
+  const centerY = H * 0.5;
+
+  // Top edge
+  for (let x = 0; x <= W; x += 2) {
+    const y = centerY + compositeY(x, 7, time);
+    if (x === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+
+  // Bottom edge (mirror)
+  for (let x = W; x >= 0; x -= 2) {
+    const y = centerY - compositeY(x, 7, time) * 0.15;
+    ctx.lineTo(x, y);
+  }
+
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, centerY - H * 0.3, 0, centerY + H * 0.3);
+  grad.addColorStop(0, 'rgba(72, 202, 228, 0.03)');
+  grad.addColorStop(0.5, 'rgba(247, 127, 0, 0.05)');
+  grad.addColorStop(1, 'rgba(72, 202, 228, 0.02)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+// Nodes — points where harmonics cross zero together
+function drawNodes() {
+  const centerY = H * 0.5;
+  for (let x = 0; x < W; x += 8) {
+    // Check if multiple harmonics are near zero simultaneously
+    let nearZeroCount = 0;
+    for (let n = 1; n <= 5; n++) {
+      const y = Math.abs(waveY(x, n, time));
+      if (y < H * 0.01) nearZeroCount++;
+    }
+    if (nearZeroCount >= 2) {
+      const r = nearZeroCount * 1.5;
+      const alpha = nearZeroCount * 0.15;
+      ctx.beginPath();
+      ctx.arc(x, centerY, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(239, 246, 238, ${alpha})`;
+      ctx.fill();
+
+      if (Math.random() < 0.02) {
+        spawnParticle(x, centerY, nearZeroCount);
+      }
+    }
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= p.decay;
+    if (p.life <= 0) {
+      particles.splice(i, 1);
+      continue;
+    }
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life * 0.6;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// Spectral bar — vertical frequency spectrum on the right edge
+function drawSpectrum() {
+  const barW = 4;
+  const barX = W - barW - 16;
+  const barH = H * 0.6;
+  const barY = H * 0.2;
+
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = '#0e1f35';
+  ctx.fillRect(barX - 2, barY, barW + 4, barH);
+  ctx.globalAlpha = 1;
+
+  for (const h of harmonics) {
+    const yPos = barY + barH - (h.n / 8) * barH;
+    const intensity = Math.abs(Math.sin(time * 0.02 * h.n + h.n));
+    ctx.fillStyle = h.color;
+    ctx.globalAlpha = h.alpha * intensity;
+    ctx.fillRect(barX, yPos - 2, barW, 4);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// Draw subtle grid lines suggesting frequency bands
+function drawFreqBands() {
+  ctx.globalAlpha = 0.04;
+  ctx.strokeStyle = CERULEAN;
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i <= 7; i++) {
+    const y = H * 0.5 + (i % 2 === 0 ? 1 : -1) * (i / 7) * H * 0.35;
+    ctx.beginPath();
+    ctx.setLineDash([2, 8]);
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+}
+
+function draw() {
+  // Smooth frequency transition
+  baseFreq += (targetFreq - baseFreq) * 0.02;
+
+  // Clear with slight trail
+  ctx.fillStyle = 'rgba(10, 22, 40, 0.15)';
+  ctx.fillRect(0, 0, W, H);
+
+  drawFreqBands();
+  drawEnvelope();
+
+  // Draw harmonics from highest to lowest (painter's order)
+  for (let i = harmonics.length - 1; i >= 0; i--) {
+    const h = harmonics[i];
+    drawWave(h.n, h.color, h.alpha, h.width);
+  }
+
+  drawNodes();
+  updateParticles();
+  drawSpectrum();
+
+  time += 1;
+  requestAnimationFrame(draw);
+}
+
+// Click to change base frequency
+canvas.addEventListener('click', (e) => {
+  targetFreq = 0.004 + (e.clientX / W) * 0.016;
+  baseAmp = 0.15 + (1 - e.clientY / H) * 0.35;
+
+  // Burst particles at click
+  for (let i = 0; i < 12; i++) {
+    spawnParticle(
+      e.clientX + (Math.random() - 0.5) * 30,
+      e.clientY + (Math.random() - 0.5) * 30,
+      Math.floor(Math.random() * 6)
+    );
+  }
+});
+
+// Touch support
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  targetFreq = 0.004 + (t.clientX / W) * 0.016;
+  baseAmp = 0.15 + (1 - t.clientY / H) * 0.35;
+});
+
+draw();
+</script>
+</body>
+</html>
