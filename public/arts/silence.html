@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>静 / Silence</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #2B2D42; overflow: hidden; cursor: crosshair; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+const SPACE_NAVY = '#2B2D42';
+const SILVER_BLUE = '#8D99AE';
+const FROST = '#EDF2F4';
+const DUST_ROSE = '#C9ADA7';
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Decaying ripples from clicks
+const ripples = [];
+
+class Ripple {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.radius = 0;
+    this.maxRadius = Math.min(W, H) * 0.6;
+    this.life = 1.0;
+    this.speed = 1.5 + Math.random() * 1.5;
+    this.freq = 0.02 + Math.random() * 0.03;
+  }
+  update() {
+    this.radius += this.speed;
+    // Exponential decay — gets very slow but never zero
+    this.life *= 0.996;
+    if (this.life < 0.003) return false;
+    return true;
+  }
+  draw() {
+    const alpha = this.life * 0.4;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(141, 153, 174, ${alpha})`;
+    ctx.lineWidth = Math.max(0.3, this.life * 2);
+    ctx.stroke();
+  }
+}
+
+// Background noise particles (Brownian motion)
+const particles = [];
+const PARTICLE_COUNT = 200;
+
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+  particles.push({
+    x: Math.random() * 2000,
+    y: Math.random() * 2000,
+    vx: 0,
+    vy: 0,
+    size: 0.5 + Math.random() * 1.5,
+    brightness: 0.1 + Math.random() * 0.3,
+  });
+}
+
+// Ghost pulses — random memories of frequencies
+let ghostTimer = 0;
+const ghosts = [];
+
+class Ghost {
+  constructor() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.radius = 0;
+    this.maxRadius = 30 + Math.random() * 80;
+    this.life = 1.0;
+  }
+  update() {
+    this.radius += 0.5;
+    this.life *= 0.98;
+    return this.life > 0.01;
+  }
+  draw() {
+    const alpha = this.life * 0.25;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(201, 173, 167, ${alpha})`;
+    ctx.lineWidth = Math.max(0.2, this.life * 1.5);
+    ctx.stroke();
+  }
+}
+
+// Residual wave — a single sine that's always decaying
+let residualAmp = 0;
+let residualFreq = 0.005;
+let residualPhase = 0;
+let residualTargetAmp = 0;
+
+// Global time
+let t = 0;
+
+function draw() {
+  // Soft fade instead of full clear — creates trails
+  ctx.fillStyle = 'rgba(43, 45, 66, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+
+  t++;
+
+  // Residual wave across the center
+  residualAmp += (residualTargetAmp - residualAmp) * 0.01;
+  residualTargetAmp *= 0.9995;
+  residualPhase += residualFreq;
+
+  if (residualAmp > 0.5) {
+    ctx.beginPath();
+    for (let x = 0; x < W; x += 2) {
+      const y = H / 2 + Math.sin(x * 0.008 + residualPhase) * residualAmp
+        + Math.sin(x * 0.003 + residualPhase * 0.7) * residualAmp * 0.3;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    const waveAlpha = Math.min(0.15, residualAmp / 300);
+    ctx.strokeStyle = `rgba(141, 153, 174, ${waveAlpha})`;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+
+  // Update and draw ripples
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    if (!ripples[i].update()) {
+      ripples.splice(i, 1);
+    } else {
+      ripples[i].draw();
+    }
+  }
+
+  // Brownian particles
+  for (const p of particles) {
+    if (p.x > W) p.x = Math.random() * W;
+    if (p.y > H) p.y = Math.random() * H;
+    // Brownian motion
+    p.vx += (Math.random() - 0.5) * 0.15;
+    p.vy += (Math.random() - 0.5) * 0.15;
+    p.vx *= 0.95;
+    p.vy *= 0.95;
+    p.x += p.vx;
+    p.y += p.vy;
+
+    // Wrap
+    if (p.x < 0) p.x = W;
+    if (p.x > W) p.x = 0;
+    if (p.y < 0) p.y = H;
+    if (p.y > H) p.y = 0;
+
+    // Affected by ripples — pushed gently
+    for (const r of ripples) {
+      const dx = p.x - r.x;
+      const dy = p.y - r.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (Math.abs(dist - r.radius) < 20) {
+        const force = r.life * 0.3;
+        p.vx += (dx / dist) * force;
+        p.vy += (dy / dist) * force;
+      }
+    }
+
+    const alpha = p.brightness * (0.3 + Math.sin(t * 0.01 + p.x * 0.01) * 0.1);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(237, 242, 244, ${alpha})`;
+    ctx.fill();
+  }
+
+  // Ghost pulses
+  ghostTimer++;
+  if (ghostTimer > 180 + Math.random() * 300) {
+    ghostTimer = 0;
+    ghosts.push(new Ghost());
+  }
+
+  for (let i = ghosts.length - 1; i >= 0; i--) {
+    if (!ghosts[i].update()) {
+      ghosts.splice(i, 1);
+    } else {
+      ghosts[i].draw();
+    }
+  }
+
+  requestAnimationFrame(draw);
+}
+
+canvas.addEventListener('click', (e) => {
+  ripples.push(new Ripple(e.clientX, e.clientY));
+  // Also trigger residual wave
+  residualTargetAmp = 40 + Math.random() * 60;
+  residualFreq = 0.003 + Math.random() * 0.008;
+});
+
+// Start with a very faint residual
+residualTargetAmp = 15;
+
+draw();
+</script>
+</body>
+</html>
