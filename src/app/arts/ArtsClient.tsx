@@ -186,6 +186,40 @@ function GridCard({ art, index, total, size }: { art: Art; index: number; total:
 }
 
 function GridView({ arts }: { arts: Art[] }) {
+  const count = arts.length;
+
+  // 少于 6 幅：大卡片居中展示
+  if (count <= 2) {
+    return (
+      <div style={{
+        display: "grid", gridTemplateColumns: count === 1 ? "1fr" : "repeat(2, 1fr)",
+        gap: "3px", paddingTop: "1rem", maxWidth: count === 1 ? "600px" : "900px", margin: "0 auto",
+      }}>
+        {arts.map((art, i) => (
+          <div key={art.slug} style={{ aspectRatio: "1/1", overflow: "hidden" }}>
+            <GridCard art={art} index={i} total={count} size={0} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (count <= 5) {
+    return (
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(2, 1fr)",
+        gap: "3px", paddingTop: "1rem", maxWidth: "960px", margin: "0 auto",
+      }}>
+        {arts.map((art, i) => (
+          <div key={art.slug} style={{ aspectRatio: "1/1", overflow: "hidden" }}>
+            <GridCard art={art} index={i} total={count} size={0} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // 6+ 幅：标准 3 列
   return (
     <div style={{
       display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
@@ -193,7 +227,7 @@ function GridView({ arts }: { arts: Art[] }) {
     }}>
       {arts.map((art, i) => (
         <div key={art.slug} style={{ aspectRatio: "1/1", overflow: "hidden" }}>
-          <GridCard art={art} index={i} total={arts.length} size={0} />
+          <GridCard art={art} index={i} total={count} size={0} />
         </div>
       ))}
     </div>
@@ -252,7 +286,7 @@ export default function ArtsClient({ arts }: { arts: Art[] }) {
 
       <section className="page-section" style={{ maxWidth: "72rem", margin: "0 auto", padding: "0 2rem 10rem" }}>
         {view === "list" ? (
-          <div>
+          <div style={arts.length <= 3 ? { maxWidth: "56rem", margin: "0 auto" } : undefined}>
             {displayedArts.map((art, i) => (
               <ListItem key={art.slug} art={art} index={i} total={arts.length} />
             ))}
