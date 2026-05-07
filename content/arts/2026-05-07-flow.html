@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>流 / Flow</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #120024; }
+canvas { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, time = 0, mouseX = 0.5, mouseY = 0.5;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+canvas.addEventListener('mousemove', e => {
+  mouseX = e.clientX / W;
+  mouseY = e.clientY / H;
+});
+
+// Noise function
+function noise(x, y, t) {
+  return Math.sin(x * 0.8 + t) * Math.cos(y * 0.6 + t * 0.7) * 0.5 +
+         Math.sin(x * 1.5 - t * 0.5) * Math.cos(y * 1.2 + t * 1.1) * 0.3 +
+         Math.sin((x + y) * 0.4 + t * 0.3) * 0.2;
+}
+
+// Flow field particles
+const PARTICLE_COUNT = 800;
+const particles = [];
+
+class Particle {
+  constructor() { this.reset(true); }
+  reset(init) {
+    this.x = Math.random() * W;
+    this.y = init ? Math.random() * H : -10;
+    this.vx = 0;
+    this.vy = 0;
+    this.life = 0.6 + Math.random() * 0.4;
+    this.maxLife = this.life;
+    this.thickness = 1.5 + Math.random() * 4;
+    this.type = Math.random(); // 0-0.6 amber, 0.6-0.85 cyan, 0.85-1 white
+    this.speed = 0.8 + Math.random() * 1.5;
+    this.trail = [];
+    this.maxTrail = 15 + Math.floor(Math.random() * 25);
+  }
+  update() {
+    const nx = this.x / W * 4;
+    const ny = this.y / H * 4;
+    const angle = noise(nx, ny, time * 0.4) * Math.PI * 2;
+    
+    // Gravity + flow field + mouse attraction
+    const dx = mouseX * W - this.x;
+    const dy = mouseY * H - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+    const pull = Math.min(200 / dist, 1.5);
+    
+    this.vx += Math.cos(angle) * 0.4 + (dx / dist) * pull * 0.015;
+    this.vy += Math.sin(angle) * 0.3 + 0.2 + (dy / dist) * pull * 0.015; // downward bias
+    
+    this.vx *= 0.92;
+    this.vy *= 0.92;
+    
+    this.x += this.vx * this.speed;
+    this.y += this.vy * this.speed;
+    
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > this.maxTrail) this.trail.shift();
+    
+    this.life -= 0.003;
+    
+    if (this.life <= 0 || this.x < -50 || this.x > W + 50 || this.y > H + 50) {
+      this.reset(false);
+    }
+  }
+  draw() {
+    if (this.trail.length < 2) return;
+    const lifeRatio = this.life / this.maxLife;
+    
+    let r, g, b;
+    if (this.type < 0.6) { r = 255; g = 179; b = 0; }       // amber
+    else if (this.type < 0.85) { r = 0; g = 229; b = 255; }  // cyan
+    else { r = 255; g = 240; b = 220; }                       // white-hot
+    
+    ctx.beginPath();
+    ctx.moveTo(this.trail[0].x, this.trail[0].y);
+    for (let i = 1; i < this.trail.length; i++) {
+      ctx.lineTo(this.trail[i].x, this.trail[i].y);
+    }
+    ctx.strokeStyle = `rgba(${r},${g},${b},${lifeRatio * 0.7})`;
+    ctx.lineWidth = this.thickness * lifeRatio;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    
+    // Head glow
+    const head = this.trail[this.trail.length - 1];
+    if (lifeRatio > 0.5 && this.thickness > 3) {
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, this.thickness * 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${r},${g},${b},${lifeRatio * 0.2})`;
+      ctx.fill();
+    }
+  }
+}
+
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+  particles.push(new Particle());
+}
+
+// Large molten pools
+class Pool {
+  constructor(x, y, r) {
+    this.x = x; this.y = y; this.radius = r;
+    this.phase = Math.random() * Math.PI * 2;
+  }
+  draw() {
+    const pulse = 1 + 0.15 * Math.sin(time * 1.5 + this.phase);
+    const r = this.radius * pulse;
+    
+    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r);
+    grad.addColorStop(0, 'rgba(255, 179, 0, 0.5)');
+    grad.addColorStop(0.3, 'rgba(255, 120, 0, 0.3)');
+    grad.addColorStop(0.6, 'rgba(106, 13, 173, 0.2)');
+    grad.addColorStop(1, 'rgba(18, 0, 36, 0)');
+    
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y, r * 2, r * 0.7, 0, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+}
+
+const pools = [
+  new Pool(W * 0.2, H * 0.85, 60),
+  new Pool(W * 0.5, H * 0.9, 80),
+  new Pool(W * 0.75, H * 0.82, 50),
+  new Pool(W * 0.35, H * 0.55, 30), // mid accumulation
+  new Pool(W * 0.65, H * 0.6, 35),
+];
+
+// Central convergence glow
+function drawConvergence() {
+  const cx = mouseX * W * 0.3 + W * 0.35;
+  const cy = mouseY * H * 0.3 + H * 0.35;
+  const pulse = 40 + 15 * Math.sin(time * 2);
+  
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, pulse * 3);
+  grad.addColorStop(0, 'rgba(255, 200, 50, 0.08)');
+  grad.addColorStop(0.5, 'rgba(106, 13, 173, 0.04)');
+  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function frame() {
+  time += 0.016;
+  
+  // Semi-transparent clear for motion blur
+  ctx.fillStyle = 'rgba(18, 0, 36, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+  
+  drawConvergence();
+  pools.forEach(p => p.draw());
+  
+  ctx.globalCompositeOperation = 'lighter';
+  particles.forEach(p => {
+    p.update();
+    p.draw();
+  });
+  ctx.globalCompositeOperation = 'source-over';
+  
+  requestAnimationFrame(frame);
+}
+
+// Initial fill
+ctx.fillStyle = '#120024';
+ctx.fillRect(0, 0, W, H);
+frame();
+</script>
+</body>
+</html>
