@@ -156,6 +156,7 @@ export interface Research {
   rating: string;
   type: string;
   content: string;
+  excerpt: string;
 }
 
 const researchDir = path.join(process.cwd(), "content", "research");
@@ -182,6 +183,11 @@ function parseResearch(filename: string): Research | null {
     rating: fm.rating || "",
     type: fm.type || "research",
     content: match[2].trim(),
+    excerpt: (() => {
+      const lines = match[2].trim().split("\n").filter((l: string) => l.trim() && !l.startsWith("#") && !l.startsWith("---") && !l.startsWith("|"));
+      const first = lines[0] || "";
+      return first.replace(/\*\*/g, "").replace(/\*/g, "").slice(0, 120) + (first.length > 120 ? "…" : "");
+    })(),
   };
 }
 

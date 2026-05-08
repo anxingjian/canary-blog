@@ -12,7 +12,23 @@ export default async function ResearchDetailPage({ params }: { params: Promise<{
   const post = getResearch(slug);
   if (!post) notFound();
 
-  const html = post.content
+  // Parse markdown tables into HTML
+  function parseTables(md: string): string {
+    return md.replace(
+      /(^\|.+\|\n)(^\|[-| :]+\|\n)((?:^\|.+\|\n?)+)/gm,
+      (_match, headerRow: string, _sep: string, bodyRows: string) => {
+        const headers = headerRow.trim().split("|").filter(Boolean).map((c: string) => c.trim());
+        const rows = bodyRows.trim().split("\n").map((r: string) =>
+          r.split("|").filter(Boolean).map((c: string) => c.trim())
+        );
+        const ths = headers.map((h: string) => `<th>${h}</th>`).join("");
+        const trs = rows.map((r: string[]) => `<tr>${r.map((c: string) => `<td>${c}</td>`).join("")}</tr>`).join("");
+        return `<div class="table-wrap"><table class="research-table"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>\n`;
+      }
+    );
+  }
+
+  const html = parseTables(post.content)
     .replace(/^### (.+)$/gm, '<h3 class="post-h3">$1</h3>')
     .replace(/^## (.+)$/gm, '<h2 class="post-h2">$1</h2>')
     .replace(/^# (.+)$/gm, '<h1>$1</h1>')

@@ -150,6 +150,20 @@ export default function ResearchPage() {
                 >
                   {item.title}
                 </h2>
+                {item.excerpt && (
+                  <p
+                    style={{
+                      fontSize: "0.8125rem",
+                      fontFamily: "'Space Mono', monospace",
+                      color: "var(--text-dim)",
+                      lineHeight: 1.6,
+                      marginTop: "0.5rem",
+                      opacity: 0.7,
+                    }}
+                  >
+                    {item.excerpt}
+                  </p>
+                )}
               </Link>
             ))}
           </div>

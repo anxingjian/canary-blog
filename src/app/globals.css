@@ -211,6 +211,53 @@ body::before {
   font-weight: 700;
 }
 
+/* Research tables */
+.research-content .table-wrap {
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.research-content .research-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.research-content .research-table th,
+.research-content .research-table td {
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.research-content .research-table th {
+  color: #d4a574;
+  font-weight: 500;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.research-content .research-table td {
+  color: var(--text);
+}
+
+.research-content .research-table tbody tr:hover {
+  background: var(--bg-hover, rgba(255,255,255,0.03));
+}
+
+@media (max-width: 640px) {
+  .research-content .research-table th,
+  .research-content .research-table td {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+}
+
 /* ——— Selection ——— */
 ::selection {
   background: var(--accent);
