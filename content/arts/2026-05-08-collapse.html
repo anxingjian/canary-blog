@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>塌 / Collapse - Canary Generative Art</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #e8e6e1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Monaco', monospace;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100vh;
+            cursor: crosshair;
+        }
+        .info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #3a3a3a;
+            font-size: 12px;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="info">
+        <p>塌 / Collapse</p>
+        <p>熔系列 · 2026-05-08</p>
+        <p>鼠标移动改变塌陷中心</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 响应式 canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // 配色
+        const colors = {
+            bg: '#e8e6e1',
+            deep: '#1a3f52',      // 冷深蓝
+            primary: '#8b7a9e',   // 紫灰
+            accent: '#d9b3c7',    // 淡粉紫
+            shadow: '#3a3a3a'     // 深灰
+        };
+        
+        // 鼠标位置
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
+        
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        
+        // 粒子类（塌陷碎片）
+        class Particle {
+            constructor(x, y, vx, vy, size, color, life) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.size = size;
+                this.color = color;
+                this.life = life;
+                this.maxLife = life;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotVel = (Math.random() - 0.5) * 0.1;
+            }
+            
+            update(gravity, collapseX, collapseY) {
+                // 重力
+                this.vy += gravity;
+                
+                // 吸向塌陷中心（坍塌吸引力）
+                const dx = collapseX - this.x;
+                const dy = collapseY - this.y;
+                const dist = Math.hypot(dx, dy);
+                const maxDist = 300;
+                
+                if (dist < maxDist && dist > 0) {
+                    const force = (maxDist - dist) / maxDist * 0.02;
+                    this.vx += (dx / dist) * force;
+                    this.vy += (dy / dist) * force;
+                }
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                this.rotation += this.rotVel;
+                
+                // 衰减
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+                this.life -= 1;
+            }
+            
+            draw(ctx) {
+                const alpha = this.life / this.maxLife;
+                ctx.save();
+                ctx.globalAlpha = alpha * 0.7;
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                
+                // 碎片形状：不规则多边形
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                const sides = 3 + Math.floor(Math.random() * 3);
+                for (let i = 0; i < sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2;
+                    const r = this.size * (0.8 + Math.random() * 0.4);
+                    const px = Math.cos(angle) * r;
+                    const py = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+        
+        // 塌陷区域类
+        class CollapseZone {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.maxRadius = 0;
+                this.targetRadius = 200;
+                this.density = 0;
+                this.life = 120; // 塌陷持续帧数
+            }
+            
+            update() {
+                this.maxRadius = Math.min(this.maxRadius + 8, this.targetRadius);
+                this.density = Math.min(this.density + 0.02, 1);
+                this.life -= 1;
+            }
+            
+            draw(ctx) {
+                const alpha = this.life / 120;
+                
+                // 外圈辐射线
+                ctx.strokeStyle = colors.deep;
+                ctx.globalAlpha = alpha * 0.3;
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 12; i++) {
+                    const angle = (i / 12) * Math.PI * 2;
+                    const x1 = this.x + Math.cos(angle) * this.maxRadius * 0.3;
+                    const y1 = this.y + Math.sin(angle) * this.maxRadius * 0.3;
+                    const x2 = this.x + Math.cos(angle) * this.maxRadius;
+                    const y2 = this.y + Math.sin(angle) * this.maxRadius;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                }
+                
+                // 涟漪
+                ctx.globalAlpha = alpha * 0.2;
+                ctx.strokeStyle = colors.accent;
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 5; i++) {
+                    const waveRadius = (this.maxRadius * (i / 5)) % this.maxRadius;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, waveRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        let particles = [];
+        let collapseZones = [];
+        let frameCount = 0;
+        
+        // 触发塌陷
+        function triggerCollapse(x, y) {
+            // 创建塌陷区域
+            collapseZones.push(new CollapseZone(x, y));
+            
+            // 生成碎片
+            const particleCount = 40 + Math.floor(Math.random() * 40);
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 4;
+                const vx = Math.cos(angle) * speed;
+                const vy = Math.sin(angle) * speed - 2; // 向上喷射
+                
+                // 随机大小和颜色
+                const size = 4 + Math.random() * 8;
+                const colorChoice = Math.random();
+                let color;
+                if (colorChoice < 0.3) color = colors.deep;
+                else if (colorChoice < 0.6) color = colors.primary;
+                else if (colorChoice < 0.85) color = colors.shadow;
+                else color = colors.accent;
+                
+                const life = 60 + Math.random() * 40;
+                particles.push(new Particle(x, y, vx, vy, size, color, life));
+            }
+        }
+        
+        canvas.addEventListener('click', (e) => {
+            triggerCollapse(e.clientX, e.clientY);
+        });
+        
+        // 自动塌陷
+        setInterval(() => {
+            if (frameCount % 120 === 0) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                triggerCollapse(x, y);
+            }
+        }, 16);
+        
+        // 绘制函数
+        function draw() {
+            // 背景
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制基础结构线（暗示坍塌前的秩序）
+            ctx.strokeStyle = colors.deep;
+            ctx.globalAlpha = 0.08;
+            ctx.lineWidth = 1;
+            const gridSize = 100;
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            ctx.globalAlpha = 1;
+            
+            // 更新和绘制塌陷区域
+            collapseZones = collapseZones.filter(z => z.life > 0);
+            collapseZones.forEach(zone => {
+                zone.update();
+                zone.draw(ctx);
+            });
+            
+            // 更新和绘制粒子
+            const gravity = 0.15;
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(p => {
+                p.update(gravity, mouseX, mouseY);
+                p.draw(ctx);
+            });
+            
+            // 鼠标周围的吸力提示（弱）
+            ctx.globalAlpha = 0.15;
+            ctx.strokeStyle = colors.accent;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(mouseX, mouseY, 100, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            
+            frameCount++;
+            requestAnimationFrame(draw);
+        }
+        
+        // 初始化自动塌陷
+        setTimeout(() => {
+            triggerCollapse(canvas.width * 0.3, canvas.height * 0.4);
+        }, 500);
+        
+        setTimeout(() => {
+            triggerCollapse(canvas.width * 0.7, canvas.height * 0.6);
+        }, 1500);
+        
+        draw();
+    </script>
+</body>
+</html>
