@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>锻 / Forge</title>
+<style>
+* { margin: 0; padding: 0; }
+body { background: #2B2522; overflow: hidden; cursor: crosshair; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+let sparks = [];
+let strikes = [];
+let grainField = [];
+let time = 0;
+let mouseX = 0, mouseY = 0;
+let lastStrike = 0;
+
+// Palette: forged metal
+const COLORS = {
+  bg: '#2B2522',        // warm charcoal
+  brass: '#B8A040',     // heated brass
+  teal: '#2A7B6F',      // oxidized copper patina
+  slag: '#6B2A10',      // dark slag brown
+  white: '#FFF8E1',     // white-hot
+  iron: '#4A4540',      // cooling iron
+  ember: '#D4731A',     // ember glow (distinct from Core's #e87040)
+};
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  initGrainField();
+}
+
+function initGrainField() {
+  grainField = [];
+  const cols = Math.ceil(W / 8);
+  const rows = Math.ceil(H / 8);
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      grainField.push({
+        x: x * 8 + 4,
+        y: y * 8 + 4,
+        angle: Math.random() * Math.PI * 2,
+        strength: 0.3 + Math.random() * 0.7,
+        displaced: 0,
+        dx: 0, dy: 0
+      });
+    }
+  }
+}
+
+class Spark {
+  constructor(x, y, angle, speed, life) {
+    this.x = x;
+    this.y = y;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed - 2;
+    this.life = life;
+    this.maxLife = life;
+    this.size = 1 + Math.random() * 2.5;
+    this.type = Math.random();
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.15; // gravity
+    this.vx *= 0.98;
+    this.life--;
+    return this.life > 0;
+  }
+  draw() {
+    const t = this.life / this.maxLife;
+    let color;
+    if (t > 0.7) color = COLORS.white;
+    else if (t > 0.4) color = COLORS.brass;
+    else color = COLORS.ember;
+    
+    ctx.globalAlpha = t * t;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size * t, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // glow
+    if (t > 0.5) {
+      ctx.globalAlpha = t * 0.3;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+class Strike {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.age = 0;
+    this.maxAge = 120;
+    this.intensity = 1;
+    this.radius = 30 + Math.random() * 20;
+    // Create sparks
+    const count = 30 + Math.floor(Math.random() * 40);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 8;
+      const life = 20 + Math.floor(Math.random() * 60);
+      sparks.push(new Spark(x, y, angle, speed, life));
+    }
+  }
+  update() {
+    this.age++;
+    this.intensity = Math.max(0, 1 - this.age / this.maxAge);
+    return this.age < this.maxAge;
+  }
+  draw() {
+    if (this.intensity <= 0) return;
+    const r = this.radius * (1 + (1 - this.intensity) * 3);
+    
+    // Impact glow
+    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r);
+    grad.addColorStop(0, `rgba(255,248,225,${this.intensity * 0.6})`);
+    grad.addColorStop(0.3, `rgba(184,160,64,${this.intensity * 0.3})`);
+    grad.addColorStop(0.6, `rgba(212,115,26,${this.intensity * 0.15})`);
+    grad.addColorStop(1, 'rgba(43,37,34,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Deformation ring
+    if (this.intensity > 0.3) {
+      ctx.strokeStyle = `rgba(42,123,111,${(this.intensity - 0.3) * 0.5})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawAnvil() {
+  const cx = W / 2;
+  const cy = H * 0.55;
+  const aw = W * 0.45;
+  const ah = H * 0.08;
+  
+  // Anvil surface - the main forging area
+  const grad = ctx.createLinearGradient(cx - aw/2, cy, cx + aw/2, cy);
+  grad.addColorStop(0, '#3A3530');
+  grad.addColorStop(0.3, '#4A4540');
+  grad.addColorStop(0.5, '#555048');
+  grad.addColorStop(0.7, '#4A4540');
+  grad.addColorStop(1, '#3A3530');
+  
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.roundRect(cx - aw/2, cy - ah/2, aw, ah, 4);
+  ctx.fill();
+  
+  // Subtle hammer marks texture on anvil
+  ctx.globalAlpha = 0.15;
+  for (let i = 0; i < 60; i++) {
+    const mx = cx - aw/2 + Math.random() * aw;
+    const my = cy - ah/2 + Math.random() * ah;
+    ctx.fillStyle = Math.random() > 0.5 ? '#5A5550' : '#353030';
+    ctx.beginPath();
+    ctx.ellipse(mx, my, 2 + Math.random() * 4, 1 + Math.random() * 2, Math.random() * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  
+  return { cx, cy, aw, ah };
+}
+
+function drawMetalPiece(anvil) {
+  const { cx, cy } = anvil;
+  const pw = 100 + Math.sin(time * 0.01) * 5;
+  const ph = 30;
+  const heat = 0.6 + Math.sin(time * 0.02) * 0.15;
+  
+  // Outer heat aura (large, soft)
+  const aura = ctx.createRadialGradient(cx, cy, 0, cx, cy, pw * 2.5);
+  aura.addColorStop(0, `rgba(212,115,26,${heat * 0.25})`);
+  aura.addColorStop(0.4, `rgba(184,160,64,${heat * 0.1})`);
+  aura.addColorStop(1, 'rgba(43,37,34,0)');
+  ctx.fillStyle = aura;
+  ctx.fillRect(cx - pw * 2.5, cy - pw * 2.5, pw * 5, pw * 5);
+  
+  // Heated metal piece
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, pw);
+  grad.addColorStop(0, `rgba(255,248,225,${heat})`);
+  grad.addColorStop(0.2, `rgba(255,220,150,${heat * 0.9})`);
+  grad.addColorStop(0.4, `rgba(212,115,26,${heat * 0.8})`);
+  grad.addColorStop(0.7, `rgba(184,160,64,${heat * 0.5})`);
+  grad.addColorStop(1, `rgba(107,42,16,${heat * 0.3})`);
+  
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.roundRect(cx - pw/2, cy - ph/2, pw, ph, 6);
+  ctx.fill();
+  
+  // White-hot center line
+  ctx.globalAlpha = heat * 0.5;
+  ctx.fillStyle = COLORS.white;
+  ctx.beginPath();
+  ctx.roundRect(cx - pw * 0.3, cy - 3, pw * 0.6, 6, 3);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawGrainStructure() {
+  // Metal grain structure - crystalline patterns visible in heated metal
+  const cols = Math.ceil(W / 8);
+  
+  for (let i = 0; i < grainField.length; i++) {
+    const g = grainField[i];
+    
+    // Check displacement from strikes
+    let totalDisp = 0;
+    let dispDx = 0, dispDy = 0;
+    for (const s of strikes) {
+      const dx = g.x - s.x;
+      const dy = g.y - s.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const influence = Math.max(0, 1 - dist / (s.radius * 4)) * s.intensity;
+      if (influence > 0) {
+        totalDisp += influence;
+        dispDx += (dx / (dist + 1)) * influence * 15;
+        dispDy += (dy / (dist + 1)) * influence * 15;
+      }
+    }
+    
+    g.dx = g.dx * 0.95 + dispDx * 0.05;
+    g.dy = g.dy * 0.95 + dispDy * 0.05;
+    g.displaced = g.displaced * 0.97 + totalDisp * 0.03;
+    
+    // Only draw grains near the center (the metal piece area)
+    const cx = W / 2, cy = H * 0.55;
+    const dx = g.x - cx, dy = g.y - cy;
+    const distCenter = Math.sqrt(dx * dx + dy * dy);
+    if (distCenter > 200) continue;
+    
+    const proximity = Math.max(0, 1 - distCenter / 200);
+    const angle = g.angle + Math.sin(time * 0.005 + g.x * 0.01) * 0.3 + g.displaced * 2;
+    const len = 3 * g.strength * (1 + g.displaced * 2);
+    
+    const px = g.x + g.dx;
+    const py = g.y + g.dy;
+    
+    ctx.globalAlpha = proximity * 0.25 * (0.5 + g.displaced);
+    
+    if (g.displaced > 0.1) {
+      ctx.strokeStyle = COLORS.teal;
+    } else {
+      ctx.strokeStyle = COLORS.iron;
+    }
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(px - Math.cos(angle) * len, py - Math.sin(angle) * len);
+    ctx.lineTo(px + Math.cos(angle) * len, py + Math.sin(angle) * len);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHeatDistortion() {
+  // Rising heat waves above the anvil
+  const cx = W / 2;
+  const baseY = H * 0.5;
+  
+  for (let i = 0; i < 8; i++) {
+    const x = cx + Math.sin(time * 0.015 + i * 1.7) * 80;
+    const y = baseY - i * 25 - Math.sin(time * 0.02 + i) * 10;
+    const alpha = 0.03 * (1 - i / 8);
+    
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = COLORS.ember;
+    ctx.lineWidth = 20 + i * 5;
+    ctx.beginPath();
+    ctx.moveTo(x - 40, y);
+    ctx.quadraticCurveTo(x + Math.sin(time * 0.03 + i * 2) * 20, y - 15, x + 40, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawForgeGlow() {
+  // Background forge fire glow from below
+  const grad = ctx.createRadialGradient(W/2, H * 0.85, 0, W/2, H * 0.85, H * 0.5);
+  grad.addColorStop(0, 'rgba(107,42,16,0.3)');
+  grad.addColorStop(0.3, 'rgba(212,115,26,0.12)');
+  grad.addColorStop(0.6, 'rgba(184,160,64,0.04)');
+  grad.addColorStop(1, 'rgba(43,37,34,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, H * 0.4, W, H * 0.6);
+  
+  // Top ambient - cooler
+  const topGrad = ctx.createLinearGradient(0, 0, 0, H * 0.3);
+  topGrad.addColorStop(0, 'rgba(42,123,111,0.04)');
+  topGrad.addColorStop(1, 'rgba(43,37,34,0)');
+  ctx.fillStyle = topGrad;
+  ctx.fillRect(0, 0, W, H * 0.3);
+}
+
+function drawScale() {
+  // Forge scale / oxide flakes around the anvil
+  const cx = W / 2;
+  const cy = H * 0.55;
+  
+  for (let i = 0; i < 25; i++) {
+    const seed = i * 7.13;
+    const angle = seed + time * 0.001;
+    const dist = 60 + (seed * 3.7) % 120;
+    const x = cx + Math.cos(angle) * dist;
+    const y = cy + Math.sin(angle) * dist * 0.4 + 20;
+    const size = 1.5 + (seed * 2.3) % 3;
+    
+    ctx.globalAlpha = 0.2 + Math.sin(time * 0.01 + seed) * 0.1;
+    ctx.fillStyle = i % 3 === 0 ? COLORS.teal : COLORS.slag;
+    ctx.beginPath();
+    ctx.ellipse(x, y, size, size * 0.6, seed, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHammerShadow() {
+  // Subtle hammer presence following mouse
+  const dist = Math.sqrt((mouseX - W/2) ** 2 + (mouseY - H * 0.55) ** 2);
+  if (dist > 300) return;
+  
+  const proximity = 1 - dist / 300;
+  ctx.globalAlpha = proximity * 0.15;
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath();
+  ctx.ellipse(mouseX, mouseY + 5, 20, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function animate() {
+  time++;
+  
+  // Clear
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, W, H);
+  
+  // Layers
+  drawForgeGlow();
+  drawHeatDistortion();
+  const anvil = drawAnvil();
+  drawGrainStructure();
+  drawMetalPiece(anvil);
+  drawScale();
+  drawHammerShadow();
+  
+  // Update strikes
+  strikes = strikes.filter(s => {
+    s.draw();
+    return s.update();
+  });
+  
+  // Update sparks
+  sparks = sparks.filter(s => {
+    s.draw();
+    return s.update();
+  });
+  
+  // Ambient floating embers
+  if (time % 15 === 0) {
+    const ex = W/2 + (Math.random() - 0.5) * W * 0.4;
+    sparks.push(new Spark(ex, H * 0.6, -Math.PI/2 + (Math.random() - 0.5) * 0.5, 0.5 + Math.random(), 80 + Math.floor(Math.random() * 60)));
+  }
+  
+  requestAnimationFrame(animate);
+}
+
+canvas.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
+canvas.addEventListener('click', e => {
+  const now = Date.now();
+  if (now - lastStrike < 100) return;
+  lastStrike = now;
+  strikes.push(new Strike(e.clientX, e.clientY));
+});
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  strikes.push(new Strike(t.clientX, t.clientY));
+}, { passive: false });
+
+window.addEventListener('resize', resize);
+resize();
+animate();
+</script>
+</body>
+</html>
