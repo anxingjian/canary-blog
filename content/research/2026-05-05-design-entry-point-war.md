@@ -1,3 +1,11 @@
+---
+title: "设计起点之争 — Stitch vs Claude Design vs Canva AI"
+date: 2026-05-05
+type: research
+rating: 8.0/10
+slug: design-entry-point-war
+---
+
 # Research #6：设计起点之争
 
 **时间范围：** 2026.04.27–05.03
