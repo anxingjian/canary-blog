@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>纺 / Spin</title>
+<style>
+* { margin: 0; padding: 0; }
+body { background: #0a0a18; overflow: hidden; cursor: crosshair; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, mx, my, fibers = [], time = 0;
+
+const INDIGO = '#1B1464';
+const IVORY = '#F5F0E1';
+const VERMILLION = '#C41E3A';
+const CHARCOAL = '#36454F';
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  mx = W / 2; my = H / 2;
+}
+window.addEventListener('resize', resize);
+resize();
+
+window.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+window.addEventListener('touchmove', e => {
+  e.preventDefault();
+  mx = e.touches[0].clientX; my = e.touches[0].clientY;
+}, { passive: false });
+
+// Fiber class - each fiber is a strand being spun
+class Fiber {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    // Start from random position
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 50 + Math.random() * Math.min(W, H) * 0.45;
+    this.x = W / 2 + Math.cos(angle) * dist;
+    this.y = H / 2 + Math.sin(angle) * dist;
+    this.originX = this.x;
+    this.originY = this.y;
+    this.length = 30 + Math.random() * 120;
+    this.thickness = 0.3 + Math.random() * 1.5;
+    this.speed = 0.002 + Math.random() * 0.006;
+    this.phase = Math.random() * Math.PI * 2;
+    this.twist = 0;
+    this.tension = 0;
+    this.type = Math.random(); // determines color behavior
+    this.segments = [];
+    this.maxSegments = Math.floor(this.length / 2);
+    this.life = 1;
+    this.decay = 0.9985 + Math.random() * 0.001;
+  }
+  update() {
+    const dx = mx - this.x;
+    const dy = my - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const pull = Math.min(0.8, 200 / (dist + 50));
+
+    // Spindle attraction - fibers spiral toward mouse
+    const angleToMouse = Math.atan2(dy, dx);
+    const tangent = angleToMouse + Math.PI / 2;
+
+    // Combine: pull toward + spiral around
+    const spiralStrength = pull * 0.3;
+    const pullStrength = pull * 0.15;
+
+    this.x += Math.cos(angleToMouse) * pullStrength * dist * 0.01;
+    this.y += Math.sin(angleToMouse) * pullStrength * dist * 0.01;
+    this.x += Math.cos(tangent) * spiralStrength * 2;
+    this.y += Math.sin(tangent) * spiralStrength * 2;
+
+    // Add organic drift
+    this.x += Math.sin(time * this.speed + this.phase) * 0.5;
+    this.y += Math.cos(time * this.speed * 1.3 + this.phase) * 0.5;
+
+    this.twist = time * this.speed * 3 + this.phase;
+    this.tension = pull;
+
+    // Record trail
+    this.segments.unshift({ x: this.x, y: this.y, tension: this.tension });
+    if (this.segments.length > this.maxSegments) this.segments.pop();
+
+    this.life *= this.decay;
+    if (this.life < 0.01 || this.x < -50 || this.x > W + 50 || this.y < -50 || this.y > H + 50) {
+      this.reset();
+    }
+  }
+  draw() {
+    if (this.segments.length < 3) return;
+    ctx.beginPath();
+    ctx.moveTo(this.segments[0].x, this.segments[0].y);
+
+    for (let i = 1; i < this.segments.length - 1; i++) {
+      const xc = (this.segments[i].x + this.segments[i + 1].x) / 2;
+      const yc = (this.segments[i].y + this.segments[i + 1].y) / 2;
+      ctx.quadraticCurveTo(this.segments[i].x, this.segments[i].y, xc, yc);
+    }
+
+    // Color based on tension and type
+    let color;
+    const avgTension = this.segments.reduce((s, seg) => s + seg.tension, 0) / this.segments.length;
+
+    if (avgTension > 0.4 && this.type > 0.6) {
+      // High tension fibers glow vermillion
+      const alpha = this.life * (0.4 + avgTension * 0.6);
+      color = `rgba(196, 30, 58, ${alpha})`;
+    } else if (this.type < 0.15) {
+      // Rare charcoal shadow fibers
+      const alpha = this.life * 0.5;
+      color = `rgba(54, 69, 79, ${alpha})`;
+    } else {
+      // Default silk ivory
+      const alpha = this.life * (0.15 + avgTension * 0.4);
+      color = `rgba(245, 240, 225, ${alpha})`;
+    }
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = this.thickness * (0.5 + avgTension * 0.5);
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+}
+
+// Spindle core - visual center where threads converge
+function drawSpindleCore() {
+  const cx = mx, cy = my;
+
+  // Subtle glow
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 60);
+  grad.addColorStop(0, 'rgba(245, 240, 225, 0.08)');
+  grad.addColorStop(0.5, 'rgba(27, 20, 100, 0.04)');
+  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 60, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Spindle point
+  const t = time * 0.02;
+  for (let i = 0; i < 3; i++) {
+    const angle = t + (i * Math.PI * 2 / 3);
+    const r = 8;
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(196, 30, 58, ${0.3 + Math.sin(time * 0.03 + i) * 0.2})`;
+    ctx.fill();
+  }
+}
+
+// Draw background texture - faint radial lines suggesting the act of spinning
+function drawBackground() {
+  const cx = W / 2, cy = H / 2;
+  const numLines = 60;
+  for (let i = 0; i < numLines; i++) {
+    const angle = (i / numLines) * Math.PI * 2 + time * 0.001;
+    const r1 = 100 + Math.sin(time * 0.005 + i * 0.5) * 30;
+    const r2 = Math.min(W, H) * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * r1, cy + Math.sin(angle) * r1);
+    ctx.lineTo(cx + Math.cos(angle) * r2, cy + Math.sin(angle) * r2);
+    ctx.strokeStyle = `rgba(27, 20, 100, ${0.03 + Math.sin(i * 0.3 + time * 0.002) * 0.02})`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+}
+
+// Initialize fibers
+const NUM_FIBERS = 120;
+for (let i = 0; i < NUM_FIBERS; i++) {
+  fibers.push(new Fiber());
+}
+
+function animate() {
+  // Fade trail
+  ctx.fillStyle = 'rgba(10, 10, 24, 0.06)';
+  ctx.fillRect(0, 0, W, H);
+
+  time++;
+
+  if (time % 60 === 0) drawBackground();
+
+  drawSpindleCore();
+
+  for (const fiber of fibers) {
+    fiber.update();
+    fiber.draw();
+  }
+
+  requestAnimationFrame(animate);
+}
+
+// Initial background fill
+ctx.fillStyle = '#0a0a18';
+ctx.fillRect(0, 0, W, H);
+drawBackground();
+
+animate();
+</script>
+</body>
+</html>
