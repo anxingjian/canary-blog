@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>绷 / Taut — Silk #3</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    body { 
+      background: #FFF8F0; 
+      overflow: hidden;
+      font-family: -apple-system, sans-serif;
+    }
+    canvas { display: block; }
+    #info {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      font-size: 11px;
+      color: #1B3A5C;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="info">绷 / Taut<br>Silk #3</div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    let W, H;
+
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Color palette
+    const BG = '#FFF8F0';
+    const PRIMARY = '#1B3A5C';      // 靛青
+    const ACCENT = '#D4AF37';       // 金色
+    const SUBTLE = '#E8E8E8';       // 极浅灰
+
+    // Tension field — grid with tension applied
+    const gridSize = 40;
+    const rows = Math.ceil(H / gridSize) + 2;
+    const cols = Math.ceil(W / gridSize) + 2;
+
+    // Perlin noise-like function for smooth variation
+    function noise2d(x, y) {
+      const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+      return n - Math.floor(n);
+    }
+
+    // Calculate tension at a point (0-1, where 1 = maximum tension)
+    function getTension(x, y) {
+      const cx = W / 2;
+      const cy = H / 2.5;
+      const dist = Math.hypot(x - cx, y - cy);
+      const maxDist = Math.hypot(cx, cy);
+      const distFactor = Math.max(0, 1 - dist / maxDist);
+      
+      const noiseFactor = noise2d(x * 0.01, y * 0.01) * 0.3;
+      return Math.pow(distFactor, 1.5) * 0.7 + noiseFactor * 0.3;
+    }
+
+    // Draw horizontal lines with tension-based modulation
+    function drawHorizontalLines() {
+      ctx.strokeStyle = PRIMARY;
+      
+      for (let row = 0; row < rows; row++) {
+        const y = row * gridSize;
+        const tension = getTension(W / 2, y);
+        const thickness = 1 + tension * 1.5;
+        const alpha = 0.3 + tension * 0.5;
+        
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = thickness;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+    }
+
+    // Draw vertical lines with tension-based modulation
+    function drawVerticalLines() {
+      ctx.strokeStyle = PRIMARY;
+      
+      for (let col = 0; col < cols; col++) {
+        const x = col * gridSize;
+        const tension = getTension(x, H / 2.5);
+        const thickness = 1 + tension * 1.5;
+        const alpha = 0.3 + tension * 0.5;
+        
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = thickness;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+        ctx.stroke();
+      }
+    }
+
+    // Draw tension nodes (high-tension points marked in gold)
+    function drawTensionNodes() {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = ACCENT;
+      
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const x = col * gridSize;
+          const y = row * gridSize;
+          const tension = getTension(x, y);
+          
+          if (tension > 0.4) {
+            const radius = 2 + tension * 4;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+
+    // Draw subtle diagonal strains (optional high-tension zones)
+    function drawDiagonalStrains() {
+      ctx.globalAlpha = 0.15;
+      ctx.strokeStyle = PRIMARY;
+      ctx.lineWidth = 0.5;
+      
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const x1 = col * gridSize;
+          const y1 = row * gridSize;
+          const x2 = (col + 1) * gridSize;
+          const y2 = (row + 1) * gridSize;
+          
+          const tension = getTension((x1 + x2) / 2, (y1 + y2) / 2);
+          if (tension > 0.5) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    // Main render
+    function render() {
+      ctx.fillStyle = BG;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.globalAlpha = 1;
+      drawHorizontalLines();
+      drawVerticalLines();
+      drawDiagonalStrains();
+      drawTensionNodes();
+
+      // Squint test: visual focus is clear—golden nodes concentrate at center-top
+      requestAnimationFrame(render);
+    }
+
+    render();
+  </script>
+</body>
+</html>
