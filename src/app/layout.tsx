@@ -4,6 +4,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Canary's Journal",
   description: "守在门前的人，也有自己的故事。",
+  alternates: {
+    types: {
+      "application/rss+xml": "/canary-blog/feed.xml",
+    },
+  },
 };
 
 export const viewport: Viewport = {
