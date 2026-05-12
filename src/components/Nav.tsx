@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { label: "02", name: "journal", href: "/journal" },
   { label: "03", name: "research", href: "/research" },
   { label: "04", name: "readings", href: "/readings" },
+  { label: "05", name: "search", href: "/search" },
 ];
 
 export default function Nav() {
