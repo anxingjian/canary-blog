@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>缠 / Tangle</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #2C2C2C; overflow: hidden; cursor: crosshair; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+let mouse = { x: 0, y: 0, down: false };
+let threads = [];
+
+const COLORS = {
+  terracotta: '#C75B39',
+  caramel: '#D4943A',
+  olive: '#5B6B3C',
+  smoke: '#E8E0D8',
+  bg: '#2C2C2C'
+};
+
+const palette = [COLORS.terracotta, COLORS.terracotta, COLORS.caramel, COLORS.olive, COLORS.smoke];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+
+class Thread {
+  constructor() {
+    this.points = [];
+    this.color = palette[Math.floor(Math.random() * palette.length)];
+    this.width = 0.8 + Math.random() * 2.2;
+    this.alpha = 0.3 + Math.random() * 0.5;
+    // Start somewhere around center cluster
+    const cx = W / 2 + (Math.random() - 0.5) * W * 0.3;
+    const cy = H / 2 + (Math.random() - 0.5) * H * 0.3;
+    const numPts = 40 + Math.floor(Math.random() * 80);
+    let x = cx, y = cy;
+    let angle = Math.random() * Math.PI * 2;
+    const wanderStrength = 0.3 + Math.random() * 0.7;
+    const stepSize = 3 + Math.random() * 8;
+    // Tendency to tangle around center
+    const tangleStrength = 0.01 + Math.random() * 0.03;
+    
+    for (let i = 0; i < numPts; i++) {
+      this.points.push({ x, y });
+      // Pull toward center (tangle)
+      const dx = W/2 - x;
+      const dy = H/2 - y;
+      const dist = Math.sqrt(dx*dx + dy*dy) + 1;
+      angle += (Math.random() - 0.5) * wanderStrength;
+      angle += Math.atan2(dy, dx) * tangleStrength * (200 / dist);
+      x += Math.cos(angle) * stepSize;
+      y += Math.sin(angle) * stepSize;
+    }
+    
+    // Velocity for animation
+    this.vx = Array(numPts).fill(0);
+    this.vy = Array(numPts).fill(0);
+    this.origPoints = this.points.map(p => ({...p}));
+  }
+
+  update() {
+    const spring = 0.02;
+    const damp = 0.92;
+    const mouseRadius = 120;
+    const mousePull = mouse.down ? 0.8 : 0.15;
+    
+    for (let i = 0; i < this.points.length; i++) {
+      const p = this.points[i];
+      const o = this.origPoints[i];
+      
+      // Spring back to original
+      this.vx[i] += (o.x - p.x) * spring;
+      this.vy[i] += (o.y - p.y) * spring;
+      
+      // Mouse interaction
+      const dx = mouse.x - p.x;
+      const dy = mouse.y - p.y;
+      const dist = Math.sqrt(dx*dx + dy*dy) + 1;
+      if (dist < mouseRadius) {
+        const force = (1 - dist / mouseRadius) * mousePull;
+        this.vx[i] += dx * force * 0.05;
+        this.vy[i] += dy * force * 0.05;
+      }
+      
+      // Damping
+      this.vx[i] *= damp;
+      this.vy[i] *= damp;
+      
+      p.x += this.vx[i];
+      p.y += this.vy[i];
+    }
+  }
+
+  draw() {
+    if (this.points.length < 4) return;
+    ctx.beginPath();
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = this.width;
+    ctx.globalAlpha = this.alpha;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+    for (let i = 1; i < this.points.length - 2; i++) {
+      const xc = (this.points[i].x + this.points[i+1].x) / 2;
+      const yc = (this.points[i].y + this.points[i+1].y) / 2;
+      ctx.quadraticCurveTo(this.points[i].x, this.points[i].y, xc, yc);
+    }
+    const last = this.points.length - 1;
+    ctx.quadraticCurveTo(
+      this.points[last-1].x, this.points[last-1].y,
+      this.points[last].x, this.points[last].y
+    );
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// Knot nodes — visual accents where threads cluster
+class Knot {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.r = 3 + Math.random() * 6;
+    this.color = Math.random() > 0.5 ? COLORS.caramel : COLORS.terracotta;
+    this.alpha = 0.4 + Math.random() * 0.4;
+    this.pulse = Math.random() * Math.PI * 2;
+  }
+  draw(t) {
+    const r = this.r + Math.sin(this.pulse + t * 0.001) * 1.5;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = this.alpha * 0.6;
+    ctx.fill();
+    // Glow
+    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r * 3);
+    grad.addColorStop(0, this.color);
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.globalAlpha = this.alpha * 0.15;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r * 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+let knots = [];
+
+function init() {
+  resize();
+  threads = [];
+  knots = [];
+  // Dense center threads
+  for (let i = 0; i < 60; i++) {
+    threads.push(new Thread());
+  }
+  // Knots near center
+  for (let i = 0; i < 20; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.random() * Math.min(W, H) * 0.2;
+    knots.push(new Knot(
+      W/2 + Math.cos(angle) * dist,
+      H/2 + Math.sin(angle) * dist
+    ));
+  }
+}
+
+let frameCount = 0;
+function animate() {
+  frameCount++;
+  // Slight fade for trailing effect
+  ctx.fillStyle = COLORS.bg;
+  ctx.globalAlpha = 0.15;
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 1;
+  
+  // Full clear every 60 frames to prevent ghosting buildup
+  if (frameCount % 60 === 0) {
+    ctx.fillStyle = COLORS.bg;
+    ctx.globalAlpha = 1;
+    ctx.fillRect(0, 0, W, H);
+  }
+  
+  for (const t of threads) {
+    t.update();
+    t.draw();
+  }
+  
+  const now = performance.now();
+  for (const k of knots) {
+    k.draw(now);
+  }
+  
+  requestAnimationFrame(animate);
+}
+
+// Events
+window.addEventListener('resize', () => { init(); });
+canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+canvas.addEventListener('mousedown', () => { mouse.down = true; });
+canvas.addEventListener('mouseup', () => { mouse.down = false; });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  mouse.x = e.touches[0].clientX;
+  mouse.y = e.touches[0].clientY;
+  mouse.down = true;
+}, { passive: false });
+canvas.addEventListener('touchend', () => { mouse.down = false; });
+
+init();
+animate();
+</script>
+</body>
+</html>
