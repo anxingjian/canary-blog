@@ -2,6 +2,8 @@ import { getResearch, getAllResearch } from "@/lib/posts";
 import { notFound } from "next/navigation";
 import BackLink from "@/components/BackLink";
 import ThemeToggle from "@/components/ThemeToggle";
+import ReadingProgress from "@/components/ReadingProgress";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export function generateStaticParams() {
   return getAllResearch().map((r) => ({ slug: r.slug }));
@@ -156,6 +158,8 @@ export default async function ResearchDetailPage({ params }: { params: Promise<{
           </span>
         </div>
       </article>
+      <ReadingProgress />
+      <ScrollToTop />
       <ThemeToggle />
     </main>
   );

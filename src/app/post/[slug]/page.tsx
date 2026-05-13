@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import BackLink from "@/components/BackLink";
 import ThemeToggle from "@/components/ThemeToggle";
 import PostPasswordGate from "@/components/PostPasswordGate";
+import ReadingProgress from "@/components/ReadingProgress";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export function generateStaticParams() {
   return getAllPosts().map((post) => ({ slug: post.slug }));
@@ -160,6 +162,8 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           </span>
         </div>
       </article>
+    <ReadingProgress />
+    <ScrollToTop />
     <ThemeToggle />
     </main>
     </PostPasswordGate>
