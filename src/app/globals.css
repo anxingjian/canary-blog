@@ -22,9 +22,9 @@
   --text: #3a3a3a;
   --text-dim: #888;
   --text-bright: #1a1a1a;
-  --accent: #2a6e3f;
-  --accent-soft: #3d8a54;
-  --accent-dim: #c5dccb;
+  --accent: #d4a574;  /* 金色，与深色主题保持一致 */
+  --accent-soft: #e8b896;
+  --accent-dim: #ddd9d4;
   --border: #d4d0cb;
   --border-hover: #b8b3ad;
   --shadow: rgba(0, 0, 0, 0.08);
