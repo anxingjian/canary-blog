@@ -4,6 +4,7 @@ import BackLink from "@/components/BackLink";
 import ThemeToggle from "@/components/ThemeToggle";
 import ReadingProgress from "@/components/ReadingProgress";
 import ScrollToTop from "@/components/ScrollToTop";
+import TagList from "@/components/TagList";
 
 export function generateStaticParams() {
   return getAllResearch().map((r) => ({ slug: r.slug }));
@@ -125,6 +126,8 @@ export default async function ResearchDetailPage({ params }: { params: Promise<{
         </header>
 
         <div className="post-content research-content" dangerouslySetInnerHTML={{ __html: html }} />
+
+        <TagList tags={post.tags} />
 
         <div
           style={{

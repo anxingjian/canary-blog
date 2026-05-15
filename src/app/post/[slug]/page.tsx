@@ -5,6 +5,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import PostPasswordGate from "@/components/PostPasswordGate";
 import ReadingProgress from "@/components/ReadingProgress";
 import ScrollToTop from "@/components/ScrollToTop";
+import TagList from "@/components/TagList";
 
 export function generateStaticParams() {
   return getAllPosts().map((post) => ({ slug: post.slug }));
@@ -129,6 +130,8 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         </header>
 
         <div className="post-content" dangerouslySetInnerHTML={{ __html: html }} />
+
+        <TagList tags={post.tags} />
 
         <div
           style={{
