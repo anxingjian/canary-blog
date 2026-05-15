@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veil 纱</title>
+<style>
+* { margin: 0; padding: 0; }
+body { overflow: hidden; background: #F0EBE0; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, mx = 0.5, my = 0.5;
+let veils = [];
+let time = 0;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  initVeils();
+}
+
+function initVeils() {
+  veils = [];
+  const count = 12;
+  for (let i = 0; i < count; i++) {
+    veils.push({
+      y: H * (i / count) + Math.random() * 40 - 20,
+      speed: 0.2 + Math.random() * 0.4,
+      amplitude: 20 + Math.random() * 60,
+      phase: Math.random() * Math.PI * 2,
+      thickness: 30 + Math.random() * 80,
+      opacity: 0.08 + Math.random() * 0.15,
+      color: i % 3 === 0 ? '#4A0E1C' : i % 3 === 1 ? '#5C7A5E' : '#2B2B2B',
+      waveCount: 2 + Math.floor(Math.random() * 3),
+      drift: Math.random() * 0.5 - 0.25
+    });
+  }
+}
+
+function drawVeil(veil, t) {
+  ctx.beginPath();
+  const mouseInfluence = (mx - 0.5) * 80;
+  const mouseY = (my - 0.5) * 30;
+  
+  // Top edge
+  for (let x = -10; x <= W + 10; x += 4) {
+    const nx = x / W;
+    let y = veil.y + mouseY;
+    for (let w = 1; w <= veil.waveCount; w++) {
+      y += Math.sin(nx * w * Math.PI * 2 + t * veil.speed + veil.phase * w) * (veil.amplitude / w);
+    }
+    y += mouseInfluence * Math.sin(nx * Math.PI) * 0.3;
+    y += veil.drift * t * 2;
+    
+    if (x === -10) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  
+  // Bottom edge (close the shape)
+  for (let x = W + 10; x >= -10; x -= 4) {
+    const nx = x / W;
+    let y = veil.y + veil.thickness + mouseY;
+    for (let w = 1; w <= veil.waveCount; w++) {
+      y += Math.sin(nx * w * Math.PI * 2 + t * veil.speed * 0.8 + veil.phase * w + 0.5) * (veil.amplitude / w) * 0.7;
+    }
+    y += mouseInfluence * Math.sin(nx * Math.PI) * 0.2;
+    y += veil.drift * t * 2;
+    
+    ctx.lineTo(x, y);
+  }
+  
+  ctx.closePath();
+  ctx.fillStyle = veil.color;
+  ctx.globalAlpha = veil.opacity;
+  ctx.fill();
+}
+
+function drawGoldenLight(t) {
+  // Light leaking through gaps
+  const grd = ctx.createRadialGradient(
+    W * (0.6 + Math.sin(t * 0.1) * 0.1), 
+    H * (0.3 + Math.cos(t * 0.07) * 0.1),
+    0,
+    W * 0.6, H * 0.3,
+    W * 0.5
+  );
+  grd.addColorStop(0, 'rgba(201, 168, 76, 0.12)');
+  grd.addColorStop(0.3, 'rgba(201, 168, 76, 0.06)');
+  grd.addColorStop(0.7, 'rgba(201, 168, 76, 0.02)');
+  grd.addColorStop(1, 'rgba(201, 168, 76, 0)');
+  
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W, H);
+  
+  // Secondary light source
+  const grd2 = ctx.createRadialGradient(
+    W * (0.3 + Math.cos(t * 0.08) * 0.05),
+    H * (0.7 + Math.sin(t * 0.06) * 0.05),
+    0,
+    W * 0.3, H * 0.7,
+    W * 0.3
+  );
+  grd2.addColorStop(0, 'rgba(201, 168, 76, 0.08)');
+  grd2.addColorStop(0.5, 'rgba(201, 168, 76, 0.03)');
+  grd2.addColorStop(1, 'rgba(201, 168, 76, 0)');
+  
+  ctx.fillStyle = grd2;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawDust(t) {
+  // Floating particles in the light
+  ctx.globalAlpha = 1;
+  for (let i = 0; i < 60; i++) {
+    const seed = i * 137.508;
+    const x = ((seed * 3.1 + t * (0.1 + (i % 5) * 0.05)) % W);
+    const y = ((seed * 2.3 + Math.sin(t * 0.2 + i) * 30) % H);
+    const size = 1 + Math.sin(seed) * 0.8;
+    const alpha = 0.1 + Math.sin(t * 0.5 + i * 0.7) * 0.08;
+    
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(201, 168, 76, ${alpha})`;
+    ctx.fill();
+  }
+}
+
+function draw() {
+  time += 0.016;
+  
+  // Background
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#F0EBE0';
+  ctx.fillRect(0, 0, W, H);
+  
+  // Golden light behind veils
+  drawGoldenLight(time);
+  
+  // Draw veils back to front
+  for (let i = 0; i < veils.length; i++) {
+    drawVeil(veils[i], time);
+  }
+  
+  // Dust particles in foreground
+  drawDust(time);
+  
+  // Vignette
+  ctx.globalAlpha = 1;
+  const vig = ctx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.8);
+  vig.addColorStop(0, 'rgba(43, 43, 43, 0)');
+  vig.addColorStop(1, 'rgba(43, 43, 43, 0.15)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+  
+  requestAnimationFrame(draw);
+}
+
+window.addEventListener('resize', resize);
+window.addEventListener('mousemove', e => {
+  mx = e.clientX / W;
+  my = e.clientY / H;
+});
+window.addEventListener('touchmove', e => {
+  mx = e.touches[0].clientX / W;
+  my = e.touches[0].clientY / H;
+});
+
+resize();
+draw();
+</script>
+</body>
+</html>
