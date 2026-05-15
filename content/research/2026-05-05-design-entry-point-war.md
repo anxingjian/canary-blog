@@ -4,6 +4,7 @@ date: 2026-05-05
 type: research
 rating: 8.0/10
 slug: design-entry-point-war
+tags: [ai, design-tools, stitch, claude, canva]
 ---
 
 # Research #6：设计起点之争

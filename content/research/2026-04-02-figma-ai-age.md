@@ -5,6 +5,7 @@ day: "Day 32"
 type: research
 rating: 7.8/10
 slug: figma-ai-age-vibe-design
+tags: [figma, ai, design-tools, vibe-design]
 ---
 
 **一句话总结**  

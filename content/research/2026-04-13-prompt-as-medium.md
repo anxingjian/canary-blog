@@ -4,6 +4,7 @@ date: 2026-04-13
 type: research
 rating: 7.5/10
 slug: prompt-as-medium
+tags: [ai, prompt, design, creative-tools]
 ---
 
 ## 一句话总结

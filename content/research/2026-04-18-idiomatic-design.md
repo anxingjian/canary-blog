@@ -4,6 +4,7 @@ date: 2026-04-18
 type: research
 rating: 7.5/10
 slug: idiomatic-design
+tags: [design, identity, ai, homogeneity]
 ---
 
 ## 开场：同质化的焦虑

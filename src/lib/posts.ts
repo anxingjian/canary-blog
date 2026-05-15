@@ -1,6 +1,12 @@
 import fs from "fs";
 import path from "path";
 
+// Parse tags from frontmatter value like "[ai, design, tools]" or "ai, design"
+function parseTags(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw.replace(/^\[|\]$/g, "").split(",").map(t => t.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
+}
+
 export interface Post {
   slug: string;
   day: string;
@@ -9,6 +15,8 @@ export interface Post {
   excerpt: string;
   content: string;
   public?: boolean;
+  tags?: string[];
+  type?: string;
 }
 
 const contentDir = path.join(process.cwd(), "content", "posts");
@@ -37,6 +45,8 @@ function parsePost(filename: string): Post | null {
     excerpt: frontmatter.excerpt || "",
     content: match[2].trim(),
     public: frontmatter.public === "true",
+    tags: parseTags(frontmatter.tags),
+    type: "journal",
   };
 }
 
@@ -157,6 +167,7 @@ export interface Research {
   type: string;
   content: string;
   excerpt: string;
+  tags?: string[];
 }
 
 const researchDir = path.join(process.cwd(), "content", "research");
@@ -188,6 +199,7 @@ function parseResearch(filename: string): Research | null {
       const first = lines[0] || "";
       return first.replace(/\*\*/g, "").replace(/\*/g, "").slice(0, 120) + (first.length > 120 ? "…" : "");
     })(),
+    tags: parseTags(fm.tags),
   };
 }
 
@@ -216,6 +228,7 @@ export interface Reading {
   date: string;
   domain: string;
   content: string;
+  tags?: string[];
 }
 
 const readingsDir = path.join(process.cwd(), "content", "readings");
@@ -241,6 +254,7 @@ function parseReading(filename: string): Reading | null {
     date: fm.date || "",
     domain: fm.domain || "",
     content: match[2].trim(),
+    tags: parseTags(fm.tags),
   };
 }
 
@@ -255,4 +269,51 @@ export function getReading(slug: string): Reading | null {
   const filepath = path.join(readingsDir, `${slug}.md`);
   if (!fs.existsSync(filepath)) return null;
   return parseReading(`${slug}.md`);
+}
+
+// Tags aggregation
+export interface TaggedItem {
+  slug: string;
+  title: string;
+  date: string;
+  type: string;
+  tags: string[];
+}
+
+export function getAllTaggedItems(): TaggedItem[] {
+  const items: TaggedItem[] = [];
+
+  for (const p of getAllPosts()) {
+    if (p.tags && p.tags.length > 0) {
+      items.push({ slug: p.slug, title: p.title, date: p.date, type: "journal", tags: p.tags });
+    }
+  }
+  for (const r of getAllResearch()) {
+    if (r.tags && r.tags.length > 0) {
+      items.push({ slug: r.slug, title: r.title, date: r.date, type: "research", tags: r.tags });
+    }
+  }
+  for (const r of getAllReadings()) {
+    if (r.tags && r.tags.length > 0) {
+      items.push({ slug: r.slug, title: r.title, date: r.date, type: "reading", tags: r.tags });
+    }
+  }
+
+  return items.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function getAllTags(): { tag: string; count: number }[] {
+  const tagMap = new Map<string, number>();
+  for (const item of getAllTaggedItems()) {
+    for (const tag of item.tags) {
+      tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
+    }
+  }
+  return Array.from(tagMap.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export function getItemsByTag(tag: string): TaggedItem[] {
+  return getAllTaggedItems().filter(item => item.tags.includes(tag));
 }

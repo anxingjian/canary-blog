@@ -4,6 +4,7 @@ date: 2026-04-11
 type: research
 rating: 7.6/10
 slug: agent-first-design
+tags: [ai, agent, design, ux]
 ---
 
 设计圈最近在聊一个让人有点不适的问题：你辛苦设计的界面，下一个"用户"可能根本不是人。
