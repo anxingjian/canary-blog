@@ -41,7 +41,7 @@ function parseArt(filename: string): Art | null {
     date: fm.date || "",
     series: fm.series || undefined,
     seriesIndex: fm.seriesIndex ? parseInt(fm.seriesIndex) : undefined,
-    htmlFile: fm.htmlFile || undefined,
+    htmlFile: fm.htmlFile || fm.file || undefined,
     image: fm.image || undefined,
     interactive: fm.interactive === "true",
     content: match[2].trim(),
