@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lift 散</title>
+<style>
+* { margin: 0; padding: 0; }
+body { overflow: hidden; background: #FAF3E0; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, mx = 0.5, my = 0.5;
+let time = 0;
+
+const CREAM = '#FAF3E0';
+const ORANGE = '#E07A2F';
+const ESPRESSO = '#2D2926';
+const SKY = '#5BA4CF';
+const GOLD = '#F2C94C';
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+window.addEventListener('mousemove', e => {
+  mx = e.clientX / W;
+  my = e.clientY / H;
+});
+window.addEventListener('touchmove', e => {
+  mx = e.touches[0].clientX / W;
+  my = e.touches[0].clientY / H;
+  e.preventDefault();
+}, { passive: false });
+
+// Fog layers — each is a collection of soft blobs that lift/dissipate
+class FogLayer {
+  constructor(y, speed, alpha, color) {
+    this.baseY = y;
+    this.y = y;
+    this.speed = speed;
+    this.baseAlpha = alpha;
+    this.alpha = alpha;
+    this.color = color;
+    this.offsetX = Math.random() * 1000;
+    this.lifted = 0; // 0 = full fog, 1 = fully lifted
+  }
+}
+
+const layers = [];
+for (let i = 0; i < 12; i++) {
+  const t = i / 11;
+  const y = H * (0.2 + t * 0.65);
+  const speed = 0.3 + Math.random() * 0.5;
+  const alpha = 0.12 + Math.random() * 0.15;
+  const colors = [CREAM, '#E8DCC8', '#D4C9B0'];
+  layers.push(new FogLayer(y, speed, alpha, colors[i % 3]));
+}
+
+// Revealed elements — things that appear as fog lifts
+class RevealedShape {
+  constructor() {
+    this.x = Math.random() * W;
+    this.y = H * (0.3 + Math.random() * 0.5);
+    this.size = 3 + Math.random() * 20;
+    this.type = Math.random(); // determines shape
+    this.color = [ORANGE, SKY, GOLD, ESPRESSO][Math.floor(Math.random() * 4)];
+    this.opacity = 0;
+    this.targetOpacity = 0;
+    this.rotation = Math.random() * Math.PI * 2;
+    this.rotSpeed = (Math.random() - 0.5) * 0.005;
+  }
+}
+
+const shapes = [];
+for (let i = 0; i < 80; i++) {
+  shapes.push(new RevealedShape());
+}
+
+// Light rays from top
+class LightRay {
+  constructor() {
+    this.x = Math.random() * W;
+    this.width = 20 + Math.random() * 60;
+    this.alpha = 0;
+    this.targetAlpha = 0.03 + Math.random() * 0.06;
+    this.drift = (Math.random() - 0.5) * 0.3;
+  }
+}
+
+const rays = [];
+for (let i = 0; i < 8; i++) {
+  rays.push(new LightRay());
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return [r, g, b];
+}
+
+function drawFogBlob(x, y, rx, ry, color, alpha) {
+  const [r, g, b] = hexToRgb(color);
+  const grad = ctx.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry));
+  grad.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
+  grad.addColorStop(0.5, `rgba(${r},${g},${b},${alpha * 0.5})`);
+  grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function draw() {
+  time += 0.008;
+  
+  // Mouse proximity creates "clearing" — fog lifts where cursor goes
+  const clearX = mx * W;
+  const clearY = my * H;
+  const clearRadius = 200;
+  
+  // Global lift progresses slowly
+  const globalLift = Math.min(time * 0.02, 0.4);
+  
+  // Background — gradually shifts from foggy cream to clearer
+  const bgShift = globalLift * 0.3;
+  ctx.fillStyle = `rgb(${250 - bgShift * 20}, ${243 - bgShift * 10}, ${224 - bgShift * 5})`;
+  ctx.fillRect(0, 0, W, H);
+  
+  // Draw light rays (appear as fog lifts)
+  rays.forEach(ray => {
+    ray.x += ray.drift;
+    if (ray.x < -100) ray.x = W + 100;
+    if (ray.x > W + 100) ray.x = -100;
+    
+    ray.alpha += (ray.targetAlpha * globalLift * 2.5 - ray.alpha) * 0.01;
+    
+    const [r, g, b] = hexToRgb(GOLD);
+    const grad = ctx.createLinearGradient(ray.x, 0, ray.x, H);
+    grad.addColorStop(0, `rgba(${r},${g},${b},${ray.alpha})`);
+    grad.addColorStop(0.4, `rgba(${r},${g},${b},${ray.alpha * 0.5})`);
+    grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(ray.x - ray.width / 2, 0);
+    ctx.lineTo(ray.x + ray.width / 2, 0);
+    ctx.lineTo(ray.x + ray.width, H);
+    ctx.lineTo(ray.x - ray.width * 0.5, H);
+    ctx.closePath();
+    ctx.fill();
+  });
+  
+  // Draw revealed shapes (appear through fog)
+  shapes.forEach(shape => {
+    // Distance from mouse
+    const dx = shape.x - clearX;
+    const dy = shape.y - clearY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    // Closer to mouse or more time passed = more revealed
+    const mouseFactor = Math.max(0, 1 - dist / clearRadius);
+    shape.targetOpacity = Math.min(1, globalLift * 1.5 + mouseFactor * 0.7);
+    shape.opacity += (shape.targetOpacity - shape.opacity) * 0.03;
+    
+    if (shape.opacity < 0.01) return;
+    
+    shape.rotation += shape.rotSpeed;
+    
+    ctx.save();
+    ctx.translate(shape.x, shape.y);
+    ctx.rotate(shape.rotation);
+    ctx.globalAlpha = shape.opacity;
+    
+    const [r, g, b] = hexToRgb(shape.color);
+    
+    if (shape.type < 0.3) {
+      // Circle
+      ctx.beginPath();
+      ctx.arc(0, 0, shape.size, 0, Math.PI * 2);
+      ctx.fillStyle = shape.color;
+      ctx.fill();
+    } else if (shape.type < 0.5) {
+      // Ring
+      ctx.beginPath();
+      ctx.arc(0, 0, shape.size, 0, Math.PI * 2);
+      ctx.strokeStyle = shape.color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    } else if (shape.type < 0.7) {
+      // Line segment
+      const len = shape.size * 2;
+      ctx.beginPath();
+      ctx.moveTo(-len / 2, 0);
+      ctx.lineTo(len / 2, 0);
+      ctx.strokeStyle = shape.color;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    } else if (shape.type < 0.85) {
+      // Small triangle
+      const s = shape.size;
+      ctx.beginPath();
+      ctx.moveTo(0, -s);
+      ctx.lineTo(s * 0.866, s * 0.5);
+      ctx.lineTo(-s * 0.866, s * 0.5);
+      ctx.closePath();
+      ctx.strokeStyle = shape.color;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else {
+      // Dot cluster
+      for (let j = 0; j < 4; j++) {
+        const ox = (Math.random() - 0.5) * shape.size * 2;
+        const oy = (Math.random() - 0.5) * shape.size * 2;
+        ctx.beginPath();
+        ctx.arc(ox, oy, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = shape.color;
+        ctx.fill();
+      }
+    }
+    
+    ctx.restore();
+  });
+  
+  // Draw fog layers on top
+  layers.forEach((layer, i) => {
+    const dx = layer.baseY / H * W * 0.5 - clearX;
+    const dy = layer.baseY - clearY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const mouseLift = Math.max(0, 1 - dist / (clearRadius * 1.5));
+    
+    // Each layer lifts differently
+    const layerLift = globalLift + mouseLift * 0.5;
+    layer.alpha = layer.baseAlpha * Math.max(0, 1 - layerLift * 1.8);
+    layer.y = layer.baseY - layerLift * 80 * (1 + i * 0.1);
+    
+    if (layer.alpha < 0.005) return;
+    
+    // Draw multiple blobs per layer
+    const blobCount = 5;
+    for (let b = 0; b < blobCount; b++) {
+      const bx = W * (b / blobCount) + Math.sin(time * layer.speed + layer.offsetX + b * 2) * 150;
+      const by = layer.y + Math.cos(time * layer.speed * 0.7 + b * 3) * 30;
+      const rx = W * 0.25 + Math.sin(time * 0.3 + b) * 50;
+      const ry = 60 + Math.sin(time * 0.5 + b * 1.5) * 20;
+      drawFogBlob(bx, by, rx, ry, layer.color, layer.alpha);
+    }
+  });
+  
+  // Subtle golden glow at top (sky clearing)
+  const skyAlpha = globalLift * 0.15;
+  if (skyAlpha > 0.001) {
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.4);
+    const [r, g, b] = hexToRgb(GOLD);
+    skyGrad.addColorStop(0, `rgba(${r},${g},${b},${skyAlpha})`);
+    skyGrad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, H * 0.4);
+  }
+  
+  // Horizon line hint
+  const horizonAlpha = Math.min(globalLift * 0.8, 0.3);
+  if (horizonAlpha > 0.01) {
+    const hy = H * 0.62;
+    ctx.strokeStyle = `rgba(45,41,38,${horizonAlpha * 0.2})`;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (let x = 0; x < W; x += 3) {
+      const y = hy + Math.sin(x * 0.005 + time) * 3;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
