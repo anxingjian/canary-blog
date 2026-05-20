@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grain 粒 — Salt Series</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #FAFEFF; overflow: hidden; cursor: crosshair; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+const crystals = [];
+const INDIGO = '#1A237E';
+const CYAN = '#4DD0E1';
+const SLATE = '#37474F';
+const ACID = '#CDDC39';
+const CRYSTAL_WHITE = '#FAFEFF';
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+class Crystal {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.size = 0;
+    this.maxSize = 20 + Math.random() * 60;
+    this.growth = 0.3 + Math.random() * 0.5;
+    this.angle = (Math.floor(Math.random() * 4) * Math.PI / 2) + (Math.random() - 0.5) * 0.05;
+    this.facets = Math.random() > 0.7 ? 6 : 4;
+    this.impurity = Math.random() > 0.8;
+    this.opacity = 0;
+    this.born = Date.now();
+    this.depth = Math.random();
+  }
+
+  grow() {
+    if (this.size < this.maxSize) {
+      this.size += this.growth;
+      this.opacity = Math.min(1, this.opacity + 0.02);
+    }
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    ctx.globalAlpha = this.opacity;
+
+    const s = this.size;
+    const half = s / 2;
+
+    // Main crystal body — isometric cube illusion
+    // Top face
+    ctx.beginPath();
+    ctx.moveTo(0, -half);
+    ctx.lineTo(half * 0.8, -half * 0.4);
+    ctx.lineTo(0, half * 0.2);
+    ctx.lineTo(-half * 0.8, -half * 0.4);
+    ctx.closePath();
+    ctx.fillStyle = CRYSTAL_WHITE;
+    ctx.fill();
+    ctx.strokeStyle = CYAN;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    // Right face
+    ctx.beginPath();
+    ctx.moveTo(0, half * 0.2);
+    ctx.lineTo(half * 0.8, -half * 0.4);
+    ctx.lineTo(half * 0.8, half * 0.4);
+    ctx.lineTo(0, half);
+    ctx.closePath();
+    ctx.fillStyle = this.depth > 0.5 ? SLATE : '#546E7A';
+    ctx.globalAlpha = this.opacity * 0.6;
+    ctx.fill();
+    ctx.strokeStyle = INDIGO;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    // Left face
+    ctx.globalAlpha = this.opacity * 0.4;
+    ctx.beginPath();
+    ctx.moveTo(0, half * 0.2);
+    ctx.lineTo(-half * 0.8, -half * 0.4);
+    ctx.lineTo(-half * 0.8, half * 0.4);
+    ctx.lineTo(0, half);
+    ctx.closePath();
+    ctx.fillStyle = INDIGO;
+    ctx.fill();
+    ctx.strokeStyle = INDIGO;
+    ctx.lineWidth = 0.3;
+    ctx.stroke();
+
+    // Impurity streak
+    if (this.impurity && this.size > this.maxSize * 0.5) {
+      ctx.globalAlpha = this.opacity * 0.7;
+      ctx.beginPath();
+      ctx.moveTo(-half * 0.3, -half * 0.1);
+      ctx.lineTo(half * 0.2, half * 0.3);
+      ctx.lineWidth = 1.5 + Math.random() * 0.5;
+      ctx.strokeStyle = ACID;
+      ctx.stroke();
+    }
+
+    // Refraction highlight
+    if (this.size > this.maxSize * 0.3) {
+      ctx.globalAlpha = this.opacity * 0.3;
+      ctx.beginPath();
+      ctx.arc(-half * 0.2, -half * 0.2, s * 0.08, 0, Math.PI * 2);
+      ctx.fillStyle = CYAN;
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+}
+
+// Seed crystals
+for (let i = 0; i < 25; i++) {
+  crystals.push(new Crystal(
+    Math.random() * W,
+    Math.random() * H
+  ));
+}
+
+// Shadow crevices between crystals
+function drawCrevices() {
+  ctx.globalAlpha = 0.15;
+  ctx.strokeStyle = INDIGO;
+  ctx.lineWidth = 1;
+  for (let i = 0; i < crystals.length; i++) {
+    for (let j = i + 1; j < crystals.length; j++) {
+      const a = crystals[i], b = crystals[j];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      if (dist < (a.size + b.size) * 1.2 && dist > 0) {
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Growth rings — concentric squares
+function drawGrowthRings(crystal) {
+  if (crystal.size < 30) return;
+  ctx.save();
+  ctx.translate(crystal.x, crystal.y);
+  ctx.rotate(crystal.angle);
+  ctx.globalAlpha = crystal.opacity * 0.1;
+  ctx.strokeStyle = SLATE;
+  ctx.lineWidth = 0.3;
+  const rings = Math.floor(crystal.size / 12);
+  for (let r = 1; r <= rings; r++) {
+    const rs = r * 12 * 0.4;
+    ctx.strokeRect(-rs, -rs, rs * 2, rs * 2);
+  }
+  ctx.restore();
+}
+
+canvas.addEventListener('click', (e) => {
+  const count = 1 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < count; i++) {
+    crystals.push(new Crystal(
+      e.clientX + (Math.random() - 0.5) * 40,
+      e.clientY + (Math.random() - 0.5) * 40
+    ));
+  }
+});
+
+function animate() {
+  ctx.fillStyle = '#FAFEFF';
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle grid pattern — crystal lattice hint
+  ctx.globalAlpha = 0.03;
+  ctx.strokeStyle = INDIGO;
+  ctx.lineWidth = 0.5;
+  const gridSize = 40;
+  for (let x = 0; x < W; x += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  for (let y = 0; y < H; y += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  drawCrevices();
+
+  // Sort by depth for pseudo-3D
+  crystals.sort((a, b) => a.depth - b.depth);
+
+  for (const c of crystals) {
+    c.grow();
+    drawGrowthRings(c);
+    c.draw();
+  }
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body>
+</html>
