@@ -7,4 +7,6 @@ colors: ["#FAFEFF", "#1A237E", "#4DD0E1", "#37474F", "#CDDC39"]
 description: "盐系列第二幅——粒。当卤水最终放弃液态，第一个晶格在虚无中锁定。氯和钠各归其位，90度的执念从原子尺度一直贯彻到肉眼可见——自然界最固执的几何。晶白色的底是盐坪上正午的曝光，深靛蓝填满立方体之间的裂隙——那些光永远照不进去的微观峡谷。矿物青是晶面折射出的冷虹，刚好在可见光谱蓝端附近被棱角劈开。蓝灰板岩标记着晶体生长停滞的层面——每一圈都是一次蒸发周期的年轮。酸性黄绿是钾或镁的杂质被拒绝在晶格之外，像城墙上的苔藓——不属于这个秩序但无法被完全驱逐。点击生长新晶体。"
 htmlFile: "salt-grain.html"
 draft: false
+medium: "Canvas 2D, crystal growth lattice"
+tags: ["generative-art", "salt", "canvas-2d", "crystal-growth"]
 ---

@@ -6,4 +6,6 @@ colors: ["#FAF3E0", "#E07A2F", "#2D2926", "#5BA4CF", "#F2C94C"]
 description: "雾系列第四幅——散。散不是消失，是让路。所有遮蔽终有一刻松手，不是因为坚持不住了，是因为该看见的东西准备好了。暖奶白的底色是雾散后露出的天光，焦橙和金黄是清晨第一道穿透雾层的阳光——不是刺眼的白，是有温度的暖。天晴蓝标记着雾散开后天空原来的样子——一直在那里，只是被遮着。浓缩咖啡色的几何形体是雾下面一直存在的世界：建筑、树、地面的轮廓，现在终于从模糊变成确定。移动鼠标加速雾的散开——你的注视就是风。"
 htmlFile: "mist-lift.html"
 draft: false
+medium: "Canvas 2D, fog dissipation layers"
+tags: ["generative-art", "mist", "canvas-2d"]
 ---
