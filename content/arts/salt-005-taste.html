@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>咸 / Taste</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #F4F1DE; overflow: hidden; cursor: none; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+let mouse = { x: -200, y: -200 };
+let crystals = [];
+let dissolveParticles = [];
+let time = 0;
+
+const CORAL = '#E07A5F';
+const SLATE = '#3D405B';
+const ORANGE = '#F2802E';
+const IVORY = '#F4F1DE';
+const GRAPHITE = '#2B2D42';
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  initCrystals();
+}
+
+function initCrystals() {
+  crystals = [];
+  // Dense cluster in center-bottom area (visual weight)
+  const cx = W * 0.5;
+  const cy = H * 0.55;
+  for (let i = 0; i < 120; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.random() * Math.min(W, H) * 0.35;
+    // bias toward center
+    const r = radius * Math.pow(Math.random(), 0.6);
+    const x = cx + Math.cos(angle) * r;
+    const y = cy + Math.sin(angle) * r * 0.7; // slightly flatter
+    crystals.push(new Crystal(x, y, true));
+  }
+  // Scattered ones at top for falling effect
+  for (let i = 0; i < 15; i++) {
+    crystals.push(new Crystal(Math.random() * W, Math.random() * H * 0.3, false));
+  }
+}
+
+class Crystal {
+  constructor(x, y, settled) {
+    this.x = x;
+    this.y = y;
+    this.settled = settled;
+    this.size = settled ? Math.random() * 12 + 6 : Math.random() * 8 + 3;
+    this.baseSize = this.size;
+    this.rotation = Math.random() * Math.PI;
+    this.rotSpeed = (Math.random() - 0.5) * 0.008;
+    this.vy = settled ? 0 : Math.random() * 0.4 + 0.15;
+    this.vx = settled ? 0 : (Math.random() - 0.5) * 0.2;
+    this.opacity = 1;
+    this.dissolving = false;
+    this.dissolveProgress = 0;
+    this.facets = Math.floor(Math.random() * 3) + 4;
+    this.color = Math.random() > 0.4 ? SLATE : GRAPHITE;
+    this.shimmer = Math.random() * Math.PI * 2;
+    // facet vertices (fixed per crystal for consistency)
+    this.vertices = [];
+    for (let i = 0; i < this.facets; i++) {
+      const a = (i / this.facets) * Math.PI * 2;
+      const irregularity = 0.85 + Math.random() * 0.3;
+      this.vertices.push({ angle: a, r: irregularity });
+    }
+  }
+
+  update() {
+    this.shimmer += 0.03;
+
+    if (this.dissolving) {
+      this.dissolveProgress += 0.015;
+      this.opacity = 1 - this.dissolveProgress;
+      this.size = this.baseSize * (1 - this.dissolveProgress * 0.8);
+      this.rotation += this.rotSpeed * 3;
+
+      // emit flavor particles
+      if (Math.random() < 0.4) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 3 + 1;
+        dissolveParticles.push({
+          x: this.x, y: this.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1,
+          color: Math.random() > 0.4 ? CORAL : ORANGE,
+          size: Math.random() * 4 + 2
+        });
+      }
+
+      if (this.dissolveProgress >= 1) return false;
+    } else if (!this.settled) {
+      this.y += this.vy;
+      this.x += this.vx;
+      this.vy += 0.008;
+      this.rotation += this.rotSpeed;
+      if (this.y > H + 30) return false;
+    } else {
+      this.rotation += this.rotSpeed * 0.3;
+    }
+
+    // tongue proximity check
+    if (!this.dissolving) {
+      const dx = this.x - mouse.x;
+      const dy = this.y - mouse.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 70) {
+        this.dissolving = true;
+      }
+    }
+
+    return true;
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
+    ctx.globalAlpha = this.opacity;
+
+    // main crystal body
+    ctx.beginPath();
+    for (let i = 0; i < this.vertices.length; i++) {
+      const v = this.vertices[i];
+      const px = Math.cos(v.angle) * this.size * v.r;
+      const py = Math.sin(v.angle) * this.size * v.r;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = this.color;
+    ctx.fill();
+
+    // edge highlight
+    ctx.strokeStyle = 'rgba(244, 241, 222, 0.3)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    // shimmer facet
+    const shimmerOpacity = (Math.sin(this.shimmer) * 0.5 + 0.5) * 0.35;
+    ctx.beginPath();
+    const sv = this.vertices[0];
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(sv.angle) * this.size * sv.r, Math.sin(sv.angle) * this.size * sv.r);
+    const sv2 = this.vertices[1];
+    ctx.lineTo(Math.cos(sv2.angle) * this.size * sv2.r, Math.sin(sv2.angle) * this.size * sv2.r);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(244, 241, 222, ${shimmerOpacity})`;
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+function drawBackground() {
+  // warm ivory with subtle bottom gradient
+  const grad = ctx.createRadialGradient(W/2, H*0.55, 0, W/2, H*0.55, Math.max(W,H)*0.7);
+  grad.addColorStop(0, '#F4F1DE');
+  grad.addColorStop(1, '#EDE4C8');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawTongue() {
+  if (mouse.x < -100) return;
+
+  // moisture halo
+  const grad = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 70);
+  grad.addColorStop(0, 'rgba(224, 122, 95, 0.12)');
+  grad.addColorStop(0.5, 'rgba(224, 122, 95, 0.05)');
+  grad.addColorStop(1, 'rgba(224, 122, 95, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(mouse.x - 70, mouse.y - 70, 140, 140);
+
+  // core
+  ctx.beginPath();
+  ctx.arc(mouse.x, mouse.y, 12, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(224, 122, 95, 0.3)';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(mouse.x, mouse.y, 4, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(224, 122, 95, 0.6)';
+  ctx.fill();
+}
+
+function drawDissolveParticles() {
+  dissolveParticles = dissolveParticles.filter(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+    p.life -= 0.018;
+    if (p.life <= 0) return false;
+
+    ctx.globalAlpha = p.life * 0.8;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.fill();
+    return true;
+  });
+  ctx.globalAlpha = 1;
+}
+
+// Salinity wave at bottom - shows accumulated taste
+let salinity = 0;
+function drawSalinityWave() {
+  salinity = salinity * 0.98 + dissolveParticles.length * 0.01;
+  if (salinity < 0.5) return;
+
+  const intensity = Math.min(salinity / 20, 1);
+  ctx.globalAlpha = intensity * 0.4;
+
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 4) {
+    const wave = Math.sin(x * 0.01 + time * 0.02) * 3 * intensity +
+                 Math.sin(x * 0.023 + time * 0.015) * 2 * intensity;
+    ctx.lineTo(x, H - 20 - wave);
+  }
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fillStyle = CORAL;
+  ctx.fill();
+
+  // label
+  if (intensity > 0.3) {
+    ctx.globalAlpha = intensity * 0.5;
+    ctx.font = '13px serif';
+    ctx.fillStyle = SLATE;
+    ctx.textAlign = 'center';
+    ctx.fillText('咸', W / 2, H - 8);
+  }
+  ctx.globalAlpha = 1;
+}
+
+canvas.addEventListener('mousemove', e => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+});
+
+canvas.addEventListener('click', () => {
+  for (let i = 0; i < 8; i++) {
+    const c = new Crystal(
+      mouse.x + (Math.random() - 0.5) * 80,
+      mouse.y + (Math.random() - 0.5) * 80,
+      false
+    );
+    c.settled = true;
+    crystals.push(c);
+  }
+});
+
+resize();
+window.addEventListener('resize', resize);
+
+function animate() {
+  time++;
+  drawBackground();
+
+  // spawn falling crystals slowly
+  if (time % 40 === 0 && crystals.length < 160) {
+    crystals.push(new Crystal(Math.random() * W, -15, false));
+  }
+
+  crystals = crystals.filter(c => {
+    const alive = c.update();
+    if (alive) c.draw();
+    return alive;
+  });
+
+  drawDissolveParticles();
+  drawTongue();
+  drawSalinityWave();
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body>
+</html>
