@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>坪 / Flats</title>
+<style>
+* { margin: 0; padding: 0; }
+body { overflow: hidden; background: #0D0D0D; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+let mouseX = 0.5, mouseY = 0.5;
+let footprints = [];
+let time = 0;
+
+const SALT = '#F2E9DC';
+const VOID = '#0D0D0D';
+const BLOOD = '#8B0000';
+const GOLD = '#DAA520';
+const PLUM = '#4A0E4E';
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+canvas.addEventListener('mousemove', e => {
+  mouseX = e.clientX / W;
+  mouseY = e.clientY / H;
+});
+
+canvas.addEventListener('click', e => {
+  footprints.push({
+    x: e.clientX / W,
+    y: e.clientY / H,
+    age: 0,
+    size: 0.3 + Math.random() * 0.4
+  });
+  if (footprints.length > 20) footprints.shift();
+});
+
+// Perspective grid parameters
+const HORIZON = 0.38; // horizon line ratio
+const VANISH_X = 0.5;
+
+function heatDistortion(x, y, t) {
+  // Heat mirage: horizontal displacement near horizon
+  const distFromHorizon = Math.abs(y - HORIZON * H);
+  const intensity = Math.max(0, 1 - distFromHorizon / (H * 0.15));
+  const wave = Math.sin(x * 0.02 + t * 2) * Math.cos(y * 0.015 + t * 1.3);
+  return wave * intensity * 8 * (1 + mouseX * 3);
+}
+
+function drawSky() {
+  const horizonY = H * HORIZON;
+  // Gradient from plum to void
+  const grad = ctx.createLinearGradient(0, 0, 0, horizonY);
+  grad.addColorStop(0, VOID);
+  grad.addColorStop(0.4, PLUM);
+  grad.addColorStop(0.85, '#2A0A1E');
+  grad.addColorStop(1, BLOOD);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, horizonY + 2);
+}
+
+function drawSaltFlat() {
+  const horizonY = H * HORIZON;
+  // Salt surface gradient
+  const grad = ctx.createLinearGradient(0, horizonY, 0, H);
+  grad.addColorStop(0, '#B8AFA3');
+  grad.addColorStop(0.1, SALT);
+  grad.addColorStop(0.7, '#E8DFD2');
+  grad.addColorStop(1, '#D4C9BA');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, horizonY, W, H - horizonY);
+}
+
+function drawGridLines() {
+  const horizonY = H * HORIZON;
+  const vanishX = W * VANISH_X;
+  
+  ctx.lineWidth = 0.5;
+  
+  // Horizontal lines (receding)
+  for (let i = 1; i <= 40; i++) {
+    const t = i / 40;
+    const perspective = Math.pow(t, 2.5); // non-linear for depth
+    const y = horizonY + perspective * (H - horizonY);
+    
+    const alpha = Math.min(0.4, t * 0.5);
+    ctx.strokeStyle = `rgba(218, 165, 32, ${alpha})`;
+    
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += 3) {
+      const distort = heatDistortion(x, y, time);
+      const dy = y + distort * (1 - t);
+      if (x === 0) ctx.moveTo(x, dy);
+      else ctx.lineTo(x, dy);
+    }
+    ctx.stroke();
+  }
+  
+  // Vertical converging lines
+  const numLines = 30;
+  for (let i = -numLines; i <= numLines; i++) {
+    const baseX = vanishX + i * (W / numLines) * 2;
+    const alpha = Math.max(0.05, 0.25 - Math.abs(i) * 0.01);
+    ctx.strokeStyle = `rgba(218, 165, 32, ${alpha})`;
+    
+    ctx.beginPath();
+    ctx.moveTo(vanishX, horizonY);
+    
+    const endX = baseX + heatDistortion(baseX, H, time) * 0.5;
+    ctx.lineTo(endX, H);
+    ctx.stroke();
+  }
+}
+
+function drawMineralVeins() {
+  const horizonY = H * HORIZON;
+  const seed = 42;
+  
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = `rgba(218, 165, 32, 0.3)`;
+  
+  for (let v = 0; v < 12; v++) {
+    const startX = (Math.sin(v * 7.3 + seed) * 0.5 + 0.5) * W;
+    const startY = horizonY + (Math.cos(v * 3.1 + seed) * 0.3 + 0.5) * (H - horizonY);
+    
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    
+    let x = startX, y = startY;
+    for (let s = 0; s < 30; s++) {
+      const angle = Math.sin(s * 0.5 + v * 2.1 + time * 0.3) * Math.PI * 0.3;
+      x += Math.cos(angle) * 8;
+      y += Math.sin(angle) * 3;
+      const distort = heatDistortion(x, y, time) * 0.3;
+      ctx.lineTo(x + distort, y);
+    }
+    ctx.stroke();
+  }
+}
+
+function drawHorizonHeatLine() {
+  const horizonY = H * HORIZON;
+  
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  
+  for (let x = 0; x <= W; x += 2) {
+    const wave = Math.sin(x * 0.01 + time * 3) * 3 + 
+                 Math.sin(x * 0.023 + time * 1.7) * 2;
+    const y = horizonY + wave;
+    if (x === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  
+  const grad = ctx.createLinearGradient(0, horizonY - 5, 0, horizonY + 5);
+  grad.addColorStop(0, 'rgba(139, 0, 0, 0)');
+  grad.addColorStop(0.5, 'rgba(139, 0, 0, 0.8)');
+  grad.addColorStop(1, 'rgba(139, 0, 0, 0)');
+  ctx.strokeStyle = grad;
+  ctx.stroke();
+  
+  // Glow
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = 'rgba(139, 0, 0, 0.15)';
+  ctx.stroke();
+}
+
+function drawFootprints() {
+  const horizonY = H * HORIZON;
+  
+  footprints.forEach(fp => {
+    fp.age += 0.005;
+    const alpha = Math.max(0, 1 - fp.age);
+    const x = fp.x * W;
+    const y = fp.y * H;
+    
+    if (y < horizonY) return;
+    
+    // Depth-based size
+    const depth = (y - horizonY) / (H - horizonY);
+    const size = fp.size * depth * 20;
+    
+    ctx.save();
+    ctx.translate(x + heatDistortion(x, y, time) * 0.5, y);
+    
+    // Foot impression
+    ctx.fillStyle = `rgba(13, 13, 13, ${alpha * 0.3})`;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, size * 0.6, size, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Salt crust crack around footprint
+    ctx.strokeStyle = `rgba(139, 0, 0, ${alpha * 0.4})`;
+    ctx.lineWidth = 0.8;
+    for (let r = 0; r < 6; r++) {
+      const angle = r * Math.PI / 3 + fp.size;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(angle) * size * 0.8, Math.sin(angle) * size * 1.2);
+      ctx.lineTo(Math.cos(angle) * size * 1.8, Math.sin(angle) * size * 2.2);
+      ctx.stroke();
+    }
+    
+    ctx.restore();
+  });
+  
+  // Remove fully faded
+  while (footprints.length > 0 && footprints[0].age > 1) footprints.shift();
+}
+
+function drawMirageShimmer() {
+  const horizonY = H * HORIZON;
+  const shimmerY = horizonY + H * 0.02;
+  
+  // Mirage reflection (inverted, faint)
+  ctx.save();
+  ctx.globalAlpha = 0.08 + mouseY * 0.05;
+  ctx.translate(0, shimmerY * 2);
+  ctx.scale(1, -1);
+  
+  // Fake reflection of blood-red sky
+  const grad = ctx.createLinearGradient(0, horizonY - 30, 0, horizonY);
+  grad.addColorStop(0, 'transparent');
+  grad.addColorStop(1, BLOOD);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, horizonY - 30, W, 30);
+  ctx.restore();
+}
+
+function drawVanishingPoint() {
+  const horizonY = H * HORIZON;
+  const vanishX = W * VANISH_X;
+  
+  // Subtle glow at vanishing point
+  const grad = ctx.createRadialGradient(vanishX, horizonY, 0, vanishX, horizonY, 30);
+  grad.addColorStop(0, 'rgba(242, 233, 220, 0.3)');
+  grad.addColorStop(0.5, 'rgba(139, 0, 0, 0.1)');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.fillRect(vanishX - 30, horizonY - 30, 60, 60);
+}
+
+function drawCrackPattern() {
+  const horizonY = H * HORIZON;
+  ctx.strokeStyle = 'rgba(74, 14, 78, 0.12)';
+  ctx.lineWidth = 0.5;
+  
+  // Irregular polygonal cracks on salt surface
+  for (let i = 0; i < 60; i++) {
+    const cx = (Math.sin(i * 5.7) * 0.5 + 0.5) * W;
+    const baseY = horizonY + (Math.cos(i * 3.2) * 0.4 + 0.5) * (H - horizonY);
+    const cy = baseY;
+    
+    // Depth fade
+    const depth = (cy - horizonY) / (H - horizonY);
+    if (depth < 0.05) continue;
+    
+    ctx.globalAlpha = depth * 0.5;
+    ctx.beginPath();
+    const sides = 4 + Math.floor(Math.sin(i * 2.3) * 2 + 2);
+    const radius = depth * 30 + 5;
+    
+    for (let s = 0; s <= sides; s++) {
+      const angle = (s / sides) * Math.PI * 2;
+      const r = radius * (0.7 + Math.sin(s * 3.1 + i) * 0.3);
+      const px = cx + Math.cos(angle) * r + heatDistortion(cx, cy, time) * 0.2;
+      const py = cy + Math.sin(angle) * r * 0.5;
+      if (s === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function draw() {
+  time += 0.008;
+  
+  ctx.clearRect(0, 0, W, H);
+  
+  drawSky();
+  drawSaltFlat();
+  drawCrackPattern();
+  drawGridLines();
+  drawMineralVeins();
+  drawMirageShimmer();
+  drawHorizonHeatLine();
+  drawVanishingPoint();
+  drawFootprints();
+  
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
