@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stem 干 — 脉 / Vein</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0A1628; overflow: hidden; cursor: crosshair; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+const MIDNIGHT = '#0A1628';
+const TEAL = [0, 191, 165];
+const PAPER = [245, 240, 232];
+const SIENNA = [194, 112, 62];
+const GRAPHITE = [58, 58, 58];
+
+// Space colonization parameters
+const ATTRACT_DIST = 120;
+const KILL_DIST = 8;
+const SEGMENT_LEN = 4;
+const MAX_NODES = 8000;
+
+let attractors = [];
+let nodes = [];
+let growing = true;
+let mouseAttractors = [];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+
+function seedAttractors(count) {
+  const pts = [];
+  for (let i = 0; i < count; i++) {
+    // Distribute in upper 80% with some density variation
+    const angle = Math.random() * Math.PI * 2;
+    const r = Math.random();
+    const x = W * 0.5 + Math.cos(angle) * r * W * 0.4;
+    const y = H * 0.1 + Math.random() * H * 0.7;
+    if (x > 10 && x < W - 10 && y > 10 && y < H - 10) {
+      pts.push({ x, y, alive: true });
+    }
+  }
+  return pts;
+}
+
+function init() {
+  resize();
+  attractors = seedAttractors(600);
+  mouseAttractors = [];
+  nodes = [];
+  // Seed from bottom center
+  const startX = W / 2;
+  const startY = H - 40;
+  nodes.push({
+    x: startX,
+    y: startY,
+    parent: -1,
+    depth: 0,
+    growDir: { x: 0, y: -1 },
+    growCount: 0,
+    isGrowing: true,
+    age: 0
+  });
+  growing = true;
+  // Clear canvas
+  ctx.fillStyle = MIDNIGHT;
+  ctx.fillRect(0, 0, W, H);
+  drawAttractors();
+}
+
+function drawAttractors() {
+  // Draw attractors as faint paper-colored dots
+  for (const a of attractors) {
+    if (!a.alive) continue;
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${PAPER[0]},${PAPER[1]},${PAPER[2]},0.25)`;
+    ctx.fill();
+  }
+  for (const a of mouseAttractors) {
+    if (!a.alive) continue;
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${PAPER[0]},${PAPER[1]},${PAPER[2]},0.35)`;
+    ctx.fill();
+  }
+}
+
+function growStep() {
+  if (!growing) return;
+
+  const allAttractors = [...attractors, ...mouseAttractors].filter(a => a.alive);
+  if (allAttractors.length === 0 || nodes.length >= MAX_NODES) {
+    growing = false;
+    return;
+  }
+
+  // Reset grow directions
+  for (const n of nodes) {
+    n.growDir = { x: 0, y: 0 };
+    n.growCount = 0;
+    n.isGrowing = false;
+  }
+
+  // For each attractor, find closest node
+  for (const a of allAttractors) {
+    let closestIdx = -1;
+    let closestDist = Infinity;
+    for (let i = 0; i < nodes.length; i++) {
+      const dx = a.x - nodes[i].x;
+      const dy = a.y - nodes[i].y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < closestDist) {
+        closestDist = d;
+        closestIdx = i;
+      }
+    }
+    if (closestIdx >= 0 && closestDist < ATTRACT_DIST) {
+      if (closestDist < KILL_DIST) {
+        a.alive = false;
+      } else {
+        const n = nodes[closestIdx];
+        const dx = a.x - n.x;
+        const dy = a.y - n.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        n.growDir.x += dx / d;
+        n.growDir.y += dy / d;
+        n.growCount++;
+        n.isGrowing = true;
+      }
+    }
+  }
+
+  // Grow new nodes
+  let added = 0;
+  for (let i = 0; i < nodes.length && nodes.length < MAX_NODES; i++) {
+    const n = nodes[i];
+    if (n.growCount > 0) {
+      const len = Math.sqrt(n.growDir.x * n.growDir.x + n.growDir.y * n.growDir.y);
+      if (len > 0) {
+        const nx = n.x + (n.growDir.x / len) * SEGMENT_LEN;
+        const ny = n.y + (n.growDir.y / len) * SEGMENT_LEN;
+        nodes.push({
+          x: nx,
+          y: ny,
+          parent: i,
+          depth: n.depth + 1,
+          growDir: { x: 0, y: 0 },
+          growCount: 0,
+          isGrowing: true,
+          age: 0
+        });
+        added++;
+      }
+    }
+  }
+  if (added === 0) growing = false;
+}
+
+function render() {
+  // Fade background slightly for glow effect
+  ctx.fillStyle = 'rgba(10, 22, 40, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw all segments
+  for (let i = 1; i < nodes.length; i++) {
+    const n = nodes[i];
+    const p = nodes[n.parent];
+    n.age++;
+
+    // Thickness based on how many descendants (approximated by reverse depth)
+    const maxDepth = 80;
+    const normalizedDepth = Math.min(n.depth / maxDepth, 1);
+    const thickness = Math.max(0.5, (1 - normalizedDepth) * 5);
+
+    // Color: growing tips are sienna, established branches are teal, old ones fade to graphite
+    let r, g, b, alpha;
+    if (n.age < 15) {
+      // Growing tip — sienna
+      const t = n.age / 15;
+      r = SIENNA[0] * (1 - t) + TEAL[0] * t;
+      g = SIENNA[1] * (1 - t) + TEAL[1] * t;
+      b = SIENNA[2] * (1 - t) + TEAL[2] * t;
+      alpha = 0.95;
+    } else if (normalizedDepth > 0.7) {
+      // Fine branches — graphite with lower opacity
+      r = GRAPHITE[0];
+      g = GRAPHITE[1];
+      b = GRAPHITE[2];
+      alpha = 0.4 + (1 - normalizedDepth) * 0.6;
+    } else {
+      // Main branches — teal
+      const brightness = 1 - normalizedDepth * 0.3;
+      r = TEAL[0] * brightness;
+      g = TEAL[1] * brightness;
+      b = TEAL[2] * brightness;
+      alpha = 0.7 + (1 - normalizedDepth) * 0.3;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(n.x, n.y);
+    ctx.strokeStyle = `rgba(${r|0},${g|0},${b|0},${alpha})`;
+    ctx.lineWidth = thickness;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Glow on growing tips
+    if (n.age < 10) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 3 + (10 - n.age) * 0.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${SIENNA[0]},${SIENNA[1]},${SIENNA[2]},${0.3 * (1 - n.age/10)})`;
+      ctx.fill();
+    }
+  }
+
+  // Draw remaining attractors
+  for (const a of [...attractors, ...mouseAttractors]) {
+    if (!a.alive) continue;
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 1.2, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${PAPER[0]},${PAPER[1]},${PAPER[2]},0.15)`;
+    ctx.fill();
+  }
+}
+
+let frame = 0;
+function loop() {
+  // Grow multiple steps per frame for speed
+  for (let i = 0; i < 3; i++) growStep();
+  render();
+  frame++;
+  requestAnimationFrame(loop);
+}
+
+// Mouse: add attractors
+canvas.addEventListener('mousemove', (e) => {
+  // Sprinkle attractors around cursor
+  for (let i = 0; i < 3; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = Math.random() * 30;
+    mouseAttractors.push({
+      x: e.clientX + Math.cos(angle) * r,
+      y: e.clientY + Math.sin(angle) * r,
+      alive: true
+    });
+  }
+  if (!growing) growing = true;
+});
+
+// Click: restart
+canvas.addEventListener('click', () => {
+  init();
+});
+
+window.addEventListener('resize', () => {
+  init();
+});
+
+init();
+loop();
+</script>
+</body>
+</html>
