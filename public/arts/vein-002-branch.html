@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>枝 / Branch — 脉 #2</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #F0EDE5; overflow: hidden; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', () => { resize(); init(); });
+
+// Palette: parchment bg, deep indigo, arterial red, steel blue, charcoal
+const COLORS = {
+  bg: '#F0EDE5',
+  trunk: '#1A1A2E',
+  arterial: '#E63946',
+  steel: '#457B9D',
+  charcoal: '#2D2D2D'
+};
+
+// Branch structure using Murray's law
+// Parent radius^3 = sum of daughter radii^3
+class Branch {
+  constructor(x, y, angle, radius, depth, maxDepth) {
+    this.x = x;
+    this.y = y;
+    this.angle = angle;
+    this.radius = radius;
+    this.depth = depth;
+    this.maxDepth = maxDepth;
+    this.length = radius * (12 + Math.random() * 8);
+    this.endX = x + Math.cos(angle) * this.length;
+    this.endY = y + Math.sin(angle) * this.length;
+    this.children = [];
+    this.progress = 0;
+    this.growing = true;
+    this.growSpeed = 0.008 + Math.random() * 0.006;
+    this.curve = (Math.random() - 0.5) * 0.3;
+    this.split = false;
+  }
+
+  grow() {
+    if (!this.growing) {
+      this.children.forEach(c => c.grow());
+      return;
+    }
+    this.progress += this.growSpeed;
+    if (this.progress >= 1) {
+      this.progress = 1;
+      this.growing = false;
+      if (this.depth < this.maxDepth) {
+        this.branch();
+      }
+    }
+  }
+
+  branch() {
+    if (this.split) return;
+    this.split = true;
+    // Murray's law: r_parent^3 = r1^3 + r2^3
+    // Asymmetric split
+    const ratio = 0.55 + Math.random() * 0.2;
+    const r1 = this.radius * Math.pow(ratio, 1/3);
+    const r2 = this.radius * Math.pow(1 - ratio, 1/3);
+    
+    const spreadAngle = 0.3 + Math.random() * 0.4;
+    const drift = (Math.random() - 0.5) * 0.2;
+    
+    this.children.push(new Branch(
+      this.endX, this.endY,
+      this.angle + drift - spreadAngle * (1 - ratio),
+      r1, this.depth + 1, this.maxDepth
+    ));
+    this.children.push(new Branch(
+      this.endX, this.endY,
+      this.angle + drift + spreadAngle * ratio,
+      r2, this.depth + 1, this.maxDepth
+    ));
+    
+    // Occasional third branch
+    if (Math.random() < 0.15 && this.depth < this.maxDepth - 2) {
+      const r3 = this.radius * 0.3;
+      this.children.push(new Branch(
+        this.endX, this.endY,
+        this.angle + (Math.random() - 0.5) * 1.2,
+        r3, this.depth + 2, this.maxDepth
+      ));
+    }
+  }
+
+  draw(ctx, time) {
+    if (this.progress <= 0) return;
+    
+    const p = this.progress;
+    const cx = this.x + (this.endX - this.x) * 0.5 + Math.sin(this.angle + Math.PI/2) * this.curve * this.length;
+    
+    const currentEndX = this.x + (this.endX - this.x) * p;
+    const currentEndY = this.y + (this.endY - this.y) * p;
+    
+    // Color based on depth
+    let color;
+    if (this.depth === 0) color = COLORS.trunk;
+    else if (this.depth <= 2) color = COLORS.charcoal;
+    else if (this.depth <= 4) color = COLORS.steel;
+    else color = COLORS.arterial;
+    
+    // Pulsing effect - blood flowing through
+    const pulsePhase = time * 0.002 - this.depth * 0.3;
+    const pulse = Math.sin(pulsePhase) * 0.5 + 0.5;
+    
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y);
+    
+    // Quadratic curve for organic feel
+    const midX = this.x + (currentEndX - this.x) * 0.5 + Math.sin(this.angle + Math.PI/2) * this.curve * this.length * p;
+    const midY = this.y + (currentEndY - this.y) * 0.5 + Math.cos(this.angle + Math.PI/2) * this.curve * this.length * p * 0.3;
+    ctx.quadraticCurveTo(midX, midY, currentEndX, currentEndY);
+    
+    // Taper: thick at base, thin at tip
+    const baseWidth = this.radius * 2;
+    const tipWidth = this.radius * 0.6;
+    ctx.lineWidth = baseWidth; // simplified - real taper would need path splitting
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.7 + pulse * 0.3;
+    ctx.stroke();
+    
+    // Glow on growing tip
+    if (this.growing) {
+      ctx.beginPath();
+      ctx.arc(currentEndX, currentEndY, this.radius * 2 + pulse * 3, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.arterial;
+      ctx.globalAlpha = 0.3 + pulse * 0.3;
+      ctx.fill();
+    }
+    
+    ctx.globalAlpha = 1;
+    
+    this.children.forEach(c => c.draw(ctx, time));
+  }
+}
+
+let roots = [];
+let mouseX = W / 2, mouseY = H / 2;
+let attractPoints = [];
+
+function init() {
+  roots = [];
+  attractPoints = [];
+  
+  // Main trunk grows upward from bottom center
+  const maxDepth = 8;
+  const root = new Branch(
+    W * 0.5, H * 0.92,
+    -Math.PI / 2 + (Math.random() - 0.5) * 0.1,
+    8, 0, maxDepth
+  );
+  roots.push(root);
+  
+  // Secondary roots for visual balance
+  roots.push(new Branch(
+    W * 0.35, H * 0.95,
+    -Math.PI / 2 - 0.3 + (Math.random() - 0.5) * 0.1,
+    4, 2, maxDepth
+  ));
+  roots.push(new Branch(
+    W * 0.65, H * 0.95,
+    -Math.PI / 2 + 0.3 + (Math.random() - 0.5) * 0.1,
+    4, 2, maxDepth
+  ));
+}
+
+function drawBackground(time) {
+  // Subtle paper texture
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, W, H);
+  
+  // Faint grid lines like anatomical paper
+  ctx.strokeStyle = 'rgba(26, 26, 46, 0.03)';
+  ctx.lineWidth = 0.5;
+  const gridSize = 40;
+  for (let x = 0; x < W; x += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  for (let y = 0; y < H; y += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+  
+  // Vignette
+  const grad = ctx.createRadialGradient(W/2, H/2, W*0.2, W/2, H/2, W*0.7);
+  grad.addColorStop(0, 'rgba(240, 237, 229, 0)');
+  grad.addColorStop(1, 'rgba(26, 26, 46, 0.08)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawAnnotations(time) {
+  // Small measurement marks like anatomical drawings
+  ctx.font = '9px "Courier New", monospace';
+  ctx.fillStyle = 'rgba(69, 123, 157, 0.4)';
+  ctx.textAlign = 'left';
+  
+  const annotations = [
+    { x: W * 0.05, y: H * 0.1, text: 'Murray\'s Law: Σr³ᵢ = R³' },
+    { x: W * 0.05, y: H * 0.1 + 14, text: 'bifurcation ratio: asymmetric' },
+    { x: W * 0.75, y: H * 0.05, text: `branches: ${countBranches()}` },
+    { x: W * 0.75, y: H * 0.05 + 14, text: `depth: 8 levels` },
+  ];
+  
+  annotations.forEach(a => {
+    ctx.globalAlpha = 0.4 + Math.sin(time * 0.001 + a.x) * 0.1;
+    ctx.fillText(a.text, a.x, a.y);
+  });
+  ctx.globalAlpha = 1;
+}
+
+function countBranches() {
+  let count = 0;
+  function walk(b) { count++; b.children.forEach(walk); }
+  roots.forEach(walk);
+  return count;
+}
+
+// Particle system for blood cells
+class Particle {
+  constructor(branch) {
+    this.branch = branch;
+    this.t = 0;
+    this.speed = 0.005 + Math.random() * 0.008;
+    this.size = 1 + Math.random() * 2;
+    this.alive = true;
+  }
+  
+  update() {
+    this.t += this.speed;
+    if (this.t >= 1) {
+      // Move to a random child
+      if (this.branch.children.length > 0) {
+        this.branch = this.branch.children[Math.floor(Math.random() * this.branch.children.length)];
+        this.t = 0;
+      } else {
+        this.alive = false;
+      }
+    }
+  }
+  
+  draw(ctx) {
+    if (!this.alive || this.branch.progress < this.t) return;
+    const x = this.branch.x + (this.branch.endX - this.branch.x) * this.t;
+    const y = this.branch.y + (this.branch.endY - this.branch.y) * this.t;
+    ctx.beginPath();
+    ctx.arc(x, y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS.arterial;
+    ctx.globalAlpha = 0.6;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+let particles = [];
+
+function spawnParticle() {
+  if (roots.length > 0 && particles.length < 80) {
+    particles.push(new Particle(roots[0]));
+  }
+}
+
+let time = 0;
+init();
+
+function animate() {
+  time += 16;
+  
+  drawBackground(time);
+  
+  roots.forEach(r => {
+    r.grow();
+    r.draw(ctx, time);
+  });
+  
+  // Spawn particles periodically
+  if (time % 200 < 20) spawnParticle();
+  
+  particles = particles.filter(p => p.alive);
+  particles.forEach(p => {
+    p.update();
+    p.draw(ctx);
+  });
+  
+  drawAnnotations(time);
+  
+  requestAnimationFrame(animate);
+}
+
+animate();
+
+// Click to restart growth
+canvas.addEventListener('click', () => {
+  init();
+  particles = [];
+});
+
+// Mouse interaction - attract branches toward cursor
+canvas.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+</script>
+</body>
+</html>
