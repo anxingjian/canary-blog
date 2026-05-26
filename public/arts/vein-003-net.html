@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>网 / Net</title>
+<style>
+* { margin: 0; padding: 0; }
+body { background: #050510; overflow: hidden; cursor: crosshair; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+let nodes = [];
+let edges = [];
+let pulses = [];
+let mouseX = -1, mouseY = -1;
+let time = 0;
+
+const BG = '#050510';
+const CHARTREUSE = '#CCFF00';
+const VIOLET = '#8B5CF6';
+const MAGENTA = '#FF0080';
+const FOREST = '#0A2A1A';
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  generateNetwork();
+}
+
+function generateNetwork() {
+  nodes = [];
+  edges = [];
+  pulses = [];
+  
+  // Generate capillary nodes using Poisson-like distribution
+  const spacing = 18;
+  const cols = Math.ceil(W / spacing);
+  const rows = Math.ceil(H / spacing);
+  
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      const jitter = spacing * 0.4;
+      const x = i * spacing + (Math.random() - 0.5) * jitter + spacing / 2;
+      const y = j * spacing + (Math.random() - 0.5) * jitter + spacing / 2;
+      nodes.push({ x, y, brightness: 0, venous: Math.random() < 0.3 });
+    }
+  }
+  
+  // Connect nearby nodes to form capillary mesh
+  const maxDist = spacing * 1.6;
+  for (let i = 0; i < nodes.length; i++) {
+    let connections = 0;
+    for (let j = i + 1; j < nodes.length; j++) {
+      if (connections >= 3) break;
+      const dx = nodes[i].x - nodes[j].x;
+      const dy = nodes[i].y - nodes[j].y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < maxDist && Math.random() < 0.6) {
+        edges.push({ a: i, b: j, width: 0.3 + Math.random() * 0.7, flow: 0 });
+        connections++;
+      }
+    }
+  }
+}
+
+function injectDye(x, y) {
+  // Find nearest nodes and light them up
+  const radius = 80;
+  for (let i = 0; i < nodes.length; i++) {
+    const dx = nodes[i].x - x;
+    const dy = nodes[i].y - y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d < radius) {
+      nodes[i].brightness = Math.max(nodes[i].brightness, 1 - d / radius);
+    }
+  }
+}
+
+function addPulse(x, y) {
+  pulses.push({ x, y, radius: 0, maxRadius: 200 + Math.random() * 150, speed: 2 + Math.random() });
+}
+
+function update() {
+  time++;
+  
+  // Mouse injection
+  if (mouseX > 0) {
+    injectDye(mouseX, mouseY);
+  }
+  
+  // Spread dye along edges
+  for (const edge of edges) {
+    const na = nodes[edge.a];
+    const nb = nodes[edge.b];
+    const diff = (na.brightness - nb.brightness) * 0.02;
+    na.brightness -= diff;
+    nb.brightness += diff;
+    edge.flow = Math.abs(diff) * 10;
+  }
+  
+  // Decay
+  for (const node of nodes) {
+    node.brightness *= 0.997;
+  }
+  
+  // Update pulses
+  for (let i = pulses.length - 1; i >= 0; i--) {
+    pulses[i].radius += pulses[i].speed;
+    if (pulses[i].radius > pulses[i].maxRadius) {
+      pulses.splice(i, 1);
+    }
+  }
+  
+  // Pulse effect on nodes
+  for (const pulse of pulses) {
+    for (const node of nodes) {
+      const dx = node.x - pulse.x;
+      const dy = node.y - pulse.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (Math.abs(d - pulse.radius) < 8) {
+        node.brightness = Math.min(1, node.brightness + 0.3);
+      }
+    }
+  }
+}
+
+function draw() {
+  // Slight trail effect
+  ctx.fillStyle = 'rgba(5, 5, 16, 0.15)';
+  ctx.fillRect(0, 0, W, H);
+  
+  // Draw interstitial glow (forest green ambient)
+  if (time % 60 < 2) {
+    ctx.fillStyle = FOREST + '08';
+    ctx.fillRect(0, 0, W, H);
+  }
+  
+  // Draw edges
+  for (const edge of edges) {
+    const na = nodes[edge.a];
+    const nb = nodes[edge.b];
+    const brightness = Math.max(na.brightness, nb.brightness);
+    if (brightness < 0.01) continue;
+    
+    const alpha = brightness * 0.8;
+    const isVenous = na.venous || nb.venous;
+    
+    ctx.beginPath();
+    ctx.moveTo(na.x, na.y);
+    ctx.lineTo(nb.x, nb.y);
+    ctx.lineWidth = edge.width * (1 + brightness * 0.5);
+    
+    if (isVenous && brightness > 0.3) {
+      ctx.strokeStyle = `rgba(139, 92, 246, ${alpha})`;
+    } else {
+      ctx.strokeStyle = `rgba(204, 255, 0, ${alpha})`;
+    }
+    ctx.stroke();
+    
+    // Flow glow
+    if (edge.flow > 0.1) {
+      ctx.lineWidth = edge.width * 3;
+      ctx.strokeStyle = `rgba(204, 255, 0, ${edge.flow * 0.1})`;
+      ctx.stroke();
+    }
+  }
+  
+  // Draw pulse rings
+  for (const pulse of pulses) {
+    const progress = pulse.radius / pulse.maxRadius;
+    const alpha = (1 - progress) * 0.6;
+    ctx.beginPath();
+    ctx.arc(pulse.x, pulse.y, pulse.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 0, 128, ${alpha})`;
+    ctx.lineWidth = 2 * (1 - progress);
+    ctx.stroke();
+  }
+  
+  // Draw bright nodes
+  for (const node of nodes) {
+    if (node.brightness < 0.05) continue;
+    const r = 1.5 + node.brightness * 2;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+    
+    if (node.venous && node.brightness > 0.4) {
+      ctx.fillStyle = `rgba(139, 92, 246, ${node.brightness})`;
+    } else {
+      ctx.fillStyle = `rgba(204, 255, 0, ${node.brightness * 0.9})`;
+    }
+    ctx.fill();
+    
+    // Glow
+    if (node.brightness > 0.5) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, r * 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(204, 255, 0, ${node.brightness * 0.1})`;
+      ctx.fill();
+    }
+  }
+  
+  // Ambient heartbeat pulse (very subtle)
+  const heartbeat = Math.sin(time * 0.03) * 0.5 + 0.5;
+  if (heartbeat > 0.95) {
+    // Subtle global pulse
+    const centerX = W / 2 + Math.sin(time * 0.007) * W * 0.3;
+    const centerY = H / 2 + Math.cos(time * 0.005) * H * 0.3;
+    for (let i = 0; i < 5; i++) {
+      const idx = Math.floor(Math.random() * nodes.length);
+      const dx = nodes[idx].x - centerX;
+      const dy = nodes[idx].y - centerY;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 100) {
+        nodes[idx].brightness = Math.min(1, nodes[idx].brightness + 0.2);
+      }
+    }
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+canvas.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
+canvas.addEventListener('mouseleave', () => {
+  mouseX = -1;
+  mouseY = -1;
+});
+
+canvas.addEventListener('click', (e) => {
+  addPulse(e.clientX, e.clientY);
+});
+
+window.addEventListener('resize', resize);
+resize();
+loop();
+</script>
+</body>
+</html>
