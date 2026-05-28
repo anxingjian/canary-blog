@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>养 / Nourish</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0B0C10; overflow: hidden; cursor: crosshair; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+let vessels = [];
+let nutrients = [];
+let cells = [];
+let mouse = { x: -100, y: -100 };
+let time = 0;
+
+const COLORS = {
+  bg: '#0B0C10',
+  vessel: '#708090',
+  vesselLight: '#B0C4DE',
+  silver: '#C0C0C0',
+  ice: '#E8F4FD',
+  gold: '#D4AF37',
+  goldLight: '#F0D060',
+  goldDim: '#8B7420'
+};
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  init();
+}
+
+class Vessel {
+  constructor(x, y, angle, width, depth, parent) {
+    this.x = x;
+    this.y = y;
+    this.angle = angle;
+    this.width = width;
+    this.depth = depth;
+    this.length = 0;
+    this.maxLength = 40 + Math.random() * 60 * (1 - depth * 0.12);
+    this.growing = true;
+    this.segments = [{ x, y }];
+    this.children = [];
+    this.releaseTimer = 0;
+    this.opacity = 1 - depth * 0.08;
+  }
+
+  grow() {
+    if (!this.growing) return;
+    this.length += 0.8;
+    this.angle += (Math.random() - 0.5) * 0.06;
+    
+    let nx = this.segments[this.segments.length - 1].x + Math.cos(this.angle) * 2;
+    let ny = this.segments[this.segments.length - 1].y + Math.sin(this.angle) * 2;
+    this.segments.push({ x: nx, y: ny });
+
+    if (this.length >= this.maxLength) {
+      this.growing = false;
+      if (this.depth < 7 && Math.random() > 0.2) {
+        let spread = 0.4 + Math.random() * 0.3;
+        let end = this.segments[this.segments.length - 1];
+        this.children.push(new Vessel(end.x, end.y, this.angle - spread, this.width * 0.7, this.depth + 1, this));
+        this.children.push(new Vessel(end.x, end.y, this.angle + spread, this.width * 0.7, this.depth + 1, this));
+        vessels.push(...this.children);
+      }
+    }
+  }
+
+  draw() {
+    if (this.segments.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(this.segments[0].x, this.segments[0].y);
+    for (let i = 1; i < this.segments.length; i++) {
+      ctx.lineTo(this.segments[i].x, this.segments[i].y);
+    }
+    
+    let alpha = this.opacity * (0.4 + 0.2 * Math.sin(time * 0.02 + this.depth));
+    let w = Math.max(0.5, this.width);
+    
+    if (this.depth >= 5) {
+      // Terminal vessels — thinner, dissolving
+      ctx.strokeStyle = `rgba(184, 196, 222, ${alpha * 0.6})`;
+      ctx.lineWidth = w * 0.5;
+      ctx.setLineDash([2, 3]);
+    } else {
+      ctx.strokeStyle = `rgba(112, 128, 144, ${alpha})`;
+      ctx.lineWidth = w;
+      ctx.setLineDash([]);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Release nutrients at terminal ends
+    if (!this.growing && this.depth >= 5) {
+      this.releaseTimer++;
+      if (this.releaseTimer % 60 === 0) {
+        let end = this.segments[this.segments.length - 1];
+        nutrients.push(new Nutrient(end.x, end.y));
+      }
+    }
+  }
+}
+
+class Nutrient {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.vx = (Math.random() - 0.5) * 1.2;
+    this.vy = (Math.random() - 0.5) * 1.2;
+    this.life = 1;
+    this.decay = 0.003 + Math.random() * 0.004;
+    this.size = 2 + Math.random() * 3;
+    this.absorbed = false;
+  }
+
+  update() {
+    if (this.absorbed) {
+      this.life -= 0.05;
+      this.size *= 1.03;
+      return;
+    }
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    this.life -= this.decay;
+
+    // Check if near a cell
+    for (let cell of cells) {
+      let dx = this.x - cell.x;
+      let dy = this.y - cell.y;
+      let dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < cell.radius + 5) {
+        this.absorbed = true;
+        cell.fed(this.life);
+        break;
+      }
+    }
+  }
+
+  draw() {
+    if (this.life <= 0) return;
+    let alpha = this.life;
+    let glow = this.absorbed ? 15 : 8;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(212, 175, 55, ${alpha})`;
+    ctx.fill();
+    ctx.shadowColor = COLORS.goldLight;
+    ctx.shadowBlur = glow;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+}
+
+class Cell {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.radius = 8 + Math.random() * 12;
+    this.energy = 0.1;
+    this.pulsePhase = Math.random() * Math.PI * 2;
+    this.membrane = 0.3 + Math.random() * 0.3;
+  }
+
+  fed(amount) {
+    this.energy = Math.min(1, this.energy + amount * 0.3);
+  }
+
+  update() {
+    this.energy *= 0.997;
+    this.pulsePhase += 0.02;
+  }
+
+  draw() {
+    let pulse = Math.sin(this.pulsePhase) * 0.1;
+    let r = this.radius * (1 + pulse);
+    let energyAlpha = 0.05 + this.energy * 0.4;
+
+    // Cell interior glow when fed
+    if (this.energy > 0.15) {
+      let grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r);
+      grad.addColorStop(0, `rgba(212, 175, 55, ${this.energy * 0.3})`);
+      grad.addColorStop(0.6, `rgba(139, 116, 32, ${this.energy * 0.15})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    // Cell membrane
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(232, 244, 253, ${this.membrane * energyAlpha * 2})`;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+}
+
+function init() {
+  vessels = [];
+  nutrients = [];
+  cells = [];
+
+  // Create cells scattered in the tissue
+  for (let i = 0; i < 80; i++) {
+    cells.push(new Cell(
+      Math.random() * W,
+      Math.random() * H
+    ));
+  }
+
+  // Start vessel network from multiple entry points
+  let starts = [
+    { x: W * 0.2, y: H, angle: -Math.PI / 2 + 0.2 },
+    { x: W * 0.5, y: H, angle: -Math.PI / 2 },
+    { x: W * 0.8, y: H, angle: -Math.PI / 2 - 0.2 },
+  ];
+
+  for (let s of starts) {
+    let v = new Vessel(s.x, s.y, s.angle, 4, 0, null);
+    vessels.push(v);
+  }
+}
+
+function update() {
+  time++;
+  
+  // Grow vessels
+  for (let v of vessels) {
+    v.grow();
+  }
+
+  // Update nutrients
+  for (let n of nutrients) {
+    n.update();
+  }
+  nutrients = nutrients.filter(n => n.life > 0);
+
+  // Update cells
+  for (let c of cells) {
+    c.update();
+  }
+
+  // Mouse interaction — release nutrients where you hover near terminals
+  if (mouse.x > 0) {
+    for (let v of vessels) {
+      if (v.depth >= 5 && !v.growing && v.segments.length > 0) {
+        let end = v.segments[v.segments.length - 1];
+        let dx = mouse.x - end.x;
+        let dy = mouse.y - end.y;
+        if (dx * dx + dy * dy < 10000) {
+          if (Math.random() > 0.85) {
+            nutrients.push(new Nutrient(end.x, end.y));
+          }
+        }
+      }
+    }
+  }
+}
+
+function draw() {
+  // Slight fade for trails
+  ctx.fillStyle = 'rgba(11, 12, 16, 0.15)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw cells first (background layer)
+  for (let c of cells) {
+    c.draw();
+  }
+
+  // Draw vessels
+  for (let v of vessels) {
+    v.draw();
+  }
+
+  // Draw nutrients on top
+  for (let n of nutrients) {
+    n.draw();
+  }
+
+  // Subtle vignette
+  let vignette = ctx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.8);
+  vignette.addColorStop(0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1, 'rgba(11,12,16,0.4)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', resize);
+canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+canvas.addEventListener('mouseleave', () => { mouse.x = -100; mouse.y = -100; });
+canvas.addEventListener('click', () => {
+  // Burst of nutrients from all terminal vessels
+  for (let v of vessels) {
+    if (v.depth >= 5 && !v.growing && v.segments.length > 0) {
+      let end = v.segments[v.segments.length - 1];
+      for (let i = 0; i < 3; i++) {
+        nutrients.push(new Nutrient(end.x, end.y));
+      }
+    }
+  }
+});
+
+resize();
+loop();
+</script>
+</body>
+</html>
