@@ -28,7 +28,7 @@ export default function SearchPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch("/canary-blog/search-index")
+    fetch("/canary-blog/search-index.json")
       .then((r) => r.json())
       .then((data) => {
         setIndex(data);
