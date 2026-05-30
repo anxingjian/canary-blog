@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>翘 / Warp</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0D1B2A; overflow: hidden; cursor: crosshair; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+let mouseX = 0.5, mouseY = 0.5;
+let pressed = false;
+let time = 0;
+let strain = 0;
+
+const COLORS = {
+  bg: '#0D1B2A',
+  hard: '#1B998B',
+  soft: '#2D3047',
+  stress: '#E07A5F',
+  line: '#F4F1DE',
+  hardLight: '#2EC4B6',
+  stressGlow: '#FF9B85'
+};
+
+const NUM_LAYERS = 28;
+let layers = [];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+
+function initLayers() {
+  layers = [];
+  for (let i = 0; i < NUM_LAYERS; i++) {
+    const t = i / (NUM_LAYERS - 1);
+    layers.push({
+      baseY: t,
+      thickness: 0.8 + Math.random() * 0.4,
+      isHard: i % 5 === 2 || i % 5 === 3,
+      phase: Math.random() * Math.PI * 2,
+      freq: 0.8 + Math.random() * 0.4
+    });
+  }
+}
+
+function getDeformation(x, layerBaseY, t) {
+  // Anticline: layers bow upward in the center
+  const cx = mouseX;
+  const dist = Math.abs(x - cx);
+  const influence = Math.exp(-dist * dist * 8);
+  
+  // Amplitude grows with strain and proximity to center
+  const amp = strain * 0.15 * influence;
+  
+  // Layers closer to center of stack deform more
+  const depthFactor = 1 - Math.abs(layerBaseY - 0.5) * 0.6;
+  
+  // Sinusoidal folding with harmonics
+  const fold = Math.cos((x - cx) * Math.PI * 2) * amp * depthFactor;
+  const harmonic = Math.cos((x - cx) * Math.PI * 4) * amp * 0.15 * depthFactor;
+  
+  // Slow breathing
+  const breath = Math.sin(t * 0.3) * 0.003 * influence * strain;
+  
+  return fold + harmonic + breath;
+}
+
+function getStrain(x, layerBaseY) {
+  // Strain is highest at the outer arc of the anticline crest
+  const cx = mouseX;
+  const dist = Math.abs(x - cx);
+  const influence = Math.exp(-dist * dist * 12);
+  const depthFactor = Math.abs(layerBaseY - 0.5);
+  return influence * strain * depthFactor * 2;
+}
+
+function draw() {
+  time += 0.016;
+  
+  if (pressed) {
+    strain = Math.min(strain + 0.008, 1.5);
+  } else {
+    strain += (0.4 - strain) * 0.01;
+  }
+  
+  // Clear
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, W, H);
+  
+  // Draw layers from back to front
+  const margin = H * 0.08;
+  const layerHeight = (H - margin * 2) / NUM_LAYERS;
+  
+  for (let i = 0; i < NUM_LAYERS; i++) {
+    const layer = layers[i];
+    const baseY = margin + layer.baseY * (H - margin * 2);
+    
+    ctx.beginPath();
+    
+    const segments = 120;
+    for (let s = 0; s <= segments; s++) {
+      const x = s / segments;
+      const px = x * W;
+      
+      const deform = getDeformation(x, layer.baseY, time + layer.phase);
+      const py = baseY - deform * H;
+      
+      if (s === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    
+    // Layer fill
+    const localStrain = getStrain(mouseX, layer.baseY);
+    
+    if (layer.isHard) {
+      // Hard rock layers - teal
+      const alpha = 0.3 + layer.thickness * 0.3;
+      if (localStrain > 0.3) {
+        // Blend toward stress color at high strain
+        const blend = Math.min((localStrain - 0.3) / 0.7, 1);
+        ctx.strokeStyle = lerpColor(COLORS.hard, COLORS.stress, blend);
+        ctx.lineWidth = 2.5 * layer.thickness;
+      } else {
+        ctx.strokeStyle = COLORS.hard;
+        ctx.lineWidth = 2 * layer.thickness;
+      }
+      ctx.globalAlpha = alpha + localStrain * 0.3;
+    } else {
+      // Soft rock layers - cream/gunmetal
+      const alpha = 0.15 + layer.thickness * 0.1;
+      if (localStrain > 0.5) {
+        ctx.strokeStyle = COLORS.stressGlow;
+        ctx.lineWidth = 1.2;
+      } else {
+        ctx.strokeStyle = COLORS.line;
+        ctx.lineWidth = 0.8;
+      }
+      ctx.globalAlpha = alpha + localStrain * 0.2;
+    }
+    
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  
+  // Draw strain indicators - glowing dots at max curvature
+  if (strain > 0.2) {
+    const cx = mouseX * W;
+    for (let i = 0; i < 8; i++) {
+      const angle = time * 0.5 + i * Math.PI * 0.25;
+      const r = 20 + Math.sin(time * 2 + i) * 10;
+      const x = cx + Math.cos(angle) * r * strain;
+      const y = H * 0.5 + Math.sin(angle) * r * strain * 2;
+      
+      const glow = Math.sin(time * 3 + i * 0.7) * 0.5 + 0.5;
+      ctx.beginPath();
+      ctx.arc(x, y, 2 + glow * 2, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.stress;
+      ctx.globalAlpha = glow * strain * 0.6;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+  
+  // Pressure arrows on sides
+  const arrowAlpha = Math.min(strain * 0.5, 0.4);
+  if (arrowAlpha > 0.05) {
+    ctx.globalAlpha = arrowAlpha;
+    ctx.strokeStyle = COLORS.stress;
+    ctx.lineWidth = 2;
+    
+    // Left arrows
+    for (let i = 0; i < 5; i++) {
+      const y = H * 0.2 + (H * 0.6) * (i / 4);
+      const len = 30 + strain * 20;
+      drawArrow(ctx, 20, y, 20 + len, y);
+    }
+    // Right arrows
+    for (let i = 0; i < 5; i++) {
+      const y = H * 0.2 + (H * 0.6) * (i / 4);
+      const len = 30 + strain * 20;
+      drawArrow(ctx, W - 20, y, W - 20 - len, y);
+    }
+    ctx.globalAlpha = 1;
+  }
+  
+  requestAnimationFrame(draw);
+}
+
+function drawArrow(ctx, x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  const ux = dx / len;
+  const uy = dy / len;
+  
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - ux * 8 - uy * 4, y2 - uy * 8 + ux * 4);
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - ux * 8 + uy * 4, y2 - uy * 8 - ux * 4);
+  ctx.stroke();
+}
+
+function lerpColor(c1, c2, t) {
+  const r1 = parseInt(c1.slice(1, 3), 16);
+  const g1 = parseInt(c1.slice(3, 5), 16);
+  const b1 = parseInt(c1.slice(5, 7), 16);
+  const r2 = parseInt(c2.slice(1, 3), 16);
+  const g2 = parseInt(c2.slice(3, 5), 16);
+  const b2 = parseInt(c2.slice(5, 7), 16);
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const b = Math.round(b1 + (b2 - b1) * t);
+  return `rgb(${r},${g},${b})`;
+}
+
+// Events
+window.addEventListener('resize', resize);
+canvas.addEventListener('mousemove', e => {
+  mouseX = e.clientX / W;
+  mouseY = e.clientY / H;
+});
+canvas.addEventListener('mousedown', () => pressed = true);
+canvas.addEventListener('mouseup', () => pressed = false);
+canvas.addEventListener('click', () => {
+  strain = Math.min(strain + 0.3, 1.5);
+});
+
+// Touch
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  mouseX = e.touches[0].clientX / W;
+  mouseY = e.touches[0].clientY / H;
+}, { passive: false });
+canvas.addEventListener('touchstart', e => {
+  pressed = true;
+  mouseX = e.touches[0].clientX / W;
+  mouseY = e.touches[0].clientY / H;
+});
+canvas.addEventListener('touchend', () => pressed = false);
+
+resize();
+initLayers();
+draw();
+</script>
+</body>
+</html>
