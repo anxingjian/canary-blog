@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>痕 / Crease</title>
+<style>
+* { margin: 0; padding: 0; }
+body { background: #1A1014; overflow: hidden; cursor: crosshair; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+let time = 0;
+let mouseX = 0.5, mouseY = 0.5;
+let pressed = false;
+
+// Palette: wine-black bg #1A1014, saddle #8B4513, burlap #DEB887, plum #4A0E4E, cream #F0E6D3
+const COLORS = {
+  bg: [26, 16, 20],
+  cream: [240, 230, 211],
+  burlap: [222, 184, 135],
+  saddle: [139, 69, 19],
+  plum: [74, 14, 78],
+  wine: [100, 20, 40]
+};
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+
+// Simplex-like noise
+function hash(x, y) {
+  const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+function smoothNoise(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  return (hash(ix, iy) * (1-sx) + hash(ix+1, iy) * sx) * (1-sy) +
+         (hash(ix, iy+1) * (1-sx) + hash(ix+1, iy+1) * sx) * sy;
+}
+
+function fbm(x, y, oct) {
+  let v = 0, a = 0.5, f = 1;
+  for (let i = 0; i < oct; i++) { v += a * smoothNoise(x*f, y*f); a *= 0.5; f *= 2.1; }
+  return v;
+}
+
+// The crease: a curve running from upper-left to lower-right with gentle undulation
+function creaseY(x, t) {
+  const nx = x / W;
+  // Main diagonal
+  const base = H * 0.3 + nx * H * 0.4;
+  // Gentle wave
+  const wave = Math.sin(nx * Math.PI * 2.5 + t * 0.3) * 25;
+  // Noise wobble
+  const wobble = (fbm(nx * 3 + t * 0.05, 1.7, 3) - 0.5) * 40;
+  return base + wave + wobble;
+}
+
+function draw() {
+  ctx.fillStyle = '#1A1014';
+  ctx.fillRect(0, 0, W, H);
+  
+  const t = time * 0.008;
+  
+  // Draw folded strata — horizontal lines that bend around the crease
+  const numLines = 70;
+  for (let i = 0; i < numLines; i++) {
+    const ratio = i / numLines;
+    const baseY = ratio * H;
+    
+    ctx.beginPath();
+    let prevX, prevY;
+    
+    for (let x = 0; x <= W; x += 2) {
+      const cY = creaseY(x, t);
+      const dist = baseY - cY; // signed distance from crease
+      const absDist = Math.abs(dist);
+      const maxFold = H * 0.35;
+      
+      // Fold displacement — lines curve toward crease, sharper near it
+      let displacement = 0;
+      if (absDist < maxFold) {
+        const proximity = 1 - absDist / maxFold;
+        // Sharp fold near crease, smooth far away
+        displacement = Math.sign(dist) * proximity * proximity * proximity * 55;
+        // Compression — lines bunch up near crease
+        displacement -= proximity * proximity * 30 * Math.sign(dist);
+      }
+      
+      // Add subtle noise texture
+      const nx = x / W, ny = baseY / H;
+      const noiseDisp = (fbm(nx * 5 + t * 0.1, ny * 6, 3) - 0.5) * 8;
+      
+      // Mouse push
+      const mdx = x - mouseX * W, mdy = (baseY + displacement) - mouseY * H;
+      const mDist = Math.sqrt(mdx*mdx + mdy*mdy);
+      const mPush = Math.max(0, 1 - mDist / 150) * 25 * (pressed ? 2.5 : 1);
+      
+      const finalY = baseY + displacement + noiseDisp - mPush;
+      
+      if (x === 0) { ctx.moveTo(x, finalY); prevX = x; prevY = finalY; }
+      else ctx.lineTo(x, finalY);
+    }
+    
+    // Color: proximity to crease determines palette
+    const midCreaseY = creaseY(W * 0.5, t);
+    const distFromCrease = Math.abs(baseY - midCreaseY);
+    const proximity = Math.max(0, 1 - distFromCrease / (H * 0.4));
+    
+    let r, g, b, alpha;
+    if (proximity > 0.8) {
+      // Very near crease — deep plum, high contrast
+      const f = (proximity - 0.8) / 0.2;
+      r = 74 + f * 166; g = 14 + f * 216; b = 78 + f * 133;
+      alpha = 0.5 + f * 0.4;
+    } else if (proximity > 0.4) {
+      // Mid-range — warm saddle brown to burlap
+      const f = (proximity - 0.4) / 0.4;
+      r = 222 - f * 148; g = 184 - f * 170; b = 135 - f * 117;
+      alpha = 0.25 + f * 0.25;
+    } else {
+      // Far — faint cream/ghost lines
+      const f = proximity / 0.4;
+      r = 240; g = 230; b = 211;
+      alpha = 0.06 + f * 0.19;
+    }
+    
+    // Slight time shimmer
+    alpha *= 0.85 + 0.15 * Math.sin(t * 2 + i * 0.2);
+    
+    ctx.strokeStyle = `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${alpha.toFixed(3)})`;
+    ctx.lineWidth = proximity > 0.7 ? 1.8 : 1;
+    ctx.stroke();
+  }
+  
+  // Draw the crease line itself — bright, thin, the focal spine
+  ctx.beginPath();
+  for (let x = 0; x <= W; x += 2) {
+    const y = creaseY(x, t);
+    if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = 'rgba(240, 230, 211, 0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  
+  // Stress concentrations — bright dots along crease
+  for (let i = 0; i < 12; i++) {
+    const x = W * (0.08 + i * 0.076);
+    const y = creaseY(x, t);
+    const pulse = 0.4 + 0.4 * Math.sin(t * 4 + i * 1.7);
+    const radius = 2 + pulse * 2;
+    
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(240, 230, 211, ${(pulse * 0.5).toFixed(2)})`;
+    ctx.fill();
+    
+    // Plum halo
+    ctx.beginPath();
+    ctx.arc(x, y, radius + 4, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(100, 20, 40, ${(pulse * 0.2).toFixed(2)})`;
+    ctx.fill();
+  }
+  
+  time++;
+  requestAnimationFrame(draw);
+}
+
+window.addEventListener('resize', resize);
+canvas.addEventListener('mousemove', e => { mouseX = e.clientX / W; mouseY = e.clientY / H; });
+canvas.addEventListener('mousedown', () => { pressed = true; });
+canvas.addEventListener('mouseup', () => { pressed = false; });
+canvas.addEventListener('click', () => { time += 200; }); // jump forward in time on click
+
+resize();
+draw();
+</script>
+</body>
+</html>
