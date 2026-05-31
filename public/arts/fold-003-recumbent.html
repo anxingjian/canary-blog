@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>卧 / Recumbent</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0A0A0F; }
+canvas { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+let mouseX = 0.5, mouseY = 0.5;
+let pressed = false;
+let time = 0;
+let foldAngle = 0; // 0 = upright, PI/2 = recumbent
+let targetAngle = 0;
+
+const VOID = '#0A0A0F';
+const VERMILLION = '#E63946';
+const STEEL = '#457B9D';
+const PRUSSIAN = '#1D3557';
+const CHALK = '#F1FAEE';
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.width = window.innerWidth * dpr;
+  H = canvas.height = window.innerHeight * dpr;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+}
+
+window.addEventListener('resize', resize);
+resize();
+
+// Layer system - each layer is a set of control points defining a geological stratum
+class Layer {
+  constructor(baseY, thickness, type, color) {
+    this.baseY = baseY;
+    this.thickness = thickness;
+    this.type = type; // 'hard' or 'soft'
+    this.color = color;
+    this.points = [];
+    this.numPoints = 80;
+    this.init();
+  }
+
+  init() {
+    this.points = [];
+    for (let i = 0; i <= this.numPoints; i++) {
+      this.points.push({
+        x: i / this.numPoints,
+        y: this.baseY,
+        vy: 0
+      });
+    }
+  }
+
+  getDeformedY(normalizedX, angle, centerX, centerY) {
+    // Simulate a recumbent fold shape
+    // The fold is a combination of sinusoidal deformation + rotation of axial plane
+    const dx = normalizedX - centerX;
+    const amplitude = 0.15 + 0.05 * Math.sin(time * 0.001);
+    
+    // Base fold shape (like a lying-down S or wave)
+    const foldPhase = dx * Math.PI * 2;
+    let foldY = Math.sin(foldPhase) * amplitude;
+    
+    // Apply axial plane rotation (makes the fold recumbent)
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+    
+    // Rotated fold displacement
+    const rotatedDx = dx * cosA;
+    const foldShape = Math.sin(rotatedDx * Math.PI * 3) * amplitude * (1 - Math.abs(dx) * 1.5);
+    
+    // The recumbent fold creates an overturned limb
+    const overturn = angle > Math.PI * 0.3 ? Math.sin(dx * Math.PI * 2) * 0.08 * (angle / (Math.PI * 0.5)) : 0;
+    
+    return this.baseY + foldShape + overturn;
+  }
+}
+
+// Create layers
+const layers = [];
+const numLayers = 24;
+const layerSpacing = 0.8 / numLayers;
+
+for (let i = 0; i < numLayers; i++) {
+  const baseY = 0.1 + i * layerSpacing;
+  const isHard = i % 3 === 0;
+  const isMarker = i === Math.floor(numLayers * 0.4) || i === Math.floor(numLayers * 0.7);
+  let color;
+  if (isMarker) {
+    color = CHALK;
+  } else if (isHard) {
+    color = PRUSSIAN;
+  } else {
+    color = STEEL;
+  }
+  layers.push(new Layer(baseY, isHard ? layerSpacing * 0.7 : layerSpacing * 0.5, isHard ? 'hard' : 'soft', color));
+}
+
+// Stress particles
+class StressParticle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random();
+    this.y = Math.random();
+    this.life = 1;
+    this.maxLife = 60 + Math.random() * 120;
+    this.age = 0;
+    this.size = 1 + Math.random() * 2;
+  }
+  update(angle) {
+    this.age++;
+    this.life = 1 - this.age / this.maxLife;
+    if (this.life <= 0) this.reset();
+  }
+}
+
+const stressParticles = [];
+for (let i = 0; i < 150; i++) {
+  stressParticles.push(new StressParticle());
+}
+
+function isInOverturnedLimb(x, y, angle) {
+  // Check if point is in the overturned limb region
+  const centerX = 0.5 + (mouseX - 0.5) * 0.3;
+  const dx = x - centerX;
+  if (angle < Math.PI * 0.25) return false;
+  const limbZone = Math.abs(dx) < 0.2 && Math.abs(dx) > 0.05;
+  const verticalZone = y > 0.3 && y < 0.7;
+  return limbZone && verticalZone;
+}
+
+function draw() {
+  time++;
+  
+  // Update fold angle based on interaction
+  if (pressed) {
+    targetAngle = Math.min(targetAngle + 0.008, Math.PI * 0.48);
+  }
+  // Mouse Y controls the target angle
+  targetAngle = Math.PI * 0.1 + mouseY * Math.PI * 0.38;
+  foldAngle += (targetAngle - foldAngle) * 0.02;
+  
+  // Clear
+  ctx.fillStyle = VOID;
+  ctx.fillRect(0, 0, W, H);
+  
+  // Draw layers
+  const centerX = 0.5 + (mouseX - 0.5) * 0.2;
+  const centerY = 0.5;
+  
+  for (let li = 0; li < layers.length; li++) {
+    const layer = layers[li];
+    const thickness = layer.thickness * H;
+    
+    ctx.beginPath();
+    
+    // Top edge
+    for (let i = 0; i <= 200; i++) {
+      const nx = i / 200;
+      const px = nx * W;
+      
+      // Complex fold geometry
+      const dx = nx - centerX;
+      const dist = Math.abs(dx);
+      
+      // Fold envelope - affects amplitude based on distance from fold axis
+      const envelope = Math.exp(-dist * dist * 8);
+      
+      // Base sinusoidal fold
+      const foldFreq = 1.5;
+      const baseFold = Math.sin(dx * Math.PI * foldFreq) * 0.18 * envelope;
+      
+      // Axial plane rotation effect
+      const axialTilt = foldAngle / (Math.PI * 0.5);
+      const asymmetry = dx > 0 ? 1 + axialTilt * 0.5 : 1 - axialTilt * 0.5;
+      
+      // Overturned limb (key feature of recumbent fold)
+      const overturnEffect = axialTilt > 0.5 ? 
+        Math.sin(dx * Math.PI * 3) * 0.06 * (axialTilt - 0.5) * 2 * envelope : 0;
+      
+      // Tightening of fold with angle
+      const tightening = 1 + axialTilt * 0.8;
+      
+      let py = (layer.baseY + baseFold * asymmetry * tightening + overturnEffect) * H;
+      
+      // Add subtle geological noise
+      const noise = Math.sin(nx * 47 + li * 3.7 + time * 0.002) * 1.5;
+      py += noise;
+      
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    
+    // Bottom edge (reverse)
+    for (let i = 200; i >= 0; i--) {
+      const nx = i / 200;
+      const px = nx * W;
+      const dx = nx - centerX;
+      const dist = Math.abs(dx);
+      const envelope = Math.exp(-dist * dist * 8);
+      const foldFreq = 1.5;
+      const baseFold = Math.sin(dx * Math.PI * foldFreq) * 0.18 * envelope;
+      const axialTilt = foldAngle / (Math.PI * 0.5);
+      const asymmetry = dx > 0 ? 1 + axialTilt * 0.5 : 1 - axialTilt * 0.5;
+      const overturnEffect = axialTilt > 0.5 ? 
+        Math.sin(dx * Math.PI * 3) * 0.06 * (axialTilt - 0.5) * 2 * envelope : 0;
+      const tightening = 1 + axialTilt * 0.8;
+      
+      let py = (layer.baseY + layerSpacing + baseFold * asymmetry * tightening + overturnEffect) * H;
+      const noise = Math.sin(nx * 47 + (li + 0.5) * 3.7 + time * 0.002) * 1.5;
+      py += noise;
+      
+      ctx.lineTo(px, py);
+    }
+    
+    ctx.closePath();
+    
+    // Layer fill with slight opacity variation
+    const alpha = layer.type === 'hard' ? 0.85 : 0.6;
+    ctx.fillStyle = layer.color;
+    ctx.globalAlpha = alpha;
+    ctx.fill();
+    
+    // Thin stroke for layer boundaries
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = CHALK;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  
+  // Draw stress markers (vermillion) in overturned limb
+  const axialTilt = foldAngle / (Math.PI * 0.5);
+  if (axialTilt > 0.3) {
+    ctx.globalAlpha = (axialTilt - 0.3) * 1.4;
+    for (const p of stressParticles) {
+      p.update(foldAngle);
+      if (isInOverturnedLimb(p.x, p.y, foldAngle)) {
+        const px = p.x * W;
+        const py = p.y * H;
+        const size = p.size * (1 + axialTilt) * (W / 1000);
+        ctx.fillStyle = VERMILLION;
+        ctx.globalAlpha = p.life * (axialTilt - 0.3) * 1.4;
+        ctx.beginPath();
+        ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  
+  // Draw axial plane trace
+  ctx.save();
+  ctx.setLineDash([8, 12]);
+  ctx.strokeStyle = VERMILLION;
+  ctx.globalAlpha = 0.5 + axialTilt * 0.3;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  
+  const axCenterX = centerX * W;
+  const axLength = H * 0.6;
+  const axAngle = Math.PI / 2 - foldAngle; // axial plane angle from horizontal
+  ctx.moveTo(
+    axCenterX - Math.cos(axAngle) * axLength * 0.5,
+    H * 0.5 - Math.sin(axAngle) * axLength * 0.5
+  );
+  ctx.lineTo(
+    axCenterX + Math.cos(axAngle) * axLength * 0.5,
+    H * 0.5 + Math.sin(axAngle) * axLength * 0.5
+  );
+  ctx.stroke();
+  ctx.restore();
+  
+  // Draw chalk marker layer label
+  ctx.globalAlpha = 0.4;
+  ctx.fillStyle = CHALK;
+  ctx.font = `${W * 0.01}px monospace`;
+  ctx.fillText(`axial plane: ${(90 - foldAngle * 180 / Math.PI).toFixed(1)}° from horizontal`, W * 0.02, H * 0.96);
+  ctx.fillText(`${axialTilt > 0.7 ? 'RECUMBENT' : axialTilt > 0.4 ? 'OVERTURNED' : 'INCLINED'}`, W * 0.02, H * 0.93);
+  ctx.globalAlpha = 1;
+  
+  // Subtle vignette
+  const vg = ctx.createRadialGradient(W/2, H/2, W*0.2, W/2, H/2, W*0.7);
+  vg.addColorStop(0, 'rgba(10,10,15,0)');
+  vg.addColorStop(1, 'rgba(10,10,15,0.4)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, W, H);
+  
+  requestAnimationFrame(draw);
+}
+
+// Events
+canvas.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX / window.innerWidth;
+  mouseY = e.clientY / window.innerHeight;
+});
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  mouseX = e.touches[0].clientX / window.innerWidth;
+  mouseY = e.touches[0].clientY / window.innerHeight;
+}, { passive: false });
+
+canvas.addEventListener('mousedown', () => { pressed = true; });
+canvas.addEventListener('mouseup', () => { pressed = false; });
+canvas.addEventListener('touchstart', () => { pressed = true; });
+canvas.addEventListener('touchend', () => { pressed = false; });
+
+// Click to trigger axial plane flip
+canvas.addEventListener('click', () => {
+  targetAngle = Math.min(targetAngle + Math.PI * 0.1, Math.PI * 0.48);
+});
+
+draw();
+</script>
+</body>
+</html>
