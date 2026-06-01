@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>尖 / Chevron</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0F0F14; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// 尖 / Chevron — Fold series #4
+// Palette: #0F0F14 near-black, #7B2FBE electric violet, #E4FF1A acid yellow-green, #3D3D4A graphite, #FFFBE6 bone
+
+let layers = [];
+let numLayers = 18;
+let numFolds = 6;
+let pressureAngle = 0;
+let sharpness = 0.85;
+let targetSharpness = 0.85;
+let stressPoints = [];
+let time = 0;
+let markerIndices = [3, 8, 14];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  initLayers();
+}
+
+function initLayers() {
+  layers = [];
+  let spacing = height / (numLayers + 2);
+  for (let i = 0; i < numLayers; i++) {
+    layers.push({
+      baseY: spacing * (i + 1.5),
+      thickness: spacing * 0.7,
+      isMarker: markerIndices.includes(i)
+    });
+  }
+}
+
+function draw() {
+  background(15, 15, 20, 25);
+  time += 0.005;
+  
+  // Smooth pressure angle toward mouse
+  let targetAngle = map(mouseX, 0, width, -0.3, 0.3);
+  pressureAngle = lerp(pressureAngle, targetAngle, 0.02);
+  
+  // Sharpness increases on mousePressed
+  sharpness = lerp(sharpness, targetSharpness, 0.03);
+  
+  stressPoints = [];
+  
+  // Draw layers
+  for (let i = 0; i < numLayers; i++) {
+    drawChevronLayer(i);
+  }
+  
+  // Draw stress points (acid yellow-green flashes at hinges)
+  for (let sp of stressPoints) {
+    let alpha = 150 + 100 * sin(time * 8 + sp.x * 0.01);
+    let sz = 3 + 2 * sin(time * 6 + sp.y * 0.02);
+    noStroke();
+    fill(228, 255, 26, alpha);
+    ellipse(sp.x, sp.y, sz, sz);
+    // Glow
+    fill(228, 255, 26, alpha * 0.3);
+    ellipse(sp.x, sp.y, sz * 3, sz * 3);
+  }
+  
+  // Subtle stress flow lines
+  drawStressFlow();
+}
+
+function drawChevronLayer(idx) {
+  let layer = layers[idx];
+  let baseY = layer.baseY;
+  let amplitude = map(idx, 0, numLayers - 1, height * 0.06, height * 0.12);
+  amplitude *= (1 + 0.15 * sin(time * 2 + idx * 0.5));
+  
+  let segWidth = width / numFolds;
+  
+  // Layer color
+  let layerColor;
+  if (layer.isMarker) {
+    layerColor = color(255, 251, 230); // bone white markers
+  } else {
+    // Alternate between graphite and slightly lighter
+    let t = map(idx, 0, numLayers - 1, 0, 1);
+    layerColor = lerpColor(color(61, 61, 74), color(80, 75, 95), t);
+  }
+  
+  stroke(layerColor);
+  strokeWeight(layer.isMarker ? 2.5 : 1.8);
+  noFill();
+  
+  beginShape();
+  for (let x = -10; x <= width + 10; x += 2) {
+    let foldPos = (x / segWidth + pressureAngle * 2) % 1;
+    if (foldPos < 0) foldPos += 1;
+    
+    // Chevron: sharp zigzag
+    let chevronY;
+    if (foldPos < 0.5) {
+      // Rising limb
+      let t = foldPos * 2; // 0 to 1
+      // Sharp transition at ends controlled by sharpness
+      let sharpT = pow(t, 1 - sharpness * 0.8);
+      chevronY = lerp(-amplitude, amplitude, sharpT);
+    } else {
+      // Falling limb
+      let t = (foldPos - 0.5) * 2; // 0 to 1
+      let sharpT = pow(t, 1 - sharpness * 0.8);
+      chevronY = lerp(amplitude, -amplitude, sharpT);
+    }
+    
+    // Add subtle geological noise
+    let noiseVal = noise(x * 0.003, idx * 0.5, time * 0.3) * 4 - 2;
+    
+    let y = baseY + chevronY + noiseVal;
+    vertex(x, y);
+    
+    // Collect hinge points (stress concentration)
+    if (abs(foldPos - 0) < 0.02 || abs(foldPos - 0.5) < 0.02) {
+      if (x % 20 < 3) {
+        stressPoints.push({ x: x, y: y });
+      }
+    }
+  }
+  endShape();
+  
+  // Violet hinge highlights
+  if (idx % 3 === 0) {
+    for (let f = 0; f < numFolds; f++) {
+      let hingeX = segWidth * (f + 0.5) - pressureAngle * segWidth * 2;
+      let foldPos = 0.5;
+      let hingeY = baseY + amplitude;
+      
+      let pulse = sin(time * 4 + f + idx * 0.3);
+      let alpha = map(pulse, -1, 1, 30, 120);
+      
+      stroke(123, 47, 190, alpha);
+      strokeWeight(1.5);
+      // Small hinge mark
+      let markSize = 8 + 4 * pulse;
+      line(hingeX - markSize, hingeY - markSize * 0.5, hingeX, hingeY);
+      line(hingeX, hingeY, hingeX + markSize, hingeY - markSize * 0.5);
+    }
+  }
+}
+
+function drawStressFlow() {
+  // Flowing stress lines in acid yellow-green, subtle
+  stroke(228, 255, 26, 20);
+  strokeWeight(0.5);
+  noFill();
+  
+  for (let i = 0; i < 8; i++) {
+    let startY = noise(i, time * 0.5) * height;
+    beginShape();
+    for (let x = 0; x < width; x += 8) {
+      let angle = noise(x * 0.005, startY * 0.005, time + i) * TWO_PI;
+      startY += sin(angle) * 2;
+      vertex(x, startY);
+    }
+    endShape();
+  }
+}
+
+function mousePressed() {
+  numFolds = min(numFolds + 1, 14);
+}
+
+function keyPressed() {
+  if (key === ' ') {
+    targetSharpness = min(targetSharpness + 0.05, 0.98);
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initLayers();
+}
+</script>
+</body>
+</html>
