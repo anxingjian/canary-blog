@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Curl 卷 — Smoke Series</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #111111; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Curl 卷 — Kelvin-Helmholtz instability
+// Palette: #111111, #C9A227, #6B5B3D, #D4C5A0, #4A4A40
+
+const PARTICLE_COUNT = 2000;
+let particles = [];
+let flowField;
+let cols, rows;
+const SCALE = 12;
+let zOff = 0;
+let mouseInfluence = { x: 0, y: 0, active: false };
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  cols = ceil(width / SCALE);
+  rows = ceil(height / SCALE);
+  flowField = new Array(cols * rows);
+  
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(new SmokeParticle());
+  }
+  background(17, 17, 17);
+}
+
+function draw() {
+  // Slow fade for trails
+  noStroke();
+  fill(17, 17, 17, 8);
+  rect(0, 0, width, height);
+  
+  // Update flow field with KH-like instability
+  let yOff = 0;
+  for (let y = 0; y < rows; y++) {
+    let xOff = 0;
+    for (let x = 0; x < cols; x++) {
+      let idx = x + y * cols;
+      // Base: upward flow with horizontal shear
+      let baseAngle = -HALF_PI; // upward
+      // Add horizontal shear that varies with height (KH condition)
+      let shear = sin(y * 0.05 + zOff * 2) * 0.8;
+      // Noise-driven turbulence
+      let noiseVal = noise(xOff, yOff, zOff);
+      let angle = baseAngle + noiseVal * TWO_PI * 0.6 + shear;
+      
+      // Mouse influence - creates velocity shear
+      if (mouseInfluence.active) {
+        let dx = x * SCALE - mouseInfluence.x;
+        let dy = y * SCALE - mouseInfluence.y;
+        let dist = sqrt(dx * dx + dy * dy);
+        if (dist < 200) {
+          let influence = map(dist, 0, 200, 1.5, 0);
+          angle += influence * sin(atan2(dy, dx) + HALF_PI);
+        }
+      }
+      
+      flowField[idx] = p5.Vector.fromAngle(angle);
+      flowField[idx].setMag(0.8 + noiseVal * 0.6);
+      xOff += 0.08;
+    }
+    yOff += 0.08;
+  }
+  zOff += 0.003;
+  
+  // Update and draw particles
+  for (let p of particles) {
+    p.follow(flowField);
+    p.update();
+    p.display();
+    p.edges();
+  }
+}
+
+class SmokeParticle {
+  constructor() {
+    this.reset();
+    // Random start position for initial frame
+    this.pos = createVector(random(width), random(height));
+  }
+  
+  reset() {
+    // Spawn from bottom third, slight horizontal spread
+    this.pos = createVector(
+      width * 0.3 + random(width * 0.4),
+      height + random(20)
+    );
+    this.vel = createVector(0, -random(0.5, 1.5));
+    this.acc = createVector(0, 0);
+    this.life = 255;
+    this.maxLife = 255;
+    this.size = random(1.5, 4);
+    
+    // Color from palette based on temperature/age
+    let colorChoice = random();
+    if (colorChoice < 0.35) {
+      // Old gold - hot core
+      this.col = color(201, 162, 39);
+    } else if (colorChoice < 0.55) {
+      // Burnt umber - cooling
+      this.col = color(107, 91, 61);
+    } else if (colorChoice < 0.8) {
+      // Parchment - diffuse edges
+      this.col = color(212, 197, 160);
+    } else {
+      // Warm charcoal - background smoke
+      this.col = color(74, 74, 64);
+    }
+    
+    // Curl tendency (individual vortex strength)
+    this.curlStrength = random(-0.3, 0.3);
+  }
+  
+  follow(field) {
+    let x = floor(this.pos.x / SCALE);
+    let y = floor(this.pos.y / SCALE);
+    x = constrain(x, 0, cols - 1);
+    y = constrain(y, 0, rows - 1);
+    let idx = x + y * cols;
+    let force = field[idx].copy();
+    
+    // Add individual curl
+    let perpForce = createVector(-force.y, force.x);
+    perpForce.mult(this.curlStrength);
+    force.add(perpForce);
+    
+    this.applyForce(force);
+  }
+  
+  applyForce(force) {
+    this.acc.add(force);
+  }
+  
+  update() {
+    this.vel.add(this.acc);
+    this.vel.limit(3);
+    this.pos.add(this.vel);
+    this.acc.mult(0);
+    this.life -= 0.4;
+    
+    // Buoyancy - slight upward bias
+    this.vel.y -= 0.01;
+  }
+  
+  display() {
+    let alpha = map(this.life, 0, this.maxLife, 0, 120);
+    if (alpha <= 0) return;
+    
+    noStroke();
+    let c = this.col;
+    fill(red(c), green(c), blue(c), alpha);
+    
+    // Size grows as smoke cools and expands
+    let ageFactor = map(this.life, this.maxLife, 0, 1, 2.5);
+    ellipse(this.pos.x, this.pos.y, this.size * ageFactor);
+  }
+  
+  edges() {
+    if (this.pos.y < -20 || this.life <= 0 || 
+        this.pos.x < -20 || this.pos.x > width + 20) {
+      this.reset();
+    }
+  }
+}
+
+function mouseMoved() {
+  mouseInfluence.x = mouseX;
+  mouseInfluence.y = mouseY;
+  mouseInfluence.active = true;
+}
+
+function mousePressed() {
+  // Spawn burst of particles at click point
+  for (let i = 0; i < 30; i++) {
+    let p = new SmokeParticle();
+    p.pos = createVector(mouseX + random(-20, 20), mouseY + random(-10, 10));
+    p.vel = createVector(random(-1, 1), random(-2, -0.5));
+    p.life = 255;
+    p.size = random(2, 5);
+    // Hot new smoke is gold
+    p.col = color(201, 162, 39);
+    particles.push(p);
+  }
+  // Keep particle count manageable
+  while (particles.length > PARTICLE_COUNT + 200) {
+    particles.shift();
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  cols = ceil(width / SCALE);
+  rows = ceil(height / SCALE);
+  flowField = new Array(cols * rows);
+  background(17, 17, 17);
+}
+</script>
+</body>
+</html>
