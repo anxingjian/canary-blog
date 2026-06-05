@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smoke: Plume — Generative Art</title>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+  <style>
+    body { margin: 0; padding: 0; overflow: hidden; background: #0f0f0f; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+<script>
+let noiseScale = 0.008;
+let particles = [];
+let targetParticles = 800;
+
+class Particle {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.vx = random(-0.3, 0.3);
+    this.vy = random(-2, -0.5);
+    this.ax = 0;
+    this.ay = 0;
+    this.life = 255;
+    this.maxLife = 255;
+    this.size = random(1.5, 4);
+    this.baseSize = this.size;
+    this.noiseOffset = random(1000);
+  }
+
+  update(time) {
+    // Perlin noise driven turbulence
+    let angle = noise(this.x * noiseScale, this.y * noiseScale, time * 0.0008) * TWO_PI;
+    let magnitude = noise(this.x * noiseScale * 0.5, this.y * noiseScale * 0.5, this.noiseOffset) * 0.4;
+    
+    this.ax = cos(angle) * magnitude;
+    this.ay = sin(angle) * magnitude - 0.02; // constant upward drift
+    
+    this.vx += this.ax;
+    this.vy += this.ay;
+    
+    // damping
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    
+    this.x += this.vx;
+    this.y += this.vy;
+    
+    // dispersion: size expands as particle rises
+    let progression = 1 - (this.life / this.maxLife);
+    this.size = this.baseSize + progression * 2;
+    
+    // fade out
+    this.life -= 2;
+  }
+
+  display() {
+    let alpha = map(this.life, 0, this.maxLife, 0, 180);
+    
+    // cool gray-blue base
+    let r = 120 + map(this.life, 0, this.maxLife, 20, 0);
+    let g = 130 + map(this.life, 0, this.maxLife, 15, 0);
+    let b = 145 + map(this.life, 0, this.maxLife, 30, 0);
+    
+    fill(r, g, b, alpha);
+    noStroke();
+    circle(this.x, this.y, this.size);
+    
+    // cool rim highlight in pale celadon
+    let highlightAlpha = alpha * 0.6;
+    fill(220, 225, 215, highlightAlpha);
+    circle(this.x - this.size * 0.3, this.y - this.size * 0.3, this.size * 0.3);
+  }
+
+  isDead() {
+    return this.life <= 0;
+  }
+}
+
+function setup() {
+  createCanvas(window.innerWidth, window.innerHeight);
+  
+  // spawn initial particles across lower portion
+  for (let i = 0; i < targetParticles * 0.5; i++) {
+    let x = random(width);
+    let y = random(height * 0.6, height);
+    particles.push(new Particle(x, y));
+  }
+}
+
+function draw() {
+  background(15, 15, 18); // deep navy-black
+  
+  let time = millis();
+  
+  // continuous spawning from bottom center region
+  let spawnX = width / 2 + random(-width * 0.3, width * 0.3);
+  let spawnY = height * 0.75 + random(-20, 20);
+  
+  if (particles.length < targetParticles && random() < 0.4) {
+    particles.push(new Particle(spawnX, spawnY));
+  }
+  
+  // update and display
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update(time);
+    particles[i].display();
+    
+    if (particles[i].isDead()) {
+      particles.splice(i, 1);
+    }
+  }
+  
+  // optional: draw subtle hint of source area
+  noStroke();
+  let sourceAlpha = 40;
+  fill(150, 155, 165, sourceAlpha);
+  circle(width / 2, height * 0.75, 60);
+}
+
+function windowResized() {
+  resizeCanvas(window.innerWidth, window.innerHeight);
+}
+</script>
+</body>
+</html>
