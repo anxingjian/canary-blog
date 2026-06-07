@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>消 / Disperse</title>
+<style>
+* { margin: 0; padding: 0; }
+body { background: #0D1B2A; overflow: hidden; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Disperse (消) — Smoke series finale
+// Smoke that has exhausted its heat, losing coherence, fading into cold air
+
+const particles = [];
+const MAX_PARTICLES = 800;
+const PALETTE = ['#3E5C76', '#C5D5E4', '#F0EDE5', '#D4A49A', '#7A9BB5'];
+
+let sourceActive = true;
+let fadeTimer = 0;
+let phase = 0; // 0: emitting, 1: dispersing, 2: gone
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  colorMode(RGB, 255, 255, 255, 1.0);
+  noStroke();
+}
+
+function draw() {
+  // Dark navy background with very slight trail
+  background(13, 27, 42, 0.03);
+  
+  fadeTimer++;
+  
+  // Phase transitions — smoke source dies over time, then particles disperse
+  if (fadeTimer > 300 && phase === 0) {
+    phase = 1; // stop emitting, start aggressive dispersal
+  }
+  if (fadeTimer > 900) {
+    fadeTimer = 0;
+    phase = 0; // restart cycle
+  }
+  
+  // Emit particles from center cluster
+  if (phase === 0 && particles.length < MAX_PARTICLES) {
+    let count = int(random(2, 5));
+    for (let i = 0; i < count; i++) {
+      particles.push(new SmokeParticle(
+        width / 2 + random(-30, 30),
+        height * 0.65 + random(-10, 10)
+      ));
+    }
+  }
+  
+  // Mouse interaction: clicking creates a dispersal burst
+  if (mouseIsPressed) {
+    for (let p of particles) {
+      let d = dist(mouseX, mouseY, p.x, p.y);
+      if (d < 200) {
+        let angle = atan2(p.y - mouseY, p.x - mouseX);
+        let force = map(d, 0, 200, 3, 0.2);
+        p.vx += cos(angle) * force;
+        p.vy += sin(angle) * force;
+        p.disperseRate *= 1.02;
+      }
+    }
+  }
+  
+  // Update and draw
+  for (let i = particles.length - 1; i >= 0; i--) {
+    let p = particles[i];
+    p.update(phase);
+    p.display();
+    if (p.isDead()) {
+      particles.splice(i, 1);
+    }
+  }
+}
+
+class SmokeParticle {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.vx = random(-0.3, 0.3);
+    this.vy = random(-1.2, -0.3);
+    this.size = random(8, 40);
+    this.maxSize = this.size * random(2, 4);
+    this.alpha = random(0.4, 0.8);
+    this.color = color(this.pickColor());
+    this.noiseOffX = random(1000);
+    this.noiseOffY = random(2000);
+    this.age = 0;
+    this.lifespan = random(200, 500);
+    this.disperseRate = 1.0;
+    this.rotAngle = random(TWO_PI);
+    this.rotSpeed = random(-0.01, 0.01);
+  }
+  
+  pickColor() {
+    let c = random(PALETTE);
+    let col = color(c);
+    return col;
+  }
+  
+  update(phase) {
+    this.age++;
+    
+    // Noise-driven drift
+    let nx = noise(this.noiseOffX + frameCount * 0.003) - 0.5;
+    let ny = noise(this.noiseOffY + frameCount * 0.003) - 0.5;
+    
+    this.vx += nx * 0.1;
+    this.vy += ny * 0.08;
+    
+    // Slight upward buoyancy that weakens over time
+    let buoyancy = map(this.age, 0, this.lifespan, -0.03, 0);
+    this.vy += buoyancy;
+    
+    // In dispersal phase, particles spread outward from center
+    if (phase === 1) {
+      let dx = this.x - width / 2;
+      let dy = this.y - height / 2;
+      let d = max(1, sqrt(dx * dx + dy * dy));
+      this.vx += (dx / d) * 0.05 * this.disperseRate;
+      this.vy += (dy / d) * 0.03 * this.disperseRate;
+      this.disperseRate *= 1.001;
+      this.alpha *= 0.997;
+    }
+    
+    // Damping
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    
+    this.x += this.vx;
+    this.y += this.vy;
+    
+    // Size grows as smoke expands
+    let growthRate = phase === 1 ? 0.3 : 0.15;
+    this.size = min(this.size + growthRate, this.maxSize);
+    
+    // Alpha fades
+    let lifeFrac = this.age / this.lifespan;
+    this.alpha = map(lifeFrac, 0, 1, 0.6, 0) * (phase === 1 ? 0.6 : 1.0);
+    
+    this.rotAngle += this.rotSpeed;
+  }
+  
+  display() {
+    if (this.alpha <= 0.01) return;
+    
+    push();
+    translate(this.x, this.y);
+    rotate(this.rotAngle);
+    
+    let c = this.color;
+    let r = red(c), g = green(c), b = blue(c);
+    
+    // Soft radial gradient via concentric ellipses
+    for (let i = 3; i >= 0; i--) {
+      let frac = i / 3;
+      let s = this.size * (1 - frac * 0.4);
+      let a = this.alpha * frac * 0.4;
+      fill(r, g, b, a);
+      ellipse(0, 0, s, s * 0.85);
+    }
+    
+    pop();
+  }
+  
+  isDead() {
+    return this.age > this.lifespan || this.alpha <= 0.01 ||
+           this.x < -100 || this.x > width + 100 ||
+           this.y < -100 || this.y > height + 100;
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+</script>
+</body>
+</html>
