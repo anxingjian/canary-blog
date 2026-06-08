@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dune 丘 — Sand Series</title>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #2C1810; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<script>
+// Sand Series #1: Dune (丘)
+// Granular physics — wind-driven particle accumulation
+
+const COLORS = {
+  deepUmber: [44, 24, 16],
+  warmClay: [212, 149, 106],
+  paleSand: [242, 216, 168],
+  sienna: [139, 94, 60],
+  amberGold: [232, 184, 75]
+};
+
+let particles = [];
+let terrain = [];
+let windAngle = 0;
+let windStrength = 1.2;
+let targetWindAngle = 0;
+const NUM_PARTICLES = 800;
+const TERRAIN_RES = 2;
+let cols;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  cols = Math.ceil(width / TERRAIN_RES);
+  
+  // Initialize terrain as flat ground at 70% height
+  terrain = new Array(cols).fill(0).map(() => height * 0.7);
+  
+  // Pre-build some dune shape
+  for (let i = 0; i < cols; i++) {
+    let x = i / cols;
+    // Main dune - asymmetric: gentle windward, steep leeward
+    let duneCenter = 0.55;
+    let duneWidth = 0.25;
+    let dist = (x - duneCenter) / duneWidth;
+    if (dist > -1 && dist < 1) {
+      let h;
+      if (dist < 0) {
+        // Windward - gentle slope
+        h = Math.pow(1 - dist * dist, 1.5);
+      } else {
+        // Leeward - steeper
+        h = Math.pow(1 - dist * dist, 0.8);
+      }
+      terrain[i] -= h * height * 0.18;
+    }
+    // Secondary smaller dune
+    let dune2Center = 0.25;
+    let dune2Width = 0.12;
+    let dist2 = (x - dune2Center) / dune2Width;
+    if (dist2 > -1 && dist2 < 1) {
+      let h2 = Math.pow(1 - dist2 * dist2, 1.2) * height * 0.07;
+      terrain[i] -= h2;
+    }
+  }
+  
+  // Spawn initial particles
+  for (let i = 0; i < NUM_PARTICLES; i++) {
+    particles.push(createParticle());
+  }
+}
+
+function createParticle() {
+  return {
+    x: random(width),
+    y: random(height * 0.1, height * 0.5),
+    vx: random(0.5, 2),
+    vy: random(-0.2, 0.5),
+    size: random(1.5, 4),
+    life: random(100, 400),
+    maxLife: 400,
+    settled: false,
+    type: random() < 0.15 ? 'gold' : (random() < 0.5 ? 'clay' : 'sand')
+  };
+}
+
+function draw() {
+  // Sky gradient - pale sand to warm
+  for (let y = 0; y < height * 0.5; y++) {
+    let t = y / (height * 0.5);
+    let r = lerp(COLORS.paleSand[0], COLORS.warmClay[0], t * 0.3);
+    let g = lerp(COLORS.paleSand[1], COLORS.warmClay[1], t * 0.3);
+    let b = lerp(COLORS.paleSand[2], COLORS.warmClay[2], t * 0.3);
+    stroke(r, g, b);
+    line(0, y, width, y);
+  }
+  
+  // Draw terrain
+  drawTerrain();
+  
+  // Update wind
+  windAngle = lerp(windAngle, targetWindAngle, 0.01);
+  let wx = cos(windAngle) * windStrength;
+  let wy = sin(windAngle) * 0.3;
+  
+  // Add subtle wind variation
+  let windNoise = noise(frameCount * 0.005) * 0.6 - 0.3;
+  wx += windNoise;
+  
+  // Update and draw particles
+  noStroke();
+  for (let i = particles.length - 1; i >= 0; i--) {
+    let p = particles[i];
+    if (p.settled) continue;
+    
+    // Wind force + gravity
+    p.vx += wx * 0.01;
+    p.vy += 0.02; // gravity
+    
+    // Turbulence via noise
+    let n = noise(p.x * 0.003, p.y * 0.003, frameCount * 0.008);
+    p.vx += (n - 0.5) * 0.15;
+    p.vy += (noise(p.x * 0.003 + 100, p.y * 0.003, frameCount * 0.008) - 0.5) * 0.08;
+    
+    // Damping
+    p.vx *= 0.99;
+    p.vy *= 0.99;
+    
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+    
+    // Check terrain collision
+    let col = Math.floor(p.x / TERRAIN_RES);
+    if (col >= 0 && col < cols && p.y >= terrain[col]) {
+      // Settle on terrain
+      p.settled = true;
+      terrain[col] -= p.size * 0.3; // Build up terrain
+      // Smooth neighbors
+      if (col > 0) terrain[col-1] = lerp(terrain[col-1], terrain[col], 0.1);
+      if (col < cols - 1) terrain[col+1] = lerp(terrain[col+1], terrain[col], 0.1);
+    }
+    
+    // Remove if offscreen or dead
+    if (p.x < -50 || p.x > width + 50 || p.y > height + 50 || p.life <= 0) {
+      particles.splice(i, 1);
+      continue;
+    }
+    
+    // Draw particle
+    let alpha = map(p.life, 0, p.maxLife, 0, 220);
+    let col_arr;
+    if (p.type === 'gold') col_arr = COLORS.amberGold;
+    else if (p.type === 'clay') col_arr = COLORS.warmClay;
+    else col_arr = COLORS.paleSand;
+    
+    fill(col_arr[0], col_arr[1], col_arr[2], alpha);
+    ellipse(p.x, p.y, p.size, p.size);
+  }
+  
+  // Replenish particles from windward side
+  while (particles.length < NUM_PARTICLES) {
+    let p = createParticle();
+    p.x = random(-20, width * 0.1);
+    p.y = random(height * 0.2, height * 0.6);
+    p.vx = random(1, 3);
+    particles.push(p);
+  }
+  
+  // Erode terrain on windward slopes (simulate saltation)
+  if (frameCount % 3 === 0) {
+    for (let i = 1; i < cols - 1; i++) {
+      let slope = (terrain[i-1] - terrain[i+1]) / (TERRAIN_RES * 2);
+      // If slope faces wind, erode
+      if (slope > 0.02) {
+        terrain[i] += 0.1; // Lower the surface
+        // Deposit on leeward
+        let deposit = Math.min(i + Math.floor(random(10, 40)), cols - 1);
+        terrain[deposit] -= 0.08;
+      }
+    }
+  }
+  
+  // Angle of repose enforcement
+  let maxSlope = 0.6; // ~34 degrees
+  for (let i = 1; i < cols; i++) {
+    let diff = terrain[i-1] - terrain[i];
+    if (Math.abs(diff) > maxSlope * TERRAIN_RES) {
+      let avg = (terrain[i-1] + terrain[i]) / 2;
+      terrain[i-1] = lerp(terrain[i-1], avg, 0.05);
+      terrain[i] = lerp(terrain[i], avg, 0.05);
+    }
+  }
+}
+
+function drawTerrain() {
+  // Draw terrain layers with depth
+  noStroke();
+  
+  // Deep layer
+  fill(COLORS.deepUmber[0], COLORS.deepUmber[1], COLORS.deepUmber[2]);
+  beginShape();
+  vertex(0, height);
+  for (let i = 0; i < cols; i++) {
+    vertex(i * TERRAIN_RES, terrain[i] + 30);
+  }
+  vertex(width, height);
+  endShape(CLOSE);
+  
+  // Shadow/sienna layer
+  fill(COLORS.sienna[0], COLORS.sienna[1], COLORS.sienna[2]);
+  beginShape();
+  vertex(0, height);
+  for (let i = 0; i < cols; i++) {
+    vertex(i * TERRAIN_RES, terrain[i] + 10);
+  }
+  vertex(width, height);
+  endShape(CLOSE);
+  
+  // Main sand surface
+  beginShape();
+  vertex(0, height);
+  for (let i = 0; i < cols; i++) {
+    // Color varies based on slope (windward vs leeward)
+    let slope = 0;
+    if (i > 0 && i < cols - 1) {
+      slope = (terrain[i-1] - terrain[i+1]) / (TERRAIN_RES * 2);
+    }
+    // Windward = lighter, leeward = darker
+    let t = map(slope, -0.5, 0.5, 0, 1);
+    t = constrain(t, 0, 1);
+    let r = lerp(COLORS.sienna[0], COLORS.warmClay[0], t);
+    let g = lerp(COLORS.sienna[1], COLORS.warmClay[1], t);
+    let b = lerp(COLORS.sienna[2], COLORS.warmClay[2], t);
+    fill(r, g, b);
+    rect(i * TERRAIN_RES, terrain[i], TERRAIN_RES, height - terrain[i]);
+  }
+  endShape();
+  
+  // Highlight on ridges
+  stroke(COLORS.paleSand[0], COLORS.paleSand[1], COLORS.paleSand[2], 120);
+  strokeWeight(1.5);
+  noFill();
+  beginShape();
+  for (let i = 1; i < cols - 1; i++) {
+    // Only draw on ridge points (local minima in terrain = high points visually)
+    if (terrain[i] < terrain[i-1] && terrain[i] < terrain[i+1]) {
+      vertex(i * TERRAIN_RES, terrain[i] - 1);
+    }
+  }
+  endShape();
+  noStroke();
+}
+
+function mousePressed() {
+  // Click to change wind direction
+  targetWindAngle = atan2(mouseY - height/2, mouseX - width/2);
+  windStrength = random(0.8, 2.0);
+  
+  // Burst of particles from click point
+  for (let i = 0; i < 30; i++) {
+    let p = createParticle();
+    p.x = mouseX + random(-20, 20);
+    p.y = mouseY + random(-20, 20);
+    p.vx = random(-2, 2);
+    p.vy = random(-3, -0.5);
+    particles.push(p);
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  // Rebuild terrain array for new width
+  let newCols = Math.ceil(width / TERRAIN_RES);
+  let newTerrain = new Array(newCols).fill(0).map((_, i) => {
+    let oldIdx = Math.floor(i * cols / newCols);
+    return terrain[Math.min(oldIdx, cols - 1)] || height * 0.7;
+  });
+  terrain = newTerrain;
+  cols = newCols;
+}
+</script>
+</body>
+</html>
