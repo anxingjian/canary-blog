@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drift 移 — Sand Series</title>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #1A2F38; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<script>
+// Sand-002: Drift 移 — aeolian saltation
+// Palette: deep teal #1A2F38, bright teal #4ECDC4, gypsum white #F7F7F2, coral #FF6B6B, charcoal blue #2C3E50
+
+const PARTICLE_COUNT = 2000;
+let particles = [];
+let windSpeed = 2.5;
+let windAngle = 0;
+let heightMap;
+let cols, rows;
+let cellSize = 4;
+let time = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  cols = Math.ceil(width / cellSize);
+  rows = Math.ceil(height / cellSize);
+  heightMap = new Float32Array(cols * rows);
+  
+  // Initialize height map with noise-based dune ridges
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      let nx = i * 0.008;
+      let ny = j * 0.003;
+      // Horizontal ridge pattern
+      let ridge = sin(j * 0.05 + noise(i * 0.02, j * 0.01) * 4) * 0.5 + 0.5;
+      let base = noise(nx, ny) * 0.3;
+      heightMap[j * cols + i] = (ridge * 0.7 + base * 0.3);
+    }
+  }
+  
+  // Create saltating particles
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push({
+      x: random(width),
+      y: random(height),
+      z: 0, // height above surface
+      vx: 0,
+      vy: 0,
+      vz: 0,
+      airborne: random() < 0.3,
+      size: random(1.5, 3.5),
+      shade: random() // for color variation
+    });
+  }
+  
+  noStroke();
+}
+
+function draw() {
+  time += 0.005;
+  
+  // Semi-transparent background for trails
+  background(26, 47, 56, 25);
+  
+  // Wind field with turbulence
+  let baseWind = windSpeed;
+  
+  // Draw and update height map visualization (subtle)
+  drawTerrain();
+  
+  // Update particles
+  for (let p of particles) {
+    let gi = Math.floor(p.x / cellSize);
+    let gj = Math.floor(p.y / cellSize);
+    gi = constrain(gi, 0, cols - 1);
+    gj = constrain(gj, 0, rows - 1);
+    
+    let localHeight = heightMap[gj * cols + gi];
+    
+    if (p.airborne) {
+      // Wind force with noise turbulence
+      let turbX = noise(p.x * 0.005, p.y * 0.005, time) * 2 - 1;
+      let turbY = noise(p.x * 0.005 + 100, p.y * 0.005, time) * 2 - 1;
+      
+      p.vx += (baseWind * cos(windAngle) + turbX * 0.5) * 0.02;
+      p.vy += (baseWind * sin(windAngle) + turbY * 0.3) * 0.02;
+      p.vz -= 0.015; // gravity
+      
+      p.x += p.vx;
+      p.y += p.vy;
+      p.z += p.vz;
+      
+      // Damping
+      p.vx *= 0.99;
+      p.vy *= 0.99;
+      
+      // Landing
+      if (p.z <= 0) {
+        p.z = 0;
+        p.airborne = false;
+        // Deposit: increase height at landing point
+        if (gi >= 0 && gi < cols && gj >= 0 && gj < rows) {
+          heightMap[gj * cols + gi] = min(1, heightMap[gj * cols + gi] + 0.002);
+        }
+        p.vx *= 0.2;
+        p.vy *= 0.2;
+        p.vz = 0;
+      }
+    } else {
+      // Surface creep — slow movement along surface
+      p.vx += baseWind * cos(windAngle) * 0.003;
+      p.vy += baseWind * sin(windAngle) * 0.001;
+      p.vx *= 0.92;
+      p.vy *= 0.92;
+      p.x += p.vx;
+      p.y += p.vy;
+      
+      // Saltation trigger — probability based on wind and local exposure
+      let exposure = 1 - localHeight;
+      if (random() < 0.008 * baseWind * (0.3 + exposure * 0.7)) {
+        p.airborne = true;
+        p.vz = random(0.5, 1.5);
+        p.vx = baseWind * cos(windAngle) * random(0.3, 0.8);
+        p.vy = baseWind * sin(windAngle) * random(0.1, 0.3);
+        // Erode: decrease height at takeoff point
+        if (gi >= 0 && gi < cols && gj >= 0 && gj < rows) {
+          heightMap[gj * cols + gi] = max(0, heightMap[gj * cols + gi] - 0.001);
+        }
+      }
+    }
+    
+    // Wrap horizontally
+    if (p.x < 0) p.x += width;
+    if (p.x > width) p.x -= width;
+    if (p.y < 0) p.y += height;
+    if (p.y > height) p.y -= height;
+    
+    // Draw particle
+    drawParticle(p, localHeight);
+  }
+  
+  // Slowly evolve wind
+  windAngle = sin(time * 0.3) * 0.2 - 0.1; // mostly left-to-right with slight drift
+}
+
+function drawTerrain() {
+  // Draw every Nth cell as a subtle colored dot
+  let step = 3;
+  for (let i = 0; i < cols; i += step) {
+    for (let j = 0; j < rows; j += step) {
+      let h = heightMap[j * cols + i];
+      if (h > 0.55) {
+        // Ridge tops: gypsum white with coral sunset tint
+        let sunFactor = max(0, sin((i / cols) * PI)); // sun from right side
+        let r = lerp(247, 255, sunFactor * h);
+        let g = lerp(247, 107, sunFactor * h * 0.3);
+        let b = lerp(242, 107, sunFactor * h * 0.2);
+        fill(r, g, b, h * 30);
+        rect(i * cellSize, j * cellSize, cellSize * step, cellSize * step);
+      } else if (h < 0.35) {
+        // Troughs: deep teal shadow
+        fill(78, 205, 196, (1 - h) * 15);
+        rect(i * cellSize, j * cellSize, cellSize * step, cellSize * step);
+      }
+    }
+  }
+}
+
+function drawParticle(p, localHeight) {
+  let alpha;
+  let r, g, b;
+  
+  if (p.airborne) {
+    // Airborne: coral-tinted by sunset, brighter
+    alpha = map(p.z, 0, 2, 150, 255);
+    let t = p.shade;
+    if (t < 0.4) {
+      // Coral highlight
+      r = 255; g = 107; b = 107;
+    } else if (t < 0.7) {
+      // Gypsum white
+      r = 247; g = 247; b = 242;
+    } else {
+      // Bright teal
+      r = 78; g = 205; b = 196;
+    }
+    let sz = p.size * map(p.z, 0, 2, 1, 1.8);
+    fill(r, g, b, alpha);
+    ellipse(p.x, p.y, sz, sz);
+  } else {
+    // On surface: mostly white/teal depending on height
+    alpha = map(localHeight, 0, 1, 80, 180);
+    if (localHeight > 0.5) {
+      // On ridges: gypsum white
+      r = 247; g = 247; b = 242;
+    } else {
+      // In troughs: teal-tinted
+      r = lerp(44, 78, p.shade);
+      g = lerp(62, 205, p.shade * 0.5);
+      b = lerp(80, 196, p.shade * 0.5);
+    }
+    fill(r, g, b, alpha);
+    ellipse(p.x, p.y, p.size, p.size);
+  }
+}
+
+function mousePressed() {
+  // Click to change wind speed
+  windSpeed = map(mouseX, 0, width, 0.5, 6);
+}
+
+function mouseDragged() {
+  windSpeed = map(mouseX, 0, width, 0.5, 6);
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  // Rebuild height map
+  let newCols = Math.ceil(width / cellSize);
+  let newRows = Math.ceil(height / cellSize);
+  let newMap = new Float32Array(newCols * newRows);
+  for (let i = 0; i < newCols; i++) {
+    for (let j = 0; j < newRows; j++) {
+      let nx = i * 0.008;
+      let ny = j * 0.003;
+      let ridge = sin(j * 0.05 + noise(i * 0.02, j * 0.01) * 4) * 0.5 + 0.5;
+      let base = noise(nx, ny) * 0.3;
+      newMap[j * newCols + i] = (ridge * 0.7 + base * 0.3);
+    }
+  }
+  cols = newCols;
+  rows = newRows;
+  heightMap = newMap;
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+</script>
+</body>
+</html>
