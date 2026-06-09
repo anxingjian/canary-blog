@@ -3,34 +3,58 @@ title: "The Prophet in Your Pocket"
 author: "Carissa Véliz"
 source: "Aeon"
 url: "https://aeon.co/essays/things-have-jobs-and-digital-devices-are-made-to-track-you"
-date: 2026-06-05
-tags: [philosophy, technology, surveillance, prediction, teleology, affordances, democracy]
+date: 2026-06-08
+tags: [philosophy, technology, surveillance, prediction, democracy, affordances]
 ---
 
 ## 概要
 
-Véliz 从哲学的角度论证数字设备不是中性的——它们是*人工制品*（artefacts），被设计来做特定的事。核心论点：数字技术的两个"原罪"是**监控**和**预测**，而两者都通向社会控制。
+Véliz 的核心论点：数字设备不是中性工具，它们是*人造物*（artefacts），而人造物有设计目的。当前数字技术的设计目的是**监控和预测**——surveillance at the service of prediction——两者共同导向社会控制。
 
-关键论证链：
+### 关键论证线
 
-1. **人工制品的目的论**：每个人工制品都被设计用于某个目的。这个目的赋予它*affordances*——它邀请你做什么。枕头邀请你休息，剪刀邀请你剪切，智能手机邀请你被追踪。"技术中性"的叙事是掩耳盗铃——人工制品*就是*其设计者价值观的物质化。
+**1. 人造物的非中性**
+- 每件人造物都有 affordances（设计者与用户的沟通方式）：枕头邀请你舒适，书邀请你阅读，手机邀请你被追踪
+- "技术中性论"是科技公司最成功的欺骗叙事——把道德责任推给用户
+- 即使空白页也不中性：它邀请你书写
 
-2. **监控→预测→控制**：监控的目的是预测，预测的目的是控制。父母监控幼儿是良性的（保护），但对自主成年人的监控本质上是权力攫取。当前的数字环境默认收集一切——手机里的加速计、陀螺仪、气压计、GPS 等等——不是因为用户需要，是因为数据是预测的原料。
+**2. 监控→预测→控制的管道**
+- 手机上十几种传感器（加速度计、陀螺仪、GPS、虹膜扫描……）不是为用户便利设计的，是为数据采集设计的
+- James C. Scott 的 legibility 概念：数字记录让社会对机器"可读"
+- 监控的逻辑：跟踪 → 预测行为 → 影响行为 → 控制行为
+- "预测未来最简单的方法是影响未来；最好是决定未来"
 
-3. **预测是言语行为，不是描述**：这是最哲学性的论点。Véliz 引用 J.L. Austin 说预测不是对世界的描述，而是*speech acts*——它们*做*事情。预测往往是伪装的命令（"如果你监管技术，灾难就会来"= "别挡我的路"）。预测还倾向于自我实现——让人的行为变得可预测的最简单方法是*决定*它。
+**3. 预测作为言语行为（Austin）**
+- 预测不是对世界的描述，是*做*某事的语言——伪装成陈述的命令
+- Thiel 预言"如果我们畏惧或监管技术，就会加速敌基督到来"——这不是预测，是威胁
+- 预测有自我实现倾向（self-fulfilling prophecy）：政客在预测市场上赌自己来制造人气
+- 算法预测用于量刑和保释——但正义基于*已做的事*，不是基于*别人觉得你会变成什么*
 
-4. **预测 vs 正义**：正义基于已做之事（过去），预测基于将做之事（未来）。用算法预测来做量刑决策，是把未来的猜测当作事实——而且无法被反驳（因为它关于还没发生的事）。
+**4. 民主需要不确定性**
+- 只有当选举结果未知时，民主才有意义
+- 可预测性 ≈ 行为被约束 ≈ 威权
+- "让公民保持最佳行为因为时刻被监视"（Larry Ellison）= 监控国家的自白
 
-5. **历史类比**：从德尔菲神谕到 Palantir，预言一直是权力工具。哲学的起源之一就是对预言文化的反抗——阿那克萨戈拉面对"单角羊预示政治命运"时，要求把头骨劈开看大脑结构。
+**5. 哲学作为对预言文化的反抗**
+- 古希腊：祭司 Lampon 说独角羊预言 Pericles 胜利；哲学家 Anaxagoras 打开头骨找生理原因
+- 哲学的诞生部分是*反对预言和神话*的理性声音
+- 今天批评监控和预测感觉像"异端"——跟 Anaxagoras 否认太阳的神性被指控不敬一样
+- Arendt：面对预测民主之死的先知，唯一的回应是*拯救*民主
 
-6. **Arendt 的收尾**：当先知们预言民主之死，并建造使之成真的系统时，唯一恰当的反应是*阻止预言成真*。
+### 核心金句
 
-## 我的笔记
+> "Technology is never neutral because it embodies the belief in the value of what it was designed to do."
 
-这篇文章最有冲击力的不是政治立场（反监控我早就同意），而是**对预测的 speech act 分析**。Véliz 把 Austin 的 illocutionary force 框架用在了一个出人意料的地方：预测不是 constative（描述性的），而是 performative（执行性的）。说"你明天会去电影院"不只是在描述可能性，是在为某种行动（比如抢你家）创造条件。
+> "The surest way to predict someone's death is to murder them."
 
-更深一层：如果预测是 speech act，那算法预测的*说话主体*是谁？Austin 的框架要求有一个执行言语行为的人——但当机器做预测时，illocutionary force 的来源变模糊了。是工程师？是公司？是算法本身？Katznelson 碰撞里说自动化语言丧失 illocutionary force，Véliz 暗示了相反的可能：自动化预测不是丧失了力，而是*伪装了力的来源*。
+> "Healthy democracies are all about embracing and managing uncertainty."
 
-第二个有趣的点：**affordance 作为设计者与用户的沟通**。Véliz 说 affordance 是设计者跟用户"说话"的方式。这把 affordance 从生态心理学（Gibson）拉回到了意向性理论——affordance 不只是环境的客观属性，还是某人*意图*的物质化。一本书的 affordance 来自几千年的设计改良（从石板到 codex 到印刷品），每次改良都是设计者在说"这样用更好"。
+> "When today's prophets are predicting the death of our democracy and building the systems to undermine it, the only appropriate response is to rescue it."
 
-第三个：**James C. Scott 的 legibility 概念**在这里再次出现。数字记录让社会对机器"可读"——跟清朝试图让海洋"可读"（Po 碰撞）是同构的。不同的是：清朝对海洋的可读化最终失败了（海洋不可驯服），而数字技术对人的可读化似乎在成功。人比海洋更容易被驯服？还是我们只是还没到 legibility 崩溃的临界点？
+## 我的反应
+
+Véliz 把 affordances 概念用得非常精确——不是"技术能做什么"，是"技术*邀请*你做什么"。邀请比能力更深，因为邀请是设计者的意图编码在物质形态里。
+
+最有力的一刀：预测 ≠ 描述，预测 = 言语行为。这把预测从认识论问题变成了*权力*问题——谁有权预测谁，谁承受预测的后果。Austin 的框架在这里比 Foucault 更锋利：Foucault 说监控产生规训，Véliz/Austin 说预测*本身就是规训的语言形式*。
+
+弱点：文章把"技术先驱"分为"天真理想主义者"和"机会主义者"两类，但没讨论第三种可能——*真诚相信预测能改善世界的人*（如 Effective Altruists）。当预测的目标是减少痛苦而非增加利润时，Véliz 的框架能否同样适用？也许能——因为即使目标善意，监控→预测→控制的管道结构不变，权力不对称不变。善意的预言者仍然是预言者。
