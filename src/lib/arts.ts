@@ -52,7 +52,7 @@ export function getAllArts(): Art[] {
   if (!fs.existsSync(artsDir)) return [];
   const files = fs.readdirSync(artsDir).filter((f) => f.endsWith(".md"));
   const arts = files.map(parseArt).filter(Boolean) as Art[];
-  return arts.sort((a, b) => b.date.localeCompare(a.date) || b.slug.localeCompare(a.slug));
+  return arts.sort((a, b) => b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug));
 }
 
 export function getArt(slug: string): Art | null {
