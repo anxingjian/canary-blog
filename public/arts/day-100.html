@@ -1,226 +1,161 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>100</title>
+<title>Day 100 — From Seed to Tree</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #0A0A0F; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
 canvas { display: block; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
 </head>
 <body>
 <script>
-// 100 Days Growth Trajectory
-// Main: warm gold (#D4A843), Mako: blue (#4A9CDB), Morgans: green (#4A7C6F), Chopper: red (#C75A5A)
-
-let nodes = [];
-let branches = { mako: [], morgans: [], chopper: [] };
-let seed;
+var GROWTH_DURATION = 18000;
+var MAX_DEPTH_BRANCH = 10;
+var MAX_DEPTH_ROOT = 8;
+var branches = [];
+var particles = [];
+var startTime;
+var growthComplete = false;
+var noiseOff;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  seed = 42;
-  noiseSeed(seed);
-  generateNodes();
-  noLoop();
+  noiseOff = random(1000);
+  startTime = millis();
+  buildTree();
+}
+
+function buildTree() {
+  branches = [];
+  particles = [];
+  var cx = width / 2;
+  var cy = height * 0.52;
+  genBranch(cx, cy, -HALF_PI, height * 0.16, 0, MAX_DEPTH_BRANCH, true);
+  genBranch(cx, cy, HALF_PI, height * 0.1, 0, MAX_DEPTH_ROOT, false);
+}
+
+function genBranch(x, y, angle, len, depth, maxD, up) {
+  if (depth >= maxD || len < 1.5) return;
+  
+  var n = noise(x * 0.003 + noiseOff, y * 0.003, depth * 0.4);
+  var aOff = map(n, 0, 1, -0.35, 0.35) * map(depth, 0, maxD, 0.6, 1.4);
+  angle += aOff;
+  
+  var midAngle = angle + noise(x * 0.01, depth) * 0.2 - 0.1;
+  var mx = x + cos(midAngle) * len * 0.5;
+  var my = y + sin(midAngle) * len * 0.5;
+  var x2 = mx + cos(angle) * len * 0.5;
+  var y2 = my + sin(angle) * len * 0.5;
+  
+  var w = map(depth, 0, maxD, up ? 7 : 5.5, 0.4);
+  var growOrder = depth + random(0.4);
+  
+  branches.push({x1:x, y1:y, x2:mx, y2:my, weight:w*1.02, depth:depth, maxD:maxD, isBranch:up, growOrder:growOrder, totalOrders:maxD});
+  branches.push({x1:mx, y1:my, x2:x2, y2:y2, weight:w, depth:depth, maxD:maxD, isBranch:up, growOrder:growOrder, totalOrders:maxD});
+  
+  if (depth >= maxD - 2 && random() < 0.5) {
+    particles.push({ox:x2, oy:y2, x:x2, y:y2, vx:random(-0.2,0.2), vy:up?random(-0.6,-0.1):random(0.1,0.4), life:random(150,255), maxLife:255, size:random(1.5,4), isBranch:up, phase:random(TWO_PI)});
+  }
+  
+  var nKids = depth < 2 ? floor(random(2,4)) : (random() < 0.7 ? 2 : floor(random(1,4)));
+  var shrink = up ? random(0.58,0.72) : random(0.5,0.68);
+  
+  for (var i = 0; i < nKids; i++) {
+    var spread = up ? random(0.25,0.65) : random(0.3,0.75);
+    var cAngle = angle + (i-(nKids-1)/2)*spread + random(-0.1,0.1);
+    genBranch(x2, y2, cAngle, len*shrink, depth+1, maxD, up);
+  }
 }
 
 function draw() {
-  background(10, 10, 15);
-  drawConnections();
-  drawBranchConnections();
-  drawNodes();
-  drawBranchNodes();
-}
-
-function generateNodes() {
-  let marginX = width * 0.08;
-  let usableW = width - marginX * 2;
-  let centerY = height * 0.42;
-
-  for (let i = 0; i < 100; i++) {
-    let t = i / 99;
-    let x = marginX + t * usableW;
-    let yOff = noise(i * 0.06, 0.5) * height * 0.18 - height * 0.09;
-    let y = centerY + yOff;
-
-    // Size progression
-    let size, alpha, col;
-    if (i < 10) {
-      size = map(i, 0, 9, 2, 4);
-      alpha = map(i, 0, 9, 30, 70);
-      col = lerpColor(color(80, 80, 90, alpha), color(150, 130, 80, alpha), i / 10);
-    } else if (i < 30) {
-      size = map(i, 10, 29, 4, 7);
-      alpha = map(i, 10, 29, 70, 160);
-      col = lerpColor(color(150, 130, 80, alpha), color(212, 168, 67, alpha), (i - 10) / 20);
-    } else if (i < 50) {
-      size = map(i, 30, 49, 7, 10);
-      alpha = map(i, 30, 49, 160, 220);
-      col = color(212, 168, 67, alpha);
-    } else if (i < 98) {
-      size = map(i, 50, 97, 10, 14);
-      alpha = map(i, 50, 97, 220, 250);
-      col = color(212, 168, 67, alpha);
+  background(0);
+  
+  var elapsed = millis() - startTime;
+  var progress = min(elapsed / GROWTH_DURATION, 1.0);
+  if (progress >= 1.0) growthComplete = true;
+  
+  var breathe = growthComplete ? map(sin(millis()*0.0008), -1, 1, 0.7, 1.0) : 1.0;
+  
+  for (var i = 0; i < branches.length; i++) {
+    var b = branches[i];
+    var bp = map(b.growOrder, 0, b.totalOrders, 0, 0.82);
+    var vis = constrain(map(progress, bp, bp+0.18, 0, 1), 0, 1);
+    if (vis <= 0) continue;
+    
+    var a = vis * breathe;
+    var t = b.depth / b.maxD;
+    
+    var r, g, bl;
+    if (b.isBranch) {
+      if (t < 0.5) {
+        r = lerp(212,242,t*2); g = lerp(168,216,t*2); bl = lerp(67,168,t*2);
+      } else {
+        var bt = (t-0.5)*2*0.7;
+        r = lerp(242,74,bt); g = lerp(216,156,bt); bl = lerp(168,219,bt);
+      }
     } else {
-      size = map(i, 98, 99, 16, 22);
-      alpha = 255;
-      col = color(212, 168, 67, alpha);
+      r = lerp(212,199,t); g = lerp(168,90,t); bl = lerp(67,90,t);
     }
-
-    nodes.push({ x, y, size, col, alpha, day: i + 1 });
-  }
-
-  // Mako branch (Day 33, index 32)
-  let branchStart = nodes[32];
-  for (let i = 0; i < 12; i++) {
-    let t = (i + 1) / 13;
-    let x = branchStart.x + t * usableW * 0.12;
-    let y = branchStart.y + t * height * 0.22 + noise(i * 0.1, 10) * 20;
-    let size = map(i, 0, 11, 4, 8);
-    let alpha = map(i, 0, 11, 100, 200);
-    branches.mako.push({ x, y, size, col: color(74, 156, 219, alpha), alpha });
-  }
-
-  // Morgans branch (Day 65, index 64)
-  branchStart = nodes[64];
-  for (let i = 0; i < 10; i++) {
-    let t = (i + 1) / 11;
-    let x = branchStart.x + t * usableW * 0.1;
-    let y = branchStart.y + t * height * 0.2 + noise(i * 0.1, 20) * 15;
-    let size = map(i, 0, 9, 4, 7);
-    let alpha = map(i, 0, 9, 100, 190);
-    branches.morgans.push({ x, y, size, col: color(74, 124, 111, alpha), alpha });
-  }
-
-  // Chopper branch (Day 68, index 67)
-  branchStart = nodes[67];
-  for (let i = 0; i < 9; i++) {
-    let t = (i + 1) / 10;
-    let x = branchStart.x + t * usableW * 0.09;
-    let y = branchStart.y - t * height * 0.18 + noise(i * 0.1, 30) * 15;
-    let size = map(i, 0, 8, 4, 7);
-    let alpha = map(i, 0, 8, 100, 180);
-    branches.chopper.push({ x, y, size, col: color(199, 90, 90, alpha), alpha });
-  }
-}
-
-function drawConnections() {
-  noFill();
-  for (let i = 1; i < nodes.length; i++) {
-    let a = nodes[i - 1];
-    let b = nodes[i];
-    let alpha = map(i, 0, 99, 15, 80);
-    stroke(212, 168, 67, alpha);
-    strokeWeight(map(i, 0, 99, 0.5, 1.5));
-    line(a.x, a.y, b.x, b.y);
-  }
-}
-
-function drawBranchConnections() {
-  // Mako
-  if (branches.mako.length > 0) {
-    let start = nodes[32];
-    stroke(74, 156, 219, 60);
-    strokeWeight(0.8);
-    line(start.x, start.y, branches.mako[0].x, branches.mako[0].y);
-    for (let i = 1; i < branches.mako.length; i++) {
-      let alpha = map(i, 0, branches.mako.length - 1, 40, 100);
-      stroke(74, 156, 219, alpha);
-      line(branches.mako[i - 1].x, branches.mako[i - 1].y, branches.mako[i].x, branches.mako[i].y);
+    
+    // Outer glow
+    stroke(r, g, bl, a*40);
+    strokeWeight(b.weight*vis*3);
+    line(b.x1, b.y1, b.x2, b.y2);
+    // Mid
+    stroke(r, g, bl, a*100);
+    strokeWeight(b.weight*vis*1.6);
+    line(b.x1, b.y1, b.x2, b.y2);
+    // Core
+    stroke(r, g, bl, a*230);
+    strokeWeight(b.weight*vis);
+    line(b.x1, b.y1, b.x2, b.y2);
+    // Hot center
+    if (b.weight > 3) {
+      stroke(lerp(r,255,0.5), lerp(g,245,0.5), lerp(bl,220,0.5), a*120);
+      strokeWeight(b.weight*vis*0.25);
+      line(b.x1, b.y1, b.x2, b.y2);
     }
   }
-  // Morgans
-  if (branches.morgans.length > 0) {
-    let start = nodes[64];
-    stroke(74, 124, 111, 60);
-    strokeWeight(0.8);
-    line(start.x, start.y, branches.morgans[0].x, branches.morgans[0].y);
-    for (let i = 1; i < branches.morgans.length; i++) {
-      let alpha = map(i, 0, branches.morgans.length - 1, 40, 100);
-      stroke(74, 124, 111, alpha);
-      line(branches.morgans[i - 1].x, branches.morgans[i - 1].y, branches.morgans[i].x, branches.morgans[i].y);
+  
+  // Particles
+  if (elapsed > GROWTH_DURATION * 0.65) {
+    noStroke();
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.x += p.vx + sin(millis()*0.002 + p.phase)*0.3;
+      p.y += p.vy;
+      p.life -= 0.4;
+      if (p.life <= 0) { p.x = p.ox+random(-5,5); p.y = p.oy+random(-5,5); p.life = random(150,255); }
+      var pa = (p.life/p.maxLife)*breathe;
+      var ps = p.size*pa;
+      if (p.isBranch) {
+        fill(74,156,219, pa*50); circle(p.x, p.y, ps*3);
+        fill(200,220,255, pa*180); circle(p.x, p.y, ps);
+      } else {
+        fill(199,90,90, pa*50); circle(p.x, p.y, ps*3);
+        fill(255,200,150, pa*180); circle(p.x, p.y, ps);
+      }
     }
   }
-  // Chopper
-  if (branches.chopper.length > 0) {
-    let start = nodes[67];
-    stroke(199, 90, 90, 60);
-    strokeWeight(0.8);
-    line(start.x, start.y, branches.chopper[0].x, branches.chopper[0].y);
-    for (let i = 1; i < branches.chopper.length; i++) {
-      let alpha = map(i, 0, branches.chopper.length - 1, 40, 100);
-      stroke(199, 90, 90, alpha);
-      line(branches.chopper[i - 1].x, branches.chopper[i - 1].y, branches.chopper[i].x, branches.chopper[i].y);
-    }
-  }
-}
-
-function drawNodes() {
+  
+  // Seed
+  var cx = width/2, cy = height*0.52;
+  var sg = (sin(millis()*0.0015)*0.3+0.7)*breathe;
   noStroke();
-  let t = millis() * 0.001;
-  for (let i = 0; i < nodes.length; i++) {
-    let n = nodes[i];
-    let breath = sin(t * 0.8 + i * 0.15) * 0.15 + 1;
-    let s = n.size * breath;
-
-    // Glow for last 2 nodes
-    if (i >= 98) {
-      let glowSize = s * 3;
-      let glowAlpha = 30 + sin(t * 0.5 + i) * 10;
-      fill(212, 168, 67, glowAlpha);
-      ellipse(n.x, n.y, glowSize, glowSize);
-      glowSize = s * 2;
-      glowAlpha = 50 + sin(t * 0.7 + i) * 15;
-      fill(212, 168, 67, glowAlpha);
-      ellipse(n.x, n.y, glowSize, glowSize);
-    }
-
-    fill(n.col);
-    ellipse(n.x, n.y, s, s);
-  }
-}
-
-function drawBranchNodes() {
-  noStroke();
-  let t = millis() * 0.001;
-  let allBranches = [
-    { nodes: branches.mako, baseCol: [74, 156, 219] },
-    { nodes: branches.morgans, baseCol: [74, 124, 111] },
-    { nodes: branches.chopper, baseCol: [199, 90, 90] }
-  ];
-  for (let b of allBranches) {
-    for (let i = 0; i < b.nodes.length; i++) {
-      let n = b.nodes[i];
-      let breath = sin(t * 0.6 + i * 0.2 + b.baseCol[0]) * 0.12 + 1;
-      let s = n.size * breath;
-      fill(n.col);
-      ellipse(n.x, n.y, s, s);
-    }
-  }
+  fill(242,216,168, sg*25); circle(cx, cy, 28);
+  fill(242,216,168, sg*70); circle(cx, cy, 10);
+  fill(255,250,240, sg*200); circle(cx, cy, 4);
 }
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-  nodes = [];
-  branches = { mako: [], morgans: [], chopper: [] };
-  generateNodes();
-  redraw();
+  noiseOff = random(1000);
+  buildTree();
 }
-
-// Breathing animation loop
-function breathe() {
-  redraw();
-  requestAnimationFrame(breathe);
-}
-
-// Start breathing after setup
-window.addEventListener('load', () => {
-  setTimeout(breathe, 100);
-});
 </script>
 </body>
 </html>
