@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>遇 / Clash</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #e8e6e3; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// 遇 / Clash — ink boundary tension
+// Three ink masses breathe, push against each other at boundaries
+
+const COLORS = [
+  [25, 42, 86],    // 深靛蓝
+  [180, 50, 40],   // 朱砂红
+  [20, 18, 15]     // 墨黑
+];
+const BG = [232, 230, 227];
+const N = 120; // points per blob
+
+let blobs = [];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  noStroke();
+  initBlobs();
+}
+
+function initBlobs() {
+  blobs = [];
+  let s = min(width, height);
+  let cfgs = [
+    { cx: width * 0.35, cy: height * 0.33, r: s * 0.24 },
+    { cx: width * 0.68, cy: height * 0.5,  r: s * 0.22 },
+    { cx: width * 0.4,  cy: height * 0.7,  r: s * 0.21 }
+  ];
+  for (let i = 0; i < 3; i++) {
+    let c = cfgs[i];
+    let pts = [];
+    for (let j = 0; j < N; j++) {
+      let a = (TWO_PI / N) * j;
+      pts.push({ angle: a, r: c.r, nOff: random(1000) });
+    }
+    blobs.push({ cx: c.cx, cy: c.cy, baseR: c.r, col: COLORS[i], pts });
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initBlobs();
+}
+
+function draw() {
+  background(BG[0], BG[1], BG[2]);
+  let t = frameCount * 0.004;
+
+  // Compute target radii with gentle noise breathing
+  for (let b of blobs) {
+    for (let p of b.pts) {
+      let n = noise(p.nOff + t, p.angle * 0.8);
+      p.targetR = b.baseR * (0.92 + n * 0.16);
+    }
+  }
+
+  // Repulsion: shrink points that would overlap another blob's territory
+  let gap = min(width, height) * 0.012; // visible gap between blobs
+  for (let i = 0; i < blobs.length; i++) {
+    let a = blobs[i];
+    for (let pa of a.pts) {
+      let ax = a.cx + cos(pa.angle) * pa.targetR;
+      let ay = a.cy + sin(pa.angle) * pa.targetR;
+      for (let j = 0; j < blobs.length; j++) {
+        if (i === j) continue;
+        let b = blobs[j];
+        // Distance from this point to center of other blob
+        let dx = ax - b.cx;
+        let dy = ay - b.cy;
+        let dist = sqrt(dx * dx + dy * dy);
+        // Find approximate radius of other blob at this angle
+        let angToB = atan2(ay - b.cy, ax - b.cx);
+        let bIdx = ((angToB < 0 ? angToB + TWO_PI : angToB) / TWO_PI * N) | 0;
+        bIdx = constrain(bIdx, 0, N - 1);
+        let bR = b.pts[bIdx].targetR;
+        let boundary = bR + gap;
+        if (dist < boundary) {
+          // Push this point back
+          pa.targetR *= dist / boundary;
+        }
+      }
+    }
+  }
+
+  // Smooth radii
+  for (let b of blobs) {
+    for (let p of b.pts) {
+      p.r = lerp(p.r || p.targetR, p.targetR, 0.08);
+    }
+  }
+
+  // Draw blobs
+  for (let b of blobs) {
+    // Outer soft edge
+    fill(b.col[0], b.col[1], b.col[2], 60);
+    drawShape(b, 1.06);
+    // Core
+    fill(b.col[0], b.col[1], b.col[2], 230);
+    drawShape(b, 1.0);
+  }
+}
+
+function drawShape(b, scale) {
+  beginShape();
+  for (let i = 0; i < N; i++) {
+    let p = b.pts[i];
+    let r = p.r * scale;
+    curveVertex(b.cx + cos(p.angle) * r, b.cy + sin(p.angle) * r);
+  }
+  for (let i = 0; i < 3; i++) {
+    let p = b.pts[i];
+    let r = p.r * scale;
+    curveVertex(b.cx + cos(p.angle) * r, b.cy + sin(p.angle) * r);
+  }
+  endShape(CLOSE);
+}
+</script>
+</body>
+</html>

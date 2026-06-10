@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>沉 / Settle</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #0D0A12; width: 100%; height: 100%; }
+  canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// 沉 / Settle — pigment sedimentation
+// Particles drift downward under gravity, layering color vertically
+
+const PARTICLE_COUNT = 600;
+let particles = [];
+
+// Color palette — top to bottom
+const palette = [
+  [232, 237, 242],  // #E8EDF2 clear water
+  [123, 143, 168],  // #7B8FA8 grey-blue
+  [61, 43, 74],     // #3D2B4A ink-purple
+  [44, 27, 61],     // #2C1B3D deep purple
+  [26, 14, 31],     // #1A0E1F dense ink
+];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  noStroke();
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(createParticle(random(height)));
+  }
+}
+
+function createParticle(startY) {
+  // Heavier particles (lower palette index = lighter color, higher = darker/heavier)
+  let weight = random(0.2, 1.0); // 0=light, 1=heavy
+  let size = lerp(1.5, 4, weight);
+  let speed = lerp(0.08, 0.45, weight * weight);
+  // Color: heavier particles are darker
+  let colIdx = weight * (palette.length - 1);
+  let lo = floor(colIdx);
+  let hi = min(lo + 1, palette.length - 1);
+  let t = colIdx - lo;
+  let r = lerp(palette[lo][0], palette[hi][0], t);
+  let g = lerp(palette[lo][1], palette[hi][1], t);
+  let b = lerp(palette[lo][2], palette[hi][2], t);
+
+  return {
+    x: random(width),
+    y: startY,
+    size: size,
+    speed: speed,
+    drift: random(-0.15, 0.15),
+    alpha: lerp(60, 180, weight),
+    r, g, b,
+    weight,
+    wobbleOffset: random(TWO_PI),
+    wobbleSpeed: random(0.005, 0.015),
+  };
+}
+
+function draw() {
+  // Draw background gradient — static layered wash
+  drawGradientBg();
+
+  // Update and draw particles
+  for (let i = 0; i < particles.length; i++) {
+    let p = particles[i];
+
+    // Gentle horizontal wobble
+    p.x += p.drift + sin(frameCount * p.wobbleSpeed + p.wobbleOffset) * 0.2;
+    // Gravity pull downward
+    p.y += p.speed;
+
+    // Wrap: when particle settles to bottom, respawn at top
+    if (p.y > height + 10) {
+      p.y = random(-40, -5);
+      p.x = random(width);
+    }
+    // Wrap horizontal
+    if (p.x < -5) p.x = width + 5;
+    if (p.x > width + 5) p.x = -5;
+
+    // Fade alpha based on depth — particles near bottom become part of sediment
+    let depthFade = p.y / height;
+    let a = p.alpha * (1 - depthFade * 0.3);
+
+    fill(p.r, p.g, p.b, a);
+    ellipse(p.x, p.y, p.size, p.size * random(0.9, 1.1));
+  }
+
+  // Overlay: subtle top-clear / bottom-dense atmosphere
+  drawAtmosphere();
+}
+
+function drawGradientBg() {
+  // Vertical gradient in bands
+  let steps = 64;
+  let bandH = height / steps;
+  for (let i = 0; i < steps; i++) {
+    let t = i / (steps - 1);
+    // Top: light clear → bottom: deep ink
+    let r, g, b;
+    if (t < 0.3) {
+      let lt = t / 0.3;
+      r = lerp(palette[0][0], palette[1][0], lt);
+      g = lerp(palette[0][1], palette[1][1], lt);
+      b = lerp(palette[0][2], palette[1][2], lt);
+    } else if (t < 0.6) {
+      let lt = (t - 0.3) / 0.3;
+      r = lerp(palette[1][0], palette[2][0], lt);
+      g = lerp(palette[1][1], palette[2][1], lt);
+      b = lerp(palette[1][2], palette[2][2], lt);
+    } else {
+      let lt = (t - 0.6) / 0.4;
+      r = lerp(palette[2][0], palette[4][0], lt);
+      g = lerp(palette[2][1], palette[4][1], lt);
+      b = lerp(palette[2][2], palette[4][2], lt);
+    }
+    fill(r, g, b);
+    rect(0, i * bandH, width, bandH + 1);
+  }
+}
+
+function drawAtmosphere() {
+  // Slight animated haze at top — breathing clarity
+  let breathe = sin(frameCount * 0.008) * 8 + 20;
+  fill(232, 237, 242, breathe);
+  rect(0, 0, width, height * 0.15);
+
+  // Dense sediment layer at bottom
+  let sediment = sin(frameCount * 0.005) * 5 + 30;
+  fill(26, 14, 31, sediment);
+  rect(0, height * 0.85, width, height * 0.15);
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+</script>
+</body>
+</html>

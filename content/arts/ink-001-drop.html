@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>落 / Drop</title>
+<style>
+* { margin: 0; padding: 0; }
+html, body { overflow: hidden; background: #f5f2eb; width: 100%; height: 100%; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// 落 / Drop — ink drop explosion in water
+// Canary × 墨 series #001
+
+const DROPS = [];
+const BG = [245, 242, 235]; // warm rice paper
+const INK_DEEP = [15, 15, 20];
+const INK_MID = [40, 45, 55];
+const INDIGO = [25, 45, 80]; // accent: deep indigo
+const CYCLE_FRAMES = 240; // frames per cycle
+
+let t = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  noStroke();
+  spawnDrop();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+
+function draw() {
+  // Fade background for trail effect
+  background(BG[0], BG[1], BG[2], 25);
+
+  t++;
+
+  // Manage drops lifecycle
+  for (let i = DROPS.length - 1; i >= 0; i--) {
+    DROPS[i].update();
+    DROPS[i].display();
+    if (DROPS[i].done()) DROPS.splice(i, 1);
+  }
+
+  // Spawn new drop on cycle
+  if (t % CYCLE_FRAMES === 0) {
+    spawnDrop();
+  }
+}
+
+function spawnDrop() {
+  let cx = width * 0.5 + random(-width * 0.15, width * 0.15);
+  let cy = height * 0.5 + random(-height * 0.15, height * 0.15);
+  DROPS.push(new InkDrop(cx, cy));
+}
+
+class InkDrop {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.age = 0;
+    this.maxAge = 200;
+    this.maxR = min(width, height) * 0.4;
+    this.tendrils = [];
+    this.numTendrils = floor(random(8, 14));
+    this.burstParticles = [];
+
+    // Create tendrils (fractal arms)
+    for (let i = 0; i < this.numTendrils; i++) {
+      let angle = (TWO_PI / this.numTendrils) * i + random(-0.3, 0.3);
+      let speed = random(1.5, 3.5);
+      let wobble = random(0.02, 0.06);
+      let thickness = random(0.6, 1.0);
+      this.tendrils.push({ angle, speed, wobble, thickness, len: 0 });
+    }
+
+    // Burst particles for initial impact
+    for (let i = 0; i < 30; i++) {
+      let a = random(TWO_PI);
+      let sp = random(2, 8);
+      let sz = random(4, 20);
+      this.burstParticles.push({ x: 0, y: 0, vx: cos(a) * sp, vy: sin(a) * sp, sz, alpha: 255 });
+    }
+  }
+
+  update() {
+    this.age++;
+    let progress = this.age / this.maxAge;
+
+    // Expand tendrils
+    for (let t of this.tendrils) {
+      if (progress < 0.7) {
+        t.len += t.speed * (1 - progress * 0.8);
+        t.angle += sin(this.age * t.wobble) * 0.02;
+      }
+    }
+
+    // Update burst particles
+    for (let p of this.burstParticles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+      p.alpha -= 3;
+    }
+  }
+
+  display() {
+    let progress = this.age / this.maxAge;
+    let fade = progress > 0.6 ? map(progress, 0.6, 1, 1, 0) : 1;
+
+    push();
+    translate(this.x, this.y);
+
+    // Central mass — big bold blob
+    let coreR = min(this.age * 1.5, this.maxR * 0.15);
+    let coreAlpha = 220 * fade;
+    fill(INK_DEEP[0], INK_DEEP[1], INK_DEEP[2], coreAlpha);
+    ellipse(0, 0, coreR * 2, coreR * 2);
+
+    // Mid ring — softer
+    let midR = coreR * 1.8;
+    fill(INK_MID[0], INK_MID[1], INK_MID[2], coreAlpha * 0.4);
+    ellipse(0, 0, midR * 2, midR * 2);
+
+    // Tendrils — the fractal arms
+    for (let t of this.tendrils) {
+      let segments = 12;
+      let segLen = t.len / segments;
+      let px = 0, py = 0;
+      let curAngle = t.angle;
+
+      for (let s = 0; s < segments; s++) {
+        let nx = px + cos(curAngle) * segLen;
+        let ny = py + sin(curAngle) * segLen;
+        let segProgress = s / segments;
+        let thick = (1 - segProgress) * 12 * t.thickness * fade;
+        let alpha = (1 - segProgress * 0.7) * 200 * fade;
+
+        // Alternate between ink and indigo
+        if (s % 3 === 0) {
+          fill(INDIGO[0], INDIGO[1], INDIGO[2], alpha);
+        } else {
+          fill(INK_DEEP[0], INK_DEEP[1], INK_DEEP[2], alpha);
+        }
+        ellipse(nx, ny, thick, thick);
+
+        // Sub-branches
+        if (s > 3 && s % 2 === 0 && thick > 3) {
+          let branchAngle = curAngle + (random() > 0.5 ? 0.8 : -0.8);
+          let bx = nx + cos(branchAngle) * segLen * 0.6;
+          let by = ny + sin(branchAngle) * segLen * 0.6;
+          fill(INDIGO[0], INDIGO[1], INDIGO[2], alpha * 0.6);
+          ellipse(bx, by, thick * 0.5, thick * 0.5);
+        }
+
+        curAngle += sin(this.age * 0.03 + s) * 0.15;
+        px = nx;
+        py = ny;
+      }
+    }
+
+    // Burst particles
+    for (let p of this.burstParticles) {
+      if (p.alpha > 0) {
+        fill(INK_MID[0], INK_MID[1], INK_MID[2], p.alpha * fade);
+        ellipse(p.x, p.y, p.sz, p.sz);
+      }
+    }
+
+    // Outer halo — diffuse wash
+    if (progress > 0.1 && progress < 0.8) {
+      let haloR = coreR * 3;
+      let haloAlpha = 30 * fade * sin(map(progress, 0.1, 0.8, 0, PI));
+      fill(INDIGO[0], INDIGO[1], INDIGO[2], haloAlpha);
+      ellipse(0, 0, haloR * 2, haloR * 2);
+    }
+
+    pop();
+  }
+
+  done() {
+    return this.age > this.maxAge;
+  }
+}
+</script>
+</body>
+</html>

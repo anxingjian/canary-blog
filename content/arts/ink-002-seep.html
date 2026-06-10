@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>渗 / Seep</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+  <script>
+    // 渗 / Seep — capillary diffusion on xuan paper
+    // Ink series #002
+
+    const PAPER_COLOR = [245, 240, 230];    // warm ivory
+    const INK_COLORS = [
+      [35, 30, 28],      // deep ink black
+      [55, 50, 45],      // dark grey
+      [80, 72, 65],      // warm grey
+      [120, 95, 70],     // light ochre/sienna
+    ];
+
+    let drops = [];
+    const MAX_DROPS = 5;
+    const SPAWN_INTERVAL = 180; // frames between new drops
+
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      background(...PAPER_COLOR);
+      frameRate(60);
+      spawnDrop();
+    }
+
+    function draw() {
+      // very subtle paper overlay to build texture
+      noStroke();
+      fill(PAPER_COLOR[0], PAPER_COLOR[1], PAPER_COLOR[2], 2);
+      rect(0, 0, width, height);
+
+      // spawn new drops periodically
+      if (frameCount % SPAWN_INTERVAL === 0 && drops.length < MAX_DROPS) {
+        spawnDrop();
+      }
+
+      // update and draw each drop
+      for (let i = drops.length - 1; i >= 0; i--) {
+        let d = drops[i];
+        d.grow();
+        d.display();
+
+        // remove when fully faded or too large
+        if (d.alpha <= 0 || d.radius > max(width, height) * 0.6) {
+          drops.splice(i, 1);
+        }
+      }
+
+      // restart cycle if empty
+      if (drops.length === 0) {
+        background(...PAPER_COLOR);
+        spawnDrop();
+      }
+    }
+
+    function spawnDrop() {
+      let x = random(width * 0.2, width * 0.8);
+      let y = random(height * 0.2, height * 0.8);
+      let col = random(INK_COLORS);
+      drops.push(new InkDrop(x, y, col));
+    }
+
+    class InkDrop {
+      constructor(x, y, col) {
+        this.x = x;
+        this.y = y;
+        this.col = col;
+        this.radius = random(2, 5);
+        this.maxAlpha = random(25, 50);
+        this.alpha = this.maxAlpha;
+        this.growthRate = random(0.15, 0.4);
+        this.noiseOffset = random(1000);
+        this.fibers = [];
+        // pre-generate fiber directions for irregular edge
+        let nFibers = floor(random(60, 100));
+        for (let i = 0; i < nFibers; i++) {
+          this.fibers.push({
+            angle: (TWO_PI / nFibers) * i + random(-0.05, 0.05),
+            speed: random(0.7, 1.4),
+            nOff: random(1000),
+            len: 0
+          });
+        }
+      }
+
+      grow() {
+        this.radius += this.growthRate;
+        // slow fade as it expands
+        this.alpha = this.maxAlpha * (1 - this.radius / (max(width, height) * 0.6));
+
+        for (let f of this.fibers) {
+          // capillary fiber growth — slow, noise-driven
+          let n = noise(f.nOff + frameCount * 0.003);
+          f.len += f.speed * n * 0.5;
+          f.nOff += 0.01;
+        }
+      }
+
+      display() {
+        push();
+        translate(this.x, this.y);
+        noStroke();
+
+        // draw soft diffusion body
+        let a = max(0, this.alpha);
+        fill(this.col[0], this.col[1], this.col[2], a * 0.3);
+        ellipse(0, 0, this.radius * 1.6, this.radius * 1.6);
+
+        // draw fiber edges — the key visual
+        for (let f of this.fibers) {
+          let r = this.radius + f.len;
+          let px = cos(f.angle) * r;
+          let py = sin(f.angle) * r;
+
+          // thin fiber stroke
+          let fAlpha = a * map(f.len, 0, this.radius * 2, 1, 0.2);
+          fill(this.col[0], this.col[1], this.col[2], max(0, fAlpha));
+          let size = map(r, 0, this.radius * 3, 4, 1.5);
+          ellipse(px, py, size, size);
+
+          // intermediate dot for continuity
+          let mx = cos(f.angle) * r * 0.6;
+          let my = sin(f.angle) * r * 0.6;
+          fill(this.col[0], this.col[1], this.col[2], max(0, fAlpha * 0.5));
+          ellipse(mx, my, size * 0.8, size * 0.8);
+        }
+
+        pop();
+      }
+    }
+
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+      background(...PAPER_COLOR);
+    }
+  </script>
+</body>
+</html>

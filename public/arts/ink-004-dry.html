@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>枯 / Dry</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #FAFAFA; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+<script>
+// 枯 / Dry — dry brush calligraphy simulation
+// Ink series #4: fast strokes with depleted ink, broken traces
+
+let strokes = [];
+const MAX_STROKES = 4;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  background(250);
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  background(250);
+  strokes = [];
+}
+
+class DryStroke {
+  constructor() {
+    // Random entry angle and position
+    let side = floor(random(4));
+    let angle;
+    if (side === 0) { // left
+      this.x = -20;
+      this.y = random(height * 0.2, height * 0.8);
+      angle = random(-PI/6, PI/6);
+    } else if (side === 1) { // right
+      this.x = width + 20;
+      this.y = random(height * 0.2, height * 0.8);
+      angle = random(PI - PI/6, PI + PI/6);
+    } else if (side === 2) { // top
+      this.x = random(width * 0.2, width * 0.8);
+      this.y = -20;
+      angle = random(PI/4, 3*PI/4);
+    } else { // bottom
+      this.x = random(width * 0.2, width * 0.8);
+      this.y = height + 20;
+      angle = random(-3*PI/4, -PI/4);
+    }
+    
+    this.vx = cos(angle) * random(8, 16);
+    this.vy = sin(angle) * random(8, 16);
+    this.speed = sqrt(this.vx * this.vx + this.vy * this.vy);
+    
+    // Brush properties
+    this.brushWidth = random(3, 18);
+    this.ink = random(0.6, 1.0); // starts with some ink, depletes
+    this.inkDrain = random(0.003, 0.008);
+    this.life = 0;
+    this.maxLife = random(60, 140);
+    this.alpha = 255;
+    this.fading = false;
+    this.fadeSpeed = random(1.5, 3);
+    this.done = false;
+    
+    // Slight curve
+    this.curvature = random(-0.01, 0.01);
+    
+    // Trail points for rendering
+    this.points = [];
+  }
+  
+  update() {
+    if (this.fading) {
+      this.alpha -= this.fadeSpeed;
+      if (this.alpha <= 0) this.done = true;
+      return;
+    }
+    
+    this.life++;
+    this.ink -= this.inkDrain;
+    if (this.ink < 0) this.ink = 0;
+    
+    // Add curvature
+    let a = atan2(this.vy, this.vx) + this.curvature;
+    this.vx = cos(a) * this.speed;
+    this.vy = sin(a) * this.speed;
+    
+    this.x += this.vx;
+    this.y += this.vy;
+    
+    // Store point with ink level
+    this.points.push({
+      x: this.x,
+      y: this.y,
+      ink: this.ink,
+      w: this.brushWidth * (0.5 + 0.5 * this.ink)
+    });
+    
+    // End conditions
+    if (this.life > this.maxLife || 
+        this.x < -100 || this.x > width + 100 ||
+        this.y < -100 || this.y > height + 100) {
+      this.fading = true;
+    }
+  }
+  
+  draw() {
+    if (this.points.length < 2) return;
+    
+    push();
+    let displayAlpha = this.alpha;
+    
+    for (let i = 1; i < this.points.length; i++) {
+      let p0 = this.points[i - 1];
+      let p1 = this.points[i];
+      let ink = p1.ink;
+      
+      // Dry brush effect: skip segments randomly when ink is low
+      if (ink < 0.5 && random() > ink * 1.8) continue;
+      
+      // Base stroke
+      let baseAlpha = map(ink, 0, 1, 40, 220) * (displayAlpha / 255);
+      let w = p1.w;
+      
+      // Draw multiple thin lines to simulate bristle texture
+      let bristles = floor(map(w, 1, 18, 3, 12));
+      let perpX = -(p1.y - p0.y);
+      let perpY = (p1.x - p0.x);
+      let perpLen = sqrt(perpX * perpX + perpY * perpY);
+      if (perpLen === 0) continue;
+      perpX /= perpLen;
+      perpY /= perpLen;
+      
+      for (let b = 0; b < bristles; b++) {
+        // Each bristle has random offset and may skip (dry effect)
+        if (ink < 0.4 && random() > ink * 2.5) continue;
+        
+        let offset = map(b, 0, bristles - 1, -w/2, w/2);
+        let jitter = random(-0.8, 0.8);
+        let bx = offset + jitter;
+        
+        let bAlpha = baseAlpha * random(0.5, 1.0);
+        let grey = random() < 0.3 ? 74 : 26; // #4A4A4A or #1A1A1A
+        
+        stroke(grey, grey, grey, bAlpha);
+        strokeWeight(random(0.5, 1.5));
+        
+        let x1 = p0.x + perpX * bx;
+        let y1 = p0.y + perpY * bx;
+        let x2 = p1.x + perpX * bx;
+        let y2 = p1.y + perpY * bx;
+        
+        line(x1, y1, x2, y2);
+      }
+      
+      // Ink splatter particles when moving fast with some ink
+      if (ink > 0.2 && ink < 0.6 && random() < 0.08) {
+        noStroke();
+        fill(26, 26, 26, baseAlpha * 0.7);
+        let sx = p1.x + random(-15, 15);
+        let sy = p1.y + random(-15, 15);
+        ellipse(sx, sy, random(1, 3), random(1, 3));
+      }
+    }
+    pop();
+  }
+}
+
+function draw() {
+  // Soft fade background to create trail disappearance
+  background(250, 250, 250, 8);
+  
+  // Spawn new strokes
+  if (strokes.length < MAX_STROKES && random() < 0.02) {
+    strokes.push(new DryStroke());
+  }
+  
+  // Update and draw
+  for (let i = strokes.length - 1; i >= 0; i--) {
+    strokes[i].update();
+    strokes[i].draw();
+    if (strokes[i].done) {
+      strokes.splice(i, 1);
+    }
+  }
+}
+</script>
+</body>
+</html>
