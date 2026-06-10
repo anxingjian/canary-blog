@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>纹 / Ripple</title>
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0D1B2A; }
+  canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Sand Ripple — moonlit desert floor
+// Wind-formed transverse ripples rendered as flowing sine interference
+
+let t = 0;
+const COLS = ['#0D1B2A', '#A0B4C8', '#E8E0F0', '#5C4B7A', '#8899AA'];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  noStroke();
+}
+
+function draw() {
+  background(13, 27, 42, 25); // slow fade for trails
+  
+  const cx = width / 2;
+  const cy = height / 2;
+  
+  // Draw ripple lines from bottom to top (perspective)
+  for (let row = 0; row < 80; row++) {
+    const yBase = map(row, 0, 80, height * 0.95, height * 0.15);
+    const depth = map(row, 0, 80, 1, 0); // 0=far, 1=near
+    const lineWeight = lerp(1, 4, depth);
+    const amplitude = lerp(2, 18, depth);
+    const spacing = lerp(3, 12, depth);
+    
+    // Wind direction shifts slowly
+    const windPhase = t * 0.3 + row * 0.08;
+    const driftSpeed = lerp(0.5, 2, depth);
+    
+    // Draw granular dots along each ripple crest
+    const numPoints = floor(lerp(40, 200, depth));
+    
+    for (let i = 0; i < numPoints; i++) {
+      const xFrac = i / numPoints;
+      const x = xFrac * width;
+      
+      // Multi-frequency ripple shape
+      const freq1 = sin(xFrac * TWO_PI * 3 + windPhase) * amplitude;
+      const freq2 = sin(xFrac * TWO_PI * 7 - t * 0.15 + row * 0.2) * amplitude * 0.3;
+      const freq3 = sin(xFrac * TWO_PI * 1.5 + t * 0.08) * amplitude * 0.5;
+      
+      const y = yBase + freq1 + freq2 + freq3;
+      
+      // Color based on crest vs trough (moonlight hits crests)
+      const crestIntensity = map(freq1 + freq2, -amplitude, amplitude, 0, 1);
+      
+      let c;
+      if (crestIntensity > 0.7) {
+        // Moonlit crest — silver-blue or pale lavender
+        c = color(crestIntensity > 0.85 ? COLS[2] : COLS[1]);
+      } else if (crestIntensity < 0.3) {
+        // Shadow trough — deep violet
+        c = color(COLS[3]);
+      } else {
+        // Mid-tone pewter
+        c = color(COLS[4]);
+      }
+      
+      // Alpha based on depth (far = more transparent)
+      const alpha = lerp(40, 180, depth) * (0.7 + 0.3 * noise(x * 0.01, yBase * 0.01, t * 0.05));
+      c.setAlpha(alpha);
+      
+      fill(c);
+      const sz = lineWeight * (0.5 + noise(x * 0.02, row, t * 0.02) * 1.2);
+      
+      // Slight x-drift to simulate grain movement
+      const xDrift = sin(t * driftSpeed * 0.1 + i * 0.5) * 2 * depth;
+      
+      ellipse(x + xDrift, y, sz, sz * 0.7);
+    }
+  }
+  
+  // Sparse bright grains catching moonlight (visual accent)
+  for (let i = 0; i < 8; i++) {
+    const gx = noise(i * 100, t * 0.02) * width;
+    const gy = noise(i * 200, t * 0.02) * height * 0.7 + height * 0.2;
+    const gAlpha = sin(t * 0.5 + i * 2) * 0.5 + 0.5;
+    
+    fill(232, 224, 240, gAlpha * 200);
+    ellipse(gx, gy, 3, 3);
+  }
+  
+  t += 0.016;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+</script>
+</body>
+</html>
