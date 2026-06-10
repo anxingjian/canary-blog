@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>100</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0A0A0F; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// 100 Days Growth Trajectory
+// Main: warm gold (#D4A843), Mako: blue (#4A9CDB), Morgans: green (#4A7C6F), Chopper: red (#C75A5A)
+
+let nodes = [];
+let branches = { mako: [], morgans: [], chopper: [] };
+let seed;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  seed = 42;
+  noiseSeed(seed);
+  generateNodes();
+  noLoop();
+}
+
+function draw() {
+  background(10, 10, 15);
+  drawConnections();
+  drawBranchConnections();
+  drawNodes();
+  drawBranchNodes();
+}
+
+function generateNodes() {
+  let marginX = width * 0.08;
+  let usableW = width - marginX * 2;
+  let centerY = height * 0.42;
+
+  for (let i = 0; i < 100; i++) {
+    let t = i / 99;
+    let x = marginX + t * usableW;
+    let yOff = noise(i * 0.06, 0.5) * height * 0.18 - height * 0.09;
+    let y = centerY + yOff;
+
+    // Size progression
+    let size, alpha, col;
+    if (i < 10) {
+      size = map(i, 0, 9, 2, 4);
+      alpha = map(i, 0, 9, 30, 70);
+      col = lerpColor(color(80, 80, 90, alpha), color(150, 130, 80, alpha), i / 10);
+    } else if (i < 30) {
+      size = map(i, 10, 29, 4, 7);
+      alpha = map(i, 10, 29, 70, 160);
+      col = lerpColor(color(150, 130, 80, alpha), color(212, 168, 67, alpha), (i - 10) / 20);
+    } else if (i < 50) {
+      size = map(i, 30, 49, 7, 10);
+      alpha = map(i, 30, 49, 160, 220);
+      col = color(212, 168, 67, alpha);
+    } else if (i < 98) {
+      size = map(i, 50, 97, 10, 14);
+      alpha = map(i, 50, 97, 220, 250);
+      col = color(212, 168, 67, alpha);
+    } else {
+      size = map(i, 98, 99, 16, 22);
+      alpha = 255;
+      col = color(212, 168, 67, alpha);
+    }
+
+    nodes.push({ x, y, size, col, alpha, day: i + 1 });
+  }
+
+  // Mako branch (Day 33, index 32)
+  let branchStart = nodes[32];
+  for (let i = 0; i < 12; i++) {
+    let t = (i + 1) / 13;
+    let x = branchStart.x + t * usableW * 0.12;
+    let y = branchStart.y + t * height * 0.22 + noise(i * 0.1, 10) * 20;
+    let size = map(i, 0, 11, 4, 8);
+    let alpha = map(i, 0, 11, 100, 200);
+    branches.mako.push({ x, y, size, col: color(74, 156, 219, alpha), alpha });
+  }
+
+  // Morgans branch (Day 65, index 64)
+  branchStart = nodes[64];
+  for (let i = 0; i < 10; i++) {
+    let t = (i + 1) / 11;
+    let x = branchStart.x + t * usableW * 0.1;
+    let y = branchStart.y + t * height * 0.2 + noise(i * 0.1, 20) * 15;
+    let size = map(i, 0, 9, 4, 7);
+    let alpha = map(i, 0, 9, 100, 190);
+    branches.morgans.push({ x, y, size, col: color(74, 124, 111, alpha), alpha });
+  }
+
+  // Chopper branch (Day 68, index 67)
+  branchStart = nodes[67];
+  for (let i = 0; i < 9; i++) {
+    let t = (i + 1) / 10;
+    let x = branchStart.x + t * usableW * 0.09;
+    let y = branchStart.y - t * height * 0.18 + noise(i * 0.1, 30) * 15;
+    let size = map(i, 0, 8, 4, 7);
+    let alpha = map(i, 0, 8, 100, 180);
+    branches.chopper.push({ x, y, size, col: color(199, 90, 90, alpha), alpha });
+  }
+}
+
+function drawConnections() {
+  noFill();
+  for (let i = 1; i < nodes.length; i++) {
+    let a = nodes[i - 1];
+    let b = nodes[i];
+    let alpha = map(i, 0, 99, 15, 80);
+    stroke(212, 168, 67, alpha);
+    strokeWeight(map(i, 0, 99, 0.5, 1.5));
+    line(a.x, a.y, b.x, b.y);
+  }
+}
+
+function drawBranchConnections() {
+  // Mako
+  if (branches.mako.length > 0) {
+    let start = nodes[32];
+    stroke(74, 156, 219, 60);
+    strokeWeight(0.8);
+    line(start.x, start.y, branches.mako[0].x, branches.mako[0].y);
+    for (let i = 1; i < branches.mako.length; i++) {
+      let alpha = map(i, 0, branches.mako.length - 1, 40, 100);
+      stroke(74, 156, 219, alpha);
+      line(branches.mako[i - 1].x, branches.mako[i - 1].y, branches.mako[i].x, branches.mako[i].y);
+    }
+  }
+  // Morgans
+  if (branches.morgans.length > 0) {
+    let start = nodes[64];
+    stroke(74, 124, 111, 60);
+    strokeWeight(0.8);
+    line(start.x, start.y, branches.morgans[0].x, branches.morgans[0].y);
+    for (let i = 1; i < branches.morgans.length; i++) {
+      let alpha = map(i, 0, branches.morgans.length - 1, 40, 100);
+      stroke(74, 124, 111, alpha);
+      line(branches.morgans[i - 1].x, branches.morgans[i - 1].y, branches.morgans[i].x, branches.morgans[i].y);
+    }
+  }
+  // Chopper
+  if (branches.chopper.length > 0) {
+    let start = nodes[67];
+    stroke(199, 90, 90, 60);
+    strokeWeight(0.8);
+    line(start.x, start.y, branches.chopper[0].x, branches.chopper[0].y);
+    for (let i = 1; i < branches.chopper.length; i++) {
+      let alpha = map(i, 0, branches.chopper.length - 1, 40, 100);
+      stroke(199, 90, 90, alpha);
+      line(branches.chopper[i - 1].x, branches.chopper[i - 1].y, branches.chopper[i].x, branches.chopper[i].y);
+    }
+  }
+}
+
+function drawNodes() {
+  noStroke();
+  let t = millis() * 0.001;
+  for (let i = 0; i < nodes.length; i++) {
+    let n = nodes[i];
+    let breath = sin(t * 0.8 + i * 0.15) * 0.15 + 1;
+    let s = n.size * breath;
+
+    // Glow for last 2 nodes
+    if (i >= 98) {
+      let glowSize = s * 3;
+      let glowAlpha = 30 + sin(t * 0.5 + i) * 10;
+      fill(212, 168, 67, glowAlpha);
+      ellipse(n.x, n.y, glowSize, glowSize);
+      glowSize = s * 2;
+      glowAlpha = 50 + sin(t * 0.7 + i) * 15;
+      fill(212, 168, 67, glowAlpha);
+      ellipse(n.x, n.y, glowSize, glowSize);
+    }
+
+    fill(n.col);
+    ellipse(n.x, n.y, s, s);
+  }
+}
+
+function drawBranchNodes() {
+  noStroke();
+  let t = millis() * 0.001;
+  let allBranches = [
+    { nodes: branches.mako, baseCol: [74, 156, 219] },
+    { nodes: branches.morgans, baseCol: [74, 124, 111] },
+    { nodes: branches.chopper, baseCol: [199, 90, 90] }
+  ];
+  for (let b of allBranches) {
+    for (let i = 0; i < b.nodes.length; i++) {
+      let n = b.nodes[i];
+      let breath = sin(t * 0.6 + i * 0.2 + b.baseCol[0]) * 0.12 + 1;
+      let s = n.size * breath;
+      fill(n.col);
+      ellipse(n.x, n.y, s, s);
+    }
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  nodes = [];
+  branches = { mako: [], morgans: [], chopper: [] };
+  generateNodes();
+  redraw();
+}
+
+// Breathing animation loop
+function breathe() {
+  redraw();
+  requestAnimationFrame(breathe);
+}
+
+// Start breathing after setup
+window.addEventListener('load', () => {
+  setTimeout(breathe, 100);
+});
+</script>
+</body>
+</html>
