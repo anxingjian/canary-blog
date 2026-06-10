@@ -14,8 +14,8 @@ canvas { display: block; }
 <body>
 <script>
 var GROWTH_DURATION = 18000;
-var MAX_DEPTH_BRANCH = 10;
-var MAX_DEPTH_ROOT = 8;
+var MAX_DEPTH_BRANCH = 11;
+var MAX_DEPTH_ROOT = 9;
 var branches = [];
 var particles = [];
 var startTime;
@@ -33,16 +33,16 @@ function buildTree() {
   branches = [];
   particles = [];
   var cx = width / 2;
-  var cy = height * 0.52;
-  genBranch(cx, cy, -HALF_PI, height * 0.16, 0, MAX_DEPTH_BRANCH, true);
-  genBranch(cx, cy, HALF_PI, height * 0.1, 0, MAX_DEPTH_ROOT, false);
+  var cy = height * 0.55;
+  genBranch(cx, cy, -HALF_PI, height * 0.3, 0, MAX_DEPTH_BRANCH, true);
+  genBranch(cx, cy, HALF_PI, height * 0.2, 0, MAX_DEPTH_ROOT, false);
 }
 
 function genBranch(x, y, angle, len, depth, maxD, up) {
   if (depth >= maxD || len < 1.5) return;
   
   var n = noise(x * 0.003 + noiseOff, y * 0.003, depth * 0.4);
-  var aOff = map(n, 0, 1, -0.35, 0.35) * map(depth, 0, maxD, 0.6, 1.4);
+  var aOff = map(n, 0, 1, -0.45, 0.45) * map(depth, 0, maxD, 0.8, 1.5);
   angle += aOff;
   
   var midAngle = angle + noise(x * 0.01, depth) * 0.2 - 0.1;
@@ -61,11 +61,11 @@ function genBranch(x, y, angle, len, depth, maxD, up) {
     particles.push({ox:x2, oy:y2, x:x2, y:y2, vx:random(-0.2,0.2), vy:up?random(-0.6,-0.1):random(0.1,0.4), life:random(150,255), maxLife:255, size:random(1.5,4), isBranch:up, phase:random(TWO_PI)});
   }
   
-  var nKids = depth < 2 ? floor(random(2,4)) : (random() < 0.7 ? 2 : floor(random(1,4)));
-  var shrink = up ? random(0.58,0.72) : random(0.5,0.68);
+  var nKids = depth < 2 ? floor(random(3,5)) : (random() < 0.6 ? 2 : floor(random(2,4)));
+  var shrink = up ? random(0.62,0.76) : random(0.55,0.72);
   
   for (var i = 0; i < nKids; i++) {
-    var spread = up ? random(0.25,0.65) : random(0.3,0.75);
+    var spread = up ? random(0.3,0.7) : random(0.35,0.8);
     var cAngle = angle + (i-(nKids-1)/2)*spread + random(-0.1,0.1);
     genBranch(x2, y2, cAngle, len*shrink, depth+1, maxD, up);
   }
