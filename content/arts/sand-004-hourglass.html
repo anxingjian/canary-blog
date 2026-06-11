@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hourglass 漏</title>
+<style>
+* { margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #1A0F0A; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Sand 004 — Hourglass (漏)
+// Granular simulation: sand falling through a narrow neck, accumulating below.
+// Warm amber/sienna palette. Each grain is individually simulated.
+
+const COLORS = ['#D4874D', '#B8602A', '#E8A84C', '#8B4513', '#F2C078'];
+const BG = '#1A0F0A';
+
+let grains = [];
+let settled = [];
+const NECK_Y = 0.48;
+const NECK_W = 0.04;
+const GRAVITY = 0.12;
+const MAX_GRAINS = 2000;
+const GRAIN_SIZE_MIN = 2;
+const GRAIN_SIZE_MAX = 4;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  noStroke();
+  // Pre-fill top chamber
+  for (let i = 0; i < 600; i++) {
+    let x = random(width * 0.25, width * 0.75);
+    let y = random(height * 0.05, height * NECK_Y - 20);
+    // Only keep if inside hourglass top shape
+    if (insideTop(x, y)) {
+      grains.push(createGrain(x, y, true));
+    }
+  }
+}
+
+function createGrain(x, y, waiting) {
+  return {
+    x, y,
+    vx: 0,
+    vy: waiting ? 0 : random(0.5, 1.5),
+    size: random(GRAIN_SIZE_MIN, GRAIN_SIZE_MAX),
+    color: random(COLORS),
+    settled: false,
+    waiting: waiting
+  };
+}
+
+function insideTop(x, y) {
+  let cx = width / 2;
+  let topY = height * 0.05;
+  let neckY = height * NECK_Y;
+  let progress = (y - topY) / (neckY - topY);
+  let halfW = lerp(width * 0.35, width * NECK_W, progress);
+  return abs(x - cx) < halfW;
+}
+
+function insideBottom(x, y) {
+  let cx = width / 2;
+  let neckY = height * (NECK_Y + 0.04);
+  let botY = height * 0.95;
+  let progress = (y - neckY) / (botY - neckY);
+  let halfW = lerp(width * NECK_W, width * 0.35, progress);
+  return abs(x - cx) < halfW;
+}
+
+function getTopWall(y) {
+  let cx = width / 2;
+  let topY = height * 0.05;
+  let neckY = height * NECK_Y;
+  let progress = constrain((y - topY) / (neckY - topY), 0, 1);
+  let halfW = lerp(width * 0.35, width * NECK_W, progress);
+  return { left: cx - halfW, right: cx + halfW };
+}
+
+function getBottomWall(y) {
+  let cx = width / 2;
+  let neckY = height * (NECK_Y + 0.04);
+  let botY = height * 0.95;
+  let progress = constrain((y - neckY) / (botY - neckY), 0, 1);
+  let halfW = lerp(width * NECK_W, width * 0.35, progress);
+  return { left: cx - halfW, right: cx + halfW };
+}
+
+function draw() {
+  background(BG);
+  
+  // Draw hourglass outline (subtle)
+  stroke(80, 50, 30);
+  strokeWeight(1.5);
+  noFill();
+  drawHourglassOutline();
+  noStroke();
+
+  // Activate waiting grains near neck
+  let neckY = height * NECK_Y;
+  for (let g of grains) {
+    if (g.waiting && g.y > neckY - 30) {
+      g.waiting = false;
+      g.vy = random(0.3, 1);
+    }
+  }
+
+  // Update grains
+  for (let g of grains) {
+    if (g.settled) continue;
+    
+    if (g.waiting) {
+      // Slide toward neck
+      let cx = width / 2;
+      g.vx += (cx - g.x) * 0.001;
+      g.vy += GRAVITY * 0.3;
+      // Wall constraints in top
+      let wall = getTopWall(g.y);
+      if (g.x < wall.left + g.size) { g.x = wall.left + g.size; g.vx = abs(g.vx) * 0.3; }
+      if (g.x > wall.right - g.size) { g.x = wall.right - g.size; g.vx = -abs(g.vx) * 0.3; }
+    } else {
+      // Falling
+      g.vy += GRAVITY;
+      g.vx += random(-0.05, 0.05);
+      
+      // Bottom wall constraints
+      let wall = getBottomWall(g.y);
+      if (g.x < wall.left + g.size) { g.x = wall.left + g.size; g.vx = abs(g.vx) * 0.2; }
+      if (g.x > wall.right - g.size) { g.x = wall.right - g.size; g.vx = -abs(g.vx) * 0.2; }
+      
+      // Settle at bottom
+      if (g.y > height * 0.93) {
+        g.settled = true;
+        g.vy = 0;
+        g.vx = 0;
+        settled.push(g);
+      }
+      
+      // Check collision with settled grains
+      for (let s of settled) {
+        let d = dist(g.x, g.y, s.x, s.y);
+        if (d < (g.size + s.size) * 0.8) {
+          g.settled = true;
+          g.vy = 0;
+          g.vx = 0;
+          g.y = s.y - g.size * 0.8;
+          settled.push(g);
+          break;
+        }
+      }
+    }
+    
+    g.vx *= 0.98;
+    g.vy = min(g.vy, 6);
+    g.x += g.vx;
+    g.y += g.vy;
+  }
+
+  // Draw all grains
+  for (let g of grains) {
+    fill(g.color);
+    circle(g.x, g.y, g.size);
+  }
+
+  // Spawn new grains at top periodically (cycle)
+  if (frameCount % 3 === 0 && grains.length < MAX_GRAINS) {
+    let cx = width / 2;
+    let x = cx + random(-width * 0.02, width * 0.02);
+    let y = height * NECK_Y - 5;
+    grains.push(createGrain(x, y, false));
+  }
+
+  // Reset cycle: when top is empty and most settled
+  let activeCount = grains.filter(g => !g.settled).length;
+  if (activeCount < 5 && frameCount > 300) {
+    resetHourglass();
+  }
+}
+
+function resetHourglass() {
+  grains = [];
+  settled = [];
+  for (let i = 0; i < 600; i++) {
+    let x = random(width * 0.25, width * 0.75);
+    let y = random(height * 0.05, height * NECK_Y - 20);
+    if (insideTop(x, y)) {
+      grains.push(createGrain(x, y, true));
+    }
+  }
+}
+
+function drawHourglassOutline() {
+  let cx = width / 2;
+  let topY = height * 0.05;
+  let neckY = height * NECK_Y;
+  let neckY2 = height * (NECK_Y + 0.04);
+  let botY = height * 0.95;
+  let topW = width * 0.35;
+  let neckW = width * NECK_W;
+  
+  beginShape();
+  vertex(cx - topW, topY);
+  vertex(cx - neckW, neckY);
+  vertex(cx - neckW, neckY2);
+  vertex(cx - topW, botY);
+  endShape();
+  
+  beginShape();
+  vertex(cx + topW, topY);
+  vertex(cx + neckW, neckY);
+  vertex(cx + neckW, neckY2);
+  vertex(cx + topW, botY);
+  endShape();
+  
+  // Top and bottom lines
+  line(cx - topW, topY, cx + topW, topY);
+  line(cx - topW, botY, cx + topW, botY);
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  resetHourglass();
+}
+</script>
+</body>
+</html>
