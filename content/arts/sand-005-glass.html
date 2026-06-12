@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>琉 / Glass</title>
+<style>
+* { margin: 0; padding: 0; }
+body { overflow: hidden; background: #1A0808; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Glass (琉) — Sand transformed by fire into transparency
+// Particles fuse under extreme heat, losing their granularity,
+// becoming smooth, refractive, liquid light
+
+let particles = [];
+let furnaceCenter;
+let time = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  furnaceCenter = createVector(width * 0.5, height * 0.55);
+  
+  // Create particles in a circular zone
+  for (let i = 0; i < 800; i++) {
+    let angle = random(TWO_PI);
+    let r = random(50, min(width, height) * 0.4);
+    particles.push({
+      x: furnaceCenter.x + cos(angle) * r,
+      y: furnaceCenter.y + sin(angle) * r,
+      origX: furnaceCenter.x + cos(angle) * r,
+      origY: furnaceCenter.y + sin(angle) * r,
+      size: random(2, 6),
+      phase: random(TWO_PI),
+      speed: random(0.005, 0.02),
+      dist: r,
+      angle: angle,
+      fused: false,
+      fuseTime: random(0.3, 0.9), // when in cycle this particle fuses
+      heatResponse: random(0.5, 1.5)
+    });
+  }
+  
+  colorMode(RGB);
+  noStroke();
+}
+
+function draw() {
+  // Deep furnace background with subtle warm glow
+  background(26, 8, 8, 25);
+  
+  time += 0.003;
+  let cycle = (sin(time * 0.5) + 1) / 2; // 0-1 oscillating: heat cycle
+  
+  // Draw furnace glow at center
+  drawFurnaceGlow(cycle);
+  
+  // Update and draw particles
+  for (let p of particles) {
+    updateParticle(p, cycle);
+    drawParticle(p, cycle);
+  }
+  
+  // Draw refractive caustics (light passing through glass)
+  drawCaustics(cycle);
+}
+
+function drawFurnaceGlow(cycle) {
+  let intensity = cycle * 0.7 + 0.3;
+  // Core glow - incandescent
+  for (let i = 5; i > 0; i--) {
+    let r = i * 60 * intensity;
+    let alpha = map(i, 5, 0, 5, 40) * intensity;
+    // Shift from deep red (cold) to white-orange (hot)
+    let cr = lerp(80, 255, intensity);
+    let cg = lerp(10, 140 * intensity, intensity);
+    let cb = lerp(5, 30, intensity);
+    fill(cr, cg, cb, alpha);
+    ellipse(furnaceCenter.x, furnaceCenter.y, r * 2, r * 2);
+  }
+}
+
+function updateParticle(p, cycle) {
+  let distToCenter = dist(p.x, p.y, furnaceCenter.x, furnaceCenter.y);
+  let maxR = min(width, height) * 0.4;
+  let proximity = 1 - constrain(distToCenter / maxR, 0, 1); // 1 at center, 0 at edge
+  
+  // Heat effect: particles closer to center get more agitated then fuse
+  let heatLevel = proximity * cycle * p.heatResponse;
+  
+  if (heatLevel > p.fuseTime) {
+    // Fused: particle becomes part of molten glass, flows smoothly
+    p.fused = true;
+    p.angle += 0.002 + proximity * 0.01;
+    let targetDist = p.dist * (0.7 + 0.3 * sin(time * 2 + p.phase));
+    p.x = lerp(p.x, furnaceCenter.x + cos(p.angle) * targetDist, 0.02);
+    p.y = lerp(p.y, furnaceCenter.y + sin(p.angle) * targetDist, 0.02);
+    // Size increases as particles merge
+    p.size = lerp(p.size, random(8, 15), 0.01);
+  } else {
+    // Still granular: vibrate with heat
+    let vibration = heatLevel * 3;
+    p.x = p.origX + sin(time * 10 + p.phase) * vibration;
+    p.y = p.origY + cos(time * 10 + p.phase * 1.3) * vibration;
+  }
+}
+
+function drawParticle(p, cycle) {
+  let distToCenter = dist(p.x, p.y, furnaceCenter.x, furnaceCenter.y);
+  let maxR = min(width, height) * 0.4;
+  let proximity = 1 - constrain(distToCenter / maxR, 0, 1);
+  
+  if (p.fused) {
+    // Molten glass: teal-green with orange core glow
+    let t = proximity * cycle;
+    // Hot center = incandescent orange-white, cooling edge = teal glass
+    let r = lerp(20, 255, t * t);
+    let g = lerp(180, 100, t);
+    let b = lerp(160, 20, t * t);
+    let alpha = lerp(60, 200, t);
+    fill(r, g, b, alpha);
+    
+    // Smooth blob shape
+    let s = p.size * (1 + 0.2 * sin(time * 3 + p.phase));
+    ellipse(p.x, p.y, s, s);
+  } else {
+    // Granular sand: warm beige to hot red based on heat
+    let heat = proximity * cycle * p.heatResponse;
+    let r = lerp(180, 255, heat);
+    let g = lerp(150, 60, heat);
+    let b = lerp(100, 10, heat);
+    let alpha = lerp(150, 255, heat);
+    fill(r, g, b, alpha);
+    
+    // Angular grain shape
+    let s = p.size * (1 - heat * 0.3);
+    rect(p.x - s/2, p.y - s/2, s, s);
+  }
+}
+
+function drawCaustics(cycle) {
+  // Light refracting through cooling glass — teal streaks
+  if (cycle < 0.4) {
+    let coolness = map(cycle, 0, 0.4, 1, 0);
+    push();
+    blendMode(ADD);
+    for (let i = 0; i < 12; i++) {
+      let angle = (TWO_PI / 12) * i + time * 0.5;
+      let len = min(width, height) * 0.25 * coolness;
+      let startR = 80;
+      let x1 = furnaceCenter.x + cos(angle) * startR;
+      let y1 = furnaceCenter.y + sin(angle) * startR;
+      let x2 = furnaceCenter.x + cos(angle + 0.1) * (startR + len);
+      let y2 = furnaceCenter.y + sin(angle + 0.1) * (startR + len);
+      
+      stroke(40, 220, 200, 30 * coolness);
+      strokeWeight(2 + sin(time * 2 + i) * 1);
+      line(x1, y1, x2, y2);
+    }
+    pop();
+    noStroke();
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  furnaceCenter = createVector(width * 0.5, height * 0.55);
+}
+</script>
+</body>
+</html>
