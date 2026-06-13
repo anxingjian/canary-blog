@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Oxidize 氧</title>
+<style>
+* { margin: 0; padding: 0; }
+html, body { overflow: hidden; background: #1A0F0D; width: 100%; height: 100%; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Rust 001 - Oxidize 氧
+// Oxidation spreading across a polished iron surface
+// Visual center: a bright oxidation nucleus slightly off-center
+
+let grid, nextGrid;
+let cols, rows;
+const cellSize = 4;
+let mainSeed;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  cols = floor(width / cellSize);
+  rows = floor(height / cellSize);
+  
+  grid = new Float32Array(cols * rows);
+  nextGrid = new Float32Array(cols * rows);
+  
+  // Main visual center - off-center golden ratio
+  mainSeed = {x: floor(cols * 0.618), y: floor(rows * 0.4)};
+  grid[mainSeed.x + mainSeed.y * cols] = 0.8;
+  
+  // Secondary seeds - asymmetric, fewer
+  let secondaries = [
+    {x: floor(cols * 0.25), y: floor(rows * 0.65)},
+    {x: floor(cols * 0.78), y: floor(rows * 0.72)},
+    {x: floor(cols * 0.4), y: floor(rows * 0.2)},
+  ];
+  for (let s of secondaries) {
+    grid[s.x + s.y * cols] = 0.4 + random(0.2);
+  }
+  
+  // Scratches - guide oxidation paths toward center
+  for (let i = 0; i < 4; i++) {
+    let x0 = floor(random(cols));
+    let y0 = floor(random(rows));
+    let angle = atan2(mainSeed.y - y0, mainSeed.x - x0) + random(-0.5, 0.5);
+    let len = floor(random(30, 80));
+    for (let j = 0; j < len; j++) {
+      let gx = floor(x0 + cos(angle) * j);
+      let gy = floor(y0 + sin(angle) * j);
+      if (gx >= 0 && gx < cols && gy >= 0 && gy < rows) {
+        grid[gx + gy * cols] = max(grid[gx + gy * cols], 0.03 + random(0.07));
+      }
+    }
+  }
+  
+  frameRate(30);
+  noStroke();
+}
+
+function idx(x, y) { return x + y * cols; }
+
+function draw() {
+  // Copy current to next
+  nextGrid.set(grid);
+  
+  // Diffuse oxidation
+  for (let x = 1; x < cols - 1; x++) {
+    for (let y = 1; y < rows - 1; y++) {
+      let i = idx(x, y);
+      let val = grid[i];
+      if (val < 0.01) continue;
+      
+      // Self-intensification (slow)
+      nextGrid[i] = min(1, val + 0.00005);
+      
+      // Anisotropic spread following grain structure
+      let n = noise(x * 0.04, y * 0.04) * TWO_PI;
+      let spreadRate = val * 0.001 * (1 + 0.5 * noise(x * 0.06, y * 0.06, frameCount * 0.001));
+      
+      // Primary direction (along grain)
+      let dx = round(cos(n));
+      let dy = round(sin(n));
+      let ni1 = idx(constrain(x + dx, 0, cols - 1), constrain(y + dy, 0, rows - 1));
+      nextGrid[ni1] = min(1, nextGrid[ni1] + spreadRate * 2);
+      
+      // Lateral (weaker)
+      let ni2 = idx(constrain(x - dy, 0, cols - 1), constrain(y + dx, 0, rows - 1));
+      let ni3 = idx(constrain(x + dy, 0, cols - 1), constrain(y - dx, 0, rows - 1));
+      nextGrid[ni2] = min(1, nextGrid[ni2] + spreadRate * 0.5);
+      nextGrid[ni3] = min(1, nextGrid[ni3] + spreadRate * 0.5);
+    }
+  }
+  
+  // Rare new moisture drops
+  if (frameCount % 90 === 0) {
+    let sx = floor(random(cols));
+    let sy = floor(random(rows));
+    nextGrid[idx(sx, sy)] = min(1, nextGrid[idx(sx, sy)] + 0.15);
+  }
+  
+  // Swap
+  let tmp = grid;
+  grid = nextGrid;
+  nextGrid = tmp;
+  
+  // Render with noFill rect approach for speed
+  background(26, 15, 13);
+  
+  for (let x = 0; x < cols; x++) {
+    for (let y = 0; y < rows; y++) {
+      let val = grid[idx(x, y)];
+      if (val < 0.01) continue;
+      
+      let r, g, b;
+      if (val < 0.15) {
+        // Faint tarnish
+        let t = val / 0.15;
+        r = lerp(45, 160, t);
+        g = lerp(24, 90, t);
+        b = lerp(16, 40, t);
+      } else if (val < 0.4) {
+        // Copper-orange bloom
+        let t = (val - 0.15) / 0.25;
+        r = lerp(160, 193, t);
+        g = lerp(90, 120, t);
+        b = lerp(40, 64, t);
+      } else if (val < 0.7) {
+        // Deep rust red
+        let t = (val - 0.4) / 0.3;
+        r = lerp(193, 139, t);
+        g = lerp(120, 58, t);
+        b = lerp(64, 42, t);
+      } else if (val < 0.9) {
+        // Dark crust
+        let t = (val - 0.7) / 0.2;
+        r = lerp(139, 70, t);
+        g = lerp(58, 28, t);
+        b = lerp(42, 18, t);
+      } else {
+        // Verdigris where moisture concentrated
+        let vn = noise(x * 0.1, y * 0.1, 50);
+        if (vn > 0.5) {
+          let t = (vn - 0.5) * 2;
+          r = lerp(70, 61, t);
+          g = lerp(28, 124, t);
+          b = lerp(18, 107, t);
+        } else {
+          r = 70; g = 28; b = 18;
+        }
+      }
+      
+      fill(r, g, b);
+      rect(x * cellSize, y * cellSize, cellSize, cellSize);
+    }
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  cols = floor(width / cellSize);
+  rows = floor(height / cellSize);
+  grid = new Float32Array(cols * rows);
+  nextGrid = new Float32Array(cols * rows);
+  grid[idx(floor(cols * 0.618), floor(rows * 0.4))] = 0.8;
+}
+</script>
+</body>
+</html>
