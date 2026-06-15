@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>片 / Flake</title>
+<style>
+* { margin: 0; padding: 0; }
+body { overflow: hidden; background: #F5F0E8; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Flake (片) — rust flakes peeling away from a surface
+// Color: ivory base, burgundy/wine flakes, cold steel gray exposed metal
+
+let flakes = [];
+let baseParticles = [];
+const FLAKE_COUNT = 120;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  noStroke();
+  
+  // Create the exposed metal surface particles (cold gray)
+  for (let i = 0; i < 2000; i++) {
+    baseParticles.push({
+      x: random(width),
+      y: random(height),
+      size: random(1, 3),
+      col: color(
+        random(140, 180),
+        random(145, 175),
+        random(155, 185),
+        random(60, 120)
+      )
+    });
+  }
+  
+  // Create rust flakes
+  for (let i = 0; i < FLAKE_COUNT; i++) {
+    flakes.push(createFlake(random(width), random(height)));
+  }
+}
+
+function createFlake(x, y) {
+  // Burgundy/wine/dried blood range
+  let hueShift = random(-20, 20);
+  let r = constrain(120 + hueShift, 80, 160);
+  let g = constrain(30 + random(-15, 15), 15, 55);
+  let b = constrain(35 + random(-10, 20), 20, 60);
+  
+  let vertices = [];
+  let sides = floor(random(4, 8));
+  let baseSize = random(15, 60);
+  for (let j = 0; j < sides; j++) {
+    let angle = (TWO_PI / sides) * j + random(-0.3, 0.3);
+    let dist = baseSize * random(0.6, 1.2);
+    vertices.push({ x: cos(angle) * dist, y: sin(angle) * dist });
+  }
+  
+  return {
+    x: x,
+    y: y,
+    vertices: vertices,
+    col: color(r, g, b),
+    edgeCol: color(r * 0.7, g * 0.6, b * 0.6),
+    rotation: random(TWO_PI),
+    rotSpeed: random(-0.003, 0.003),
+    liftAngle: random(0, PI * 0.3), // how much it's peeling up
+    liftSpeed: random(0.001, 0.005),
+    liftDir: random(TWO_PI),
+    driftX: random(-0.1, 0.1),
+    driftY: random(-0.05, 0.15), // gravity pulls down slightly
+    phase: random(TWO_PI),
+    opacity: random(180, 255),
+    curling: random(0.3, 1.0), // how curled the edge is
+    fallen: false,
+    fallProgress: 0
+  };
+}
+
+function draw() {
+  background(245, 240, 232); // warm ivory
+  
+  // Draw brushed metal texture
+  for (let bp of baseParticles) {
+    fill(bp.col);
+    ellipse(bp.x, bp.y, bp.size);
+  }
+  
+  // Subtle directional brush marks (cold steel)
+  stroke(160, 165, 175, 15);
+  strokeWeight(0.5);
+  for (let i = 0; i < 80; i++) {
+    let y = random(height);
+    let x = random(width);
+    line(x, y, x + random(20, 80), y + random(-2, 2));
+  }
+  noStroke();
+  
+  // Draw shadows first
+  for (let f of flakes) {
+    if (!f.fallen) {
+      let shadowOffset = map(f.liftAngle, 0, PI * 0.5, 2, 15);
+      push();
+      translate(f.x + shadowOffset, f.y + shadowOffset);
+      rotate(f.rotation);
+      fill(0, 0, 0, map(f.liftAngle, 0, PI * 0.5, 10, 40));
+      beginShape();
+      for (let v of f.vertices) {
+        vertex(v.x * 0.95, v.y * 0.95);
+      }
+      endShape(CLOSE);
+      pop();
+    }
+  }
+  
+  // Draw flakes
+  let t = frameCount * 0.01;
+  for (let f of flakes) {
+    f.rotation += f.rotSpeed;
+    
+    // Breathing lift animation
+    let liftOsc = sin(t + f.phase) * 0.02;
+    f.liftAngle = constrain(f.liftAngle + f.liftSpeed * 0.1 + liftOsc, 0, PI * 0.45);
+    
+    // Slight drift
+    f.x += f.driftX * sin(t * 0.5 + f.phase);
+    
+    // If fully lifted, start falling
+    if (f.liftAngle > PI * 0.4 && !f.fallen && random() < 0.001) {
+      f.fallen = true;
+    }
+    
+    if (f.fallen) {
+      f.fallProgress += 0.01;
+      f.y += f.driftY * 2;
+      f.x += sin(t + f.phase) * 0.5;
+      f.opacity = max(0, f.opacity - 0.5);
+      f.rotSpeed *= 1.001;
+      
+      if (f.opacity <= 0) {
+        // Reset flake
+        Object.assign(f, createFlake(random(width), random(-50, height * 0.3)));
+        f.liftAngle = 0;
+      }
+    }
+    
+    // Draw the flake with perspective distortion based on lift
+    push();
+    translate(f.x, f.y);
+    rotate(f.rotation);
+    
+    // Scale Y to simulate 3D lift
+    let scaleY = map(f.liftAngle, 0, PI * 0.45, 1, 0.6);
+    scale(1, scaleY);
+    
+    // Main flake body
+    fill(red(f.col), green(f.col), blue(f.col), f.opacity);
+    beginShape();
+    for (let v of f.vertices) {
+      vertex(v.x, v.y);
+    }
+    endShape(CLOSE);
+    
+    // Curled edge highlight (lighter, showing underside)
+    let edgeOpacity = map(f.liftAngle, 0, PI * 0.45, 0, f.opacity * 0.7);
+    fill(200, 180, 170, edgeOpacity);
+    beginShape();
+    for (let i = 0; i < f.vertices.length; i++) {
+      let v = f.vertices[i];
+      let factor = f.curling * 0.3;
+      vertex(v.x * (1 - factor), v.y * (1 - factor));
+    }
+    endShape(CLOSE);
+    
+    // Texture lines on flake
+    stroke(red(f.edgeCol), green(f.edgeCol), blue(f.edgeCol), f.opacity * 0.4);
+    strokeWeight(0.5);
+    for (let i = 0; i < 3; i++) {
+      let v1 = f.vertices[floor(random(f.vertices.length))];
+      let v2 = f.vertices[floor(random(f.vertices.length))];
+      line(v1.x * 0.5, v1.y * 0.5, v2.x * 0.7, v2.y * 0.7);
+    }
+    noStroke();
+    
+    pop();
+  }
+  
+  // Dust motes floating (tiny warm particles)
+  for (let i = 0; i < 30; i++) {
+    let dx = (noise(i * 10, t * 0.3) - 0.5) * width * 1.5 + width * 0.5;
+    let dy = (noise(i * 10 + 100, t * 0.2) - 0.5) * height * 1.5 + height * 0.5;
+    fill(180, 120, 80, 40 + sin(t + i) * 20);
+    ellipse(dx, dy, random(1, 2.5));
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+</script>
+</body>
+</html>
