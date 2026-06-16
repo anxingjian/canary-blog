@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>蚀 / Corrode</title>
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1C1C24; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+<script>
+// 蚀 / Corrode — acid etching simulation
+// Acid drops land on a metal surface and spread along grain boundaries,
+// eating through the material. Bubbles rise from reaction sites.
+
+const CHARCOAL = [28, 28, 36];
+const ACID_GREEN = [200, 216, 40];
+const SULFUR = [184, 156, 20];
+const SLATE_VIOLET = [92, 80, 120];
+const CHARTREUSE = [136, 168, 24];
+const BONE = [216, 212, 200];
+
+let metalGrid; // health of each cell (1 = intact, 0 = dissolved)
+let cols, rows;
+const cellSize = 4;
+let acidDrops = [];
+let bubbles = [];
+let grainBoundaries; // weakness map
+let frame = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  cols = Math.ceil(width / cellSize);
+  rows = Math.ceil(height / cellSize);
+
+  // Initialize metal grid
+  metalGrid = [];
+  grainBoundaries = [];
+  for (let i = 0; i < cols; i++) {
+    metalGrid[i] = [];
+    grainBoundaries[i] = [];
+    for (let j = 0; j < rows; j++) {
+      metalGrid[i][j] = 1.0;
+      // Voronoi-ish grain boundaries via noise
+      let n = noise(i * 0.08, j * 0.08);
+      let boundary = (n > 0.48 && n < 0.52) ? 0.6 : 0.0;
+      // Add some random micro-cracks
+      if (random() < 0.003) boundary = 0.8;
+      grainBoundaries[i][j] = boundary;
+    }
+  }
+
+  noStroke();
+  background(...CHARCOAL);
+}
+
+function draw() {
+  frame++;
+
+  // Periodically drop new acid
+  if (frame % 60 === 0 && acidDrops.length < 25) {
+    let dx = random(width * 0.1, width * 0.9);
+    let dy = random(height * 0.1, height * 0.9);
+    acidDrops.push({
+      x: dx, y: dy,
+      radius: 0,
+      maxRadius: random(30, 120),
+      strength: random(0.01, 0.03),
+      speed: random(0.3, 0.8)
+    });
+  }
+
+  // Expand acid drops and corrode
+  for (let d = acidDrops.length - 1; d >= 0; d--) {
+    let drop = acidDrops[d];
+    drop.radius += drop.speed;
+
+    // Corrode cells within the expanding ring
+    let ringInner = max(0, drop.radius - 3);
+    let ringOuter = drop.radius;
+
+    let ci = Math.floor(drop.x / cellSize);
+    let cj = Math.floor(drop.y / cellSize);
+    let cr = Math.ceil(ringOuter / cellSize) + 1;
+
+    for (let di = -cr; di <= cr; di++) {
+      for (let dj = -cr; dj <= cr; dj++) {
+        let gi = ci + di;
+        let gj = cj + dj;
+        if (gi < 0 || gi >= cols || gj < 0 || gj >= rows) continue;
+
+        let px = gi * cellSize + cellSize / 2;
+        let py = gj * cellSize + cellSize / 2;
+        let dist = Math.sqrt((px - drop.x) ** 2 + (py - drop.y) ** 2);
+
+        if (dist >= ringInner && dist <= ringOuter && metalGrid[gi][gj] > 0) {
+          // Corrosion rate depends on grain boundary weakness
+          let weakness = 1.0 + grainBoundaries[gi][gj] * 4.0;
+          let corrosion = drop.strength * weakness * (1.0 - dist / drop.maxRadius);
+
+          if (corrosion > 0) {
+            metalGrid[gi][gj] = max(0, metalGrid[gi][gj] - corrosion);
+
+            // Spawn bubble at corrosion site
+            if (random() < 0.02 && metalGrid[gi][gj] < 0.7) {
+              bubbles.push({
+                x: px + random(-2, 2),
+                y: py,
+                vx: random(-0.3, 0.3),
+                vy: random(-1.5, -0.5),
+                size: random(1.5, 4),
+                life: 1.0
+              });
+            }
+          }
+        }
+      }
+    }
+
+    if (drop.radius > drop.maxRadius) {
+      acidDrops.splice(d, 1);
+    }
+  }
+
+  // Draw metal surface
+  loadPixels();
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      let health = metalGrid[i][j];
+      let boundary = grainBoundaries[i][j];
+
+      let r, g, b;
+      if (health > 0.8) {
+        // Intact metal — slate violet with grain texture
+        let t = boundary * 0.3;
+        r = lerp(SLATE_VIOLET[0], BONE[0], t);
+        g = lerp(SLATE_VIOLET[1], BONE[1], t);
+        b = lerp(SLATE_VIOLET[2], BONE[2], t);
+      } else if (health > 0.4) {
+        // Partially corroded — sulfuric yellow reaction zone
+        let t = map(health, 0.8, 0.4, 0, 1);
+        r = lerp(SLATE_VIOLET[0], SULFUR[0], t);
+        g = lerp(SLATE_VIOLET[1], SULFUR[1], t);
+        b = lerp(SLATE_VIOLET[2], SULFUR[2], t);
+      } else if (health > 0.1) {
+        // Heavily corroded — acid green
+        let t = map(health, 0.4, 0.1, 0, 1);
+        r = lerp(SULFUR[0], ACID_GREEN[0], t);
+        g = lerp(SULFUR[1], ACID_GREEN[1], t);
+        b = lerp(SULFUR[2], ACID_GREEN[2], t);
+      } else {
+        // Dissolved — exposed bone/void
+        let t = map(health, 0.1, 0, 0, 1);
+        r = lerp(ACID_GREEN[0], CHARCOAL[0], t * 0.6);
+        g = lerp(ACID_GREEN[1], CHARCOAL[1], t * 0.6);
+        b = lerp(ACID_GREEN[2], CHARCOAL[2], t * 0.6);
+        // Bone color peeking through
+        r = lerp(r, BONE[0], t * 0.3);
+        g = lerp(g, BONE[1], t * 0.3);
+        b = lerp(b, BONE[2], t * 0.3);
+      }
+
+      // Paint the cell
+      for (let px = 0; px < cellSize; px++) {
+        for (let py = 0; py < cellSize; py++) {
+          let x = i * cellSize + px;
+          let y = j * cellSize + py;
+          if (x >= width || y >= height) continue;
+          let idx = (y * width + x) * 4;
+          pixels[idx] = r;
+          pixels[idx + 1] = g;
+          pixels[idx + 2] = b;
+          pixels[idx + 3] = 255;
+        }
+      }
+    }
+  }
+  updatePixels();
+
+  // Draw bubbles on top
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    let b = bubbles[i];
+    b.x += b.vx;
+    b.y += b.vy;
+    b.vy -= 0.01; // slight acceleration upward
+    b.life -= 0.008;
+    b.size *= 0.998;
+
+    if (b.life <= 0 || b.y < 0) {
+      bubbles.splice(i, 1);
+      continue;
+    }
+
+    // Greenish translucent bubble
+    fill(CHARTREUSE[0], CHARTREUSE[1], CHARTREUSE[2], b.life * 150);
+    ellipse(b.x, b.y, b.size, b.size);
+  }
+
+  // Acid drop glow indicators
+  for (let drop of acidDrops) {
+    let alpha = map(drop.radius, 0, drop.maxRadius, 80, 0);
+    noFill();
+    stroke(ACID_GREEN[0], ACID_GREEN[1], ACID_GREEN[2], alpha);
+    strokeWeight(1);
+    ellipse(drop.x, drop.y, drop.radius * 2, drop.radius * 2);
+  }
+  noStroke();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  // Reset on resize for simplicity
+  setup();
+}
+
+function map(value, start1, stop1, start2, stop2) {
+  return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
+}
+</script>
+</body>
+</html>
