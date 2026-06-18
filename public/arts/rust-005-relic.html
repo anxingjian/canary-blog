@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>遗 / Relic</title>
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #2A2D38; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+<script>
+// 遗 / Relic — archaeological remnant simulation
+// All chemistry is done. What remains is a ghost-shape:
+// mineral deposits outlining where an iron artifact once was.
+// Particles drift and settle into a phantom form that never fully coheres.
+
+const IRON_DARK = [42, 45, 56];
+const WEATHERED_GREY = [139, 145, 153];
+const BONE_WHITE = [196, 191, 179];
+const LEAD_BLUE = [90, 98, 112];
+const OCHRE_GHOST = [166, 128, 96];
+const SLATE = [60, 68, 82];
+
+let particles = [];
+let settled = [];
+let attractors = [];
+let windField;
+let frame = 0;
+const MAX_PARTICLES = 3000;
+const MAX_SETTLED = 8000;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+
+  // Create the "relic shape" — a set of attractor points
+  // forming an abstract broken vessel / blade silhouette
+  generateRelicShape();
+
+  // Wind erosion field
+  windField = {
+    seed: random(1000),
+    strength: 0.0008,
+    scale: 0.003
+  };
+
+  background(...IRON_DARK);
+  noStroke();
+}
+
+function generateRelicShape() {
+  attractors = [];
+  let cx = width / 2;
+  let cy = height / 2;
+  let scale = min(width, height) * 0.3;
+
+  // Create a broken, asymmetric form — like a corroded blade or fragment
+  // Using multiple overlapping shapes with gaps
+  let shapes = [
+    // Main body — tall irregular trapezoid
+    { ox: 0, oy: -0.15, w: 0.25, h: 0.55, density: 0.7, rotation: 0.05 },
+    // Upper fragment — displaced
+    { ox: 0.08, oy: -0.42, w: 0.12, h: 0.15, density: 0.5, rotation: -0.1 },
+    // Lower wide base
+    { ox: -0.03, oy: 0.25, w: 0.35, h: 0.12, density: 0.6, rotation: 0.02 },
+    // Side shard
+    { ox: -0.22, oy: 0.05, w: 0.08, h: 0.2, density: 0.4, rotation: 0.15 },
+  ];
+
+  for (let shape of shapes) {
+    let count = Math.floor(60 * shape.density);
+    for (let i = 0; i < count; i++) {
+      // Points along the edges, not filled — we want an outline/remnant feel
+      let t = random();
+      let side = floor(random(4));
+      let lx, ly;
+
+      if (side === 0) { lx = -shape.w/2 + t * shape.w; ly = -shape.h/2; }
+      else if (side === 1) { lx = -shape.w/2 + t * shape.w; ly = shape.h/2; }
+      else if (side === 2) { lx = -shape.w/2; ly = -shape.h/2 + t * shape.h; }
+      else { lx = shape.w/2; ly = -shape.h/2 + t * shape.h; }
+
+      // Also scatter some interior points for density variation
+      if (random() < 0.35) {
+        lx = random(-shape.w/2, shape.w/2);
+        ly = random(-shape.h/2, shape.h/2);
+      }
+
+      // Apply rotation
+      let cos_r = cos(shape.rotation);
+      let sin_r = sin(shape.rotation);
+      let rx = lx * cos_r - ly * sin_r;
+      let ry = lx * sin_r + ly * cos_r;
+
+      attractors.push({
+        x: cx + (shape.ox + rx) * scale,
+        y: cy + (shape.oy + ry) * scale,
+        strength: random(0.3, 1.0),
+        decay: random(0.92, 0.97)
+      });
+    }
+  }
+
+  // Add fracture lines — narrow corridors of attractors
+  for (let f = 0; f < 5; f++) {
+    let fx = cx + random(-0.2, 0.2) * scale;
+    let fy = cy + random(-0.3, 0.3) * scale;
+    let angle = random(TWO_PI);
+    let len = random(0.1, 0.3) * scale;
+    for (let i = 0; i < 15; i++) {
+      let t = i / 15;
+      attractors.push({
+        x: fx + cos(angle) * len * t + random(-3, 3),
+        y: fy + sin(angle) * len * t + random(-3, 3),
+        strength: random(0.1, 0.4),
+        decay: 0.94
+      });
+    }
+  }
+}
+
+function draw() {
+  frame++;
+
+  // Emit particles from edges — dust drifting in
+  if (particles.length < MAX_PARTICLES && frame % 2 === 0) {
+    for (let i = 0; i < 3; i++) {
+      let side = floor(random(4));
+      let px, py, vx, vy;
+
+      if (side === 0) { px = random(width); py = -5; vx = random(-0.3, 0.3); vy = random(0.2, 0.8); }
+      else if (side === 1) { px = random(width); py = height + 5; vx = random(-0.3, 0.3); vy = random(-0.8, -0.2); }
+      else if (side === 2) { px = -5; py = random(height); vx = random(0.2, 0.8); vy = random(-0.3, 0.3); }
+      else { px = width + 5; py = random(height); vx = random(-0.8, -0.2); vy = random(-0.3, 0.3); }
+
+      // Particle color — mostly grey tones, rare ochre
+      let colorChoice = random();
+      let col;
+      if (colorChoice < 0.35) col = [...WEATHERED_GREY];
+      else if (colorChoice < 0.6) col = [...BONE_WHITE];
+      else if (colorChoice < 0.8) col = [...LEAD_BLUE];
+      else if (colorChoice < 0.92) col = [...SLATE];
+      else col = [...OCHRE_GHOST]; // rare warm fleck
+
+      particles.push({
+        x: px, y: py,
+        vx: vx, vy: vy,
+        col: col,
+        size: random(1, 3),
+        life: 1.0,
+        settled: false
+      });
+    }
+  }
+
+  // Semi-transparent background for trail effect
+  fill(IRON_DARK[0], IRON_DARK[1], IRON_DARK[2], 8);
+  rect(0, 0, width, height);
+
+  // Update and draw particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    let p = particles[i];
+
+    // Attraction toward nearest attractor
+    let nearestDist = Infinity;
+    let ax = 0, ay = 0;
+
+    for (let a of attractors) {
+      let dx = a.x - p.x;
+      let dy = a.y - p.y;
+      let dist = dx * dx + dy * dy;
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        let d = sqrt(dist) + 1;
+        let force = a.strength / (d * 0.8);
+        force = min(force, 0.15);
+        ax = dx / d * force;
+        ay = dy / d * force;
+      }
+    }
+
+    // Wind field perturbation
+    let wn = noise(
+      p.x * windField.scale + windField.seed,
+      p.y * windField.scale,
+      frame * 0.001
+    );
+    let windAngle = wn * TWO_PI * 2;
+    ax += cos(windAngle) * windField.strength;
+    ay += sin(windAngle) * windField.strength;
+
+    p.vx += ax;
+    p.vy += ay;
+
+    // Damping
+    p.vx *= 0.985;
+    p.vy *= 0.985;
+
+    p.x += p.vx;
+    p.y += p.vy;
+
+    // Check if particle should settle
+    let speed = p.vx * p.vx + p.vy * p.vy;
+    if (speed < 0.01 && nearestDist < 400 && settled.length < MAX_SETTLED) {
+      settled.push({
+        x: p.x,
+        y: p.y,
+        col: p.col,
+        size: p.size * random(0.6, 1.0),
+        alpha: random(80, 200),
+        age: 0
+      });
+      particles.splice(i, 1);
+      continue;
+    }
+
+    // Draw moving particle
+    let alpha = map(speed, 0, 2, 120, 40);
+    alpha = constrain(alpha, 30, 150);
+    fill(p.col[0], p.col[1], p.col[2], alpha);
+    ellipse(p.x, p.y, p.size, p.size);
+
+    // Remove if out of bounds for too long
+    p.life -= 0.0005;
+    if (p.life <= 0 || p.x < -50 || p.x > width + 50 || p.y < -50 || p.y > height + 50) {
+      particles.splice(i, 1);
+    }
+  }
+
+  // Draw settled particles — the relic form
+  for (let i = settled.length - 1; i >= 0; i--) {
+    let s = settled[i];
+    s.age++;
+
+    // Very slow wind erosion — some settled particles eventually drift away
+    if (s.age > 600 && random() < 0.0003) {
+      // Re-emit as drifting particle
+      particles.push({
+        x: s.x,
+        y: s.y,
+        vx: random(-0.5, 0.5),
+        vy: random(-0.5, 0.5),
+        col: s.col,
+        size: s.size,
+        life: 0.5,
+        settled: false
+      });
+      settled.splice(i, 1);
+      continue;
+    }
+
+    // Draw with slight flicker
+    let flicker = noise(s.x * 0.01, s.y * 0.01, frame * 0.005) * 40 - 20;
+    let a = constrain(s.alpha + flicker, 30, 220);
+
+    fill(s.col[0], s.col[1], s.col[2], a);
+    ellipse(s.x, s.y, s.size, s.size);
+  }
+
+  // Periodic re-erosion wind gust
+  if (frame % 400 === 0) {
+    windField.strength = random(0.001, 0.003);
+    setTimeout(() => { windField.strength = 0.0008; }, 3000);
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  settled = [];
+  particles = [];
+  generateRelicShape();
+  background(...IRON_DARK);
+}
+</script>
+</body>
+</html>
