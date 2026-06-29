@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Radical 拆</title>
+<style>
+* { margin: 0; padding: 0; }
+html, body { overflow: hidden; background: #08080B; width: 100%; height: 100%; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Glyph 002 - Radical 拆
+// Characters deconstructed into floating radicals
+// Structural DNA of Chinese writing drifting apart
+
+let radicalGroups = [];
+let time = 0;
+let pg;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  textAlign(CENTER, CENTER);
+  
+  generateRadicals();
+}
+
+function generateRadicals() {
+  radicalGroups = [];
+  
+  // Characters to deconstruct — each as [full char, [radicals with positions]]
+  const chars = [
+    { radicals: ['亻', '言'], source: '信' },
+    { radicals: ['木', '木'], source: '林' },
+    { radicals: ['氵', '青'], source: '清' },
+    { radicals: ['火', '山'], source: '炭' },
+    { radicals: ['日', '月'], source: '明' },
+    { radicals: ['口', '天'], source: '吞' },
+    { radicals: ['女', '子'], source: '好' },
+    { radicals: ['心', '亡'], source: '忘' },
+    { radicals: ['木', '目'], source: '相' },
+    { radicals: ['人', '大'], source: '夫' },
+    { radicals: ['雨', '田'], source: '雷' },
+    { radicals: ['门', '口'], source: '问' },
+  ];
+  
+  // Pick 4-6 random characters
+  const count = 4 + floor(random(3));
+  const selected = [];
+  const shuffled = [...chars].sort(() => random() - 0.5);
+  for (let i = 0; i < min(count, shuffled.length); i++) {
+    selected.push(shuffled[i]);
+  }
+  
+  // Position them
+  const cols = ceil(sqrt(selected.length));
+  const rows = ceil(selected.length / cols);
+  const cellW = width / cols;
+  const cellH = height / rows;
+  
+  for (let i = 0; i < selected.length; i++) {
+    const col = i % cols;
+    const row = floor(i / cols);
+    const cx = cellW * (col + 0.5);
+    const cy = cellH * (row + 0.5);
+    
+    const group = {
+      source: selected[i].source,
+      cx, cy,
+      radicals: [],
+      phase: random(TWO_PI),
+      assembleTime: 2000 + i * 1500,
+      disassembleTime: 2000 + i * 1500 + 4000,
+      cycleLength: 12000
+    };
+    
+    // Create radicals with their separated positions
+    const rads = selected[i].radicals;
+    for (let j = 0; j < rads.length; j++) {
+      const angle = (j / rads.length) * TWO_PI + random(-0.3, 0.3) + group.phase;
+      const sepDist = min(cellW, cellH) * 0.25;
+      
+      group.radicals.push({
+        char: rads[j],
+        // Home position (assembled)
+        homeX: cx + (j === 0 ? -min(cellW, cellH) * 0.08 : min(cellW, cellH) * 0.08),
+        homeY: cy,
+        // Separated position
+        sepX: cx + cos(angle) * sepDist,
+        sepY: cy + sin(angle) * sepDist,
+        // Drift
+        driftPhase: random(TWO_PI),
+        driftSpeed: 0.0003 + random(0.0002),
+        driftRadius: 8 + random(15),
+        // Rotation
+        rotPhase: random(TWO_PI),
+        rotSpeed: 0.0001 + random(0.0002),
+        rotAmp: 0.05 + random(0.1),
+        // Size
+        fontSize: min(cellW, cellH) * (0.15 + random(0.05)),
+        // Opacity
+        alpha: 0
+      });
+    }
+    
+    radicalGroups.push(group);
+  }
+}
+
+function draw() {
+  // Slow accumulation
+  background(8, 8, 11, 15);
+  
+  time += deltaTime;
+  
+  for (const group of radicalGroups) {
+    const cycleTime = time % group.cycleLength;
+    
+    // Phase: gather → hold → scatter → drift
+    // 0-2s: drift (scattered), 2s-4s: assemble, 4s-6s: hold, 6s-8s: scatter, 8s-12s: drift
+    let separation; // 0 = assembled, 1 = fully separated
+    
+    if (cycleTime < 2000) {
+      separation = 1; // drifting apart
+    } else if (cycleTime < 4000) {
+      const t = (cycleTime - 2000) / 2000;
+      separation = 1 - easeInOutCubic(t); // coming together
+    } else if (cycleTime < 6000) {
+      separation = 0; // held together
+    } else if (cycleTime < 8000) {
+      const t = (cycleTime - 6000) / 2000;
+      separation = easeInOutCubic(t); // falling apart
+    } else {
+      separation = 1; // drifting
+    }
+    
+    // Draw ghost of full character when assembled
+    if (separation < 0.3) {
+      const ghostAlpha = map(separation, 0, 0.3, 40, 0);
+      push();
+      textFont('serif');
+      textSize(min(width / ceil(sqrt(radicalGroups.length)), height / ceil(radicalGroups.length / ceil(sqrt(radicalGroups.length)))) * 0.3);
+      fill(200, 190, 175, ghostAlpha);
+      noStroke();
+      text(group.source, group.cx, group.cy);
+      pop();
+    }
+    
+    // Draw each radical
+    for (const rad of group.radicals) {
+      // Interpolate position
+      const baseX = lerp(rad.homeX, rad.sepX, separation);
+      const baseY = lerp(rad.homeY, rad.sepY, separation);
+      
+      // Add drift when separated
+      const driftAmount = separation;
+      const dx = cos(time * rad.driftSpeed + rad.driftPhase) * rad.driftRadius * driftAmount;
+      const dy = sin(time * rad.driftSpeed * 0.7 + rad.driftPhase + 1) * rad.driftRadius * 0.6 * driftAmount;
+      
+      const x = baseX + dx;
+      const y = baseY + dy;
+      
+      // Rotation when separated
+      const rot = sin(time * rad.rotSpeed + rad.rotPhase) * rad.rotAmp * separation;
+      
+      // Alpha
+      rad.alpha = lerp(rad.alpha, separation > 0.5 ? 140 : 200, 0.05);
+      
+      push();
+      translate(x, y);
+      rotate(rot);
+      
+      // Ink wash effect — multiple layers
+      textFont('serif');
+      textSize(rad.fontSize);
+      noStroke();
+      
+      // Outer glow
+      fill(180, 165, 145, rad.alpha * 0.1);
+      text(rad.char, 0, 0);
+      
+      // Main body — warm ink tones
+      const warmth = sin(time * 0.0002 + rad.driftPhase) * 0.5 + 0.5;
+      const r = lerp(160, 190, warmth);
+      const g = lerp(145, 165, warmth);
+      const b = lerp(130, 140, warmth);
+      fill(r, g, b, rad.alpha);
+      text(rad.char, 0, 0);
+      
+      pop();
+    }
+    
+    // Connection lines when partially assembled
+    if (separation > 0.1 && separation < 0.9 && group.radicals.length >= 2) {
+      for (let i = 0; i < group.radicals.length - 1; i++) {
+        const r0 = group.radicals[i];
+        const r1 = group.radicals[i + 1];
+        const x0 = lerp(r0.homeX, r0.sepX, separation) + cos(time * r0.driftSpeed + r0.driftPhase) * r0.driftRadius * separation;
+        const y0 = lerp(r0.homeY, r0.sepY, separation) + sin(time * r0.driftSpeed * 0.7 + r0.driftPhase + 1) * r0.driftRadius * 0.6 * separation;
+        const x1 = lerp(r1.homeX, r1.sepX, separation) + cos(time * r1.driftSpeed + r1.driftPhase) * r1.driftRadius * separation;
+        const y1 = lerp(r1.homeY, r1.sepY, separation) + sin(time * r1.driftSpeed * 0.7 + r1.driftPhase + 1) * r1.driftRadius * 0.6 * separation;
+        
+        stroke(150, 140, 125, 15 * (1 - abs(separation - 0.5) * 2));
+        strokeWeight(0.5);
+        line(x0, y0, x1, y1);
+      }
+    }
+  }
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2;
+}
+
+function mousePressed() {
+  generateRadicals();
+  time = 0;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  generateRadicals();
+  time = 0;
+}
+</script>
+</body>
+</html>

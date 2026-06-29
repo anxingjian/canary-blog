@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stroke 笔</title>
+<style>
+* { margin: 0; padding: 0; }
+html, body { overflow: hidden; background: #0A0A0A; width: 100%; height: 100%; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Glyph 001 - Stroke 笔
+// The elemental gesture: a single brush stroke's anatomy
+// Pressure, velocity, ink loading — before any character exists
+
+let strokes = [];
+let time = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  background(10);
+  
+  // Generate a set of calligraphic strokes
+  generateStrokes();
+}
+
+function generateStrokes() {
+  strokes = [];
+  const count = 5 + floor(random(4)); // 5-8 strokes
+  
+  for (let i = 0; i < count; i++) {
+    strokes.push(new CalliStroke(i, count));
+  }
+}
+
+class CalliStroke {
+  constructor(index, total) {
+    this.index = index;
+    this.total = total;
+    
+    // Stroke type: horizontal, vertical, left-fall, right-fall, dot, hook
+    const types = ['heng', 'shu', 'pie', 'na', 'dian', 'gou', 'ti', 'zhe'];
+    this.type = types[index % types.length];
+    
+    // Position — spread across canvas with breathing room
+    const cols = ceil(sqrt(total));
+    const rows = ceil(total / cols);
+    const col = index % cols;
+    const row = floor(index / cols);
+    const cellW = width / cols;
+    const cellH = height / rows;
+    this.cx = cellW * (col + 0.5) + random(-cellW * 0.1, cellW * 0.1);
+    this.cy = cellH * (row + 0.5) + random(-cellH * 0.1, cellH * 0.1);
+    
+    // Stroke scale
+    this.scale = min(cellW, cellH) * 0.35;
+    
+    // Animation
+    this.birthTime = index * 800 + random(300);
+    this.duration = 1200 + random(800);
+    this.alive = false;
+    this.progress = 0;
+    
+    // Generate stroke path based on type
+    this.generatePath();
+    
+    // Ink color — warm blacks, deep grays, occasional cinnabar
+    const palettes = [
+      [25, 22, 20],     // warm black
+      [35, 28, 25],     // dark umber
+      [20, 18, 22],     // cool black
+      [45, 30, 28],     // deep brown
+      [140, 35, 30],    // cinnabar red (rare)
+      [30, 35, 28],     // moss black
+    ];
+    this.ink = palettes[floor(random(palettes.length))];
+    if (random() > 0.85) this.ink = palettes[4]; // 15% chance of cinnabar
+    
+    // Ink opacity
+    this.maxAlpha = 180 + random(75);
+    
+    // Subtle rotation
+    this.rotation = random(-0.05, 0.05);
+  }
+  
+  generatePath() {
+    this.points = [];
+    const s = this.scale;
+    const steps = 60;
+    
+    switch(this.type) {
+      case 'heng': // horizontal stroke
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const x = lerp(-s, s, t);
+          const y = sin(t * PI * 0.3) * s * 0.05; // very slight arc
+          // Pressure: heavier at start and end (顿笔)
+          const pressure = 0.3 + 0.7 * (1 - 4 * pow(t - 0.5, 2));
+          const startWeight = t < 0.1 ? map(t, 0, 0.1, 1.2, 1) : 1;
+          const endWeight = t > 0.9 ? map(t, 0.9, 1, 1, 1.3) : 1;
+          this.points.push({ x, y, pressure: pressure * startWeight * endWeight });
+        }
+        break;
+        
+      case 'shu': // vertical stroke
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const x = sin(t * PI * 0.2) * s * 0.03;
+          const y = lerp(-s, s * 0.9, t);
+          const pressure = 0.4 + 0.6 * sin(t * PI);
+          this.points.push({ x, y, pressure });
+        }
+        break;
+        
+      case 'pie': // left-falling stroke (撇)
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const x = lerp(s * 0.3, -s, t);
+          const y = lerp(-s * 0.8, s * 0.6, t);
+          const curve = sin(t * PI * 0.7) * s * 0.15;
+          const pressure = map(t, 0, 1, 1, 0.15); // thick to thin
+          this.points.push({ x: x + curve, y, pressure });
+        }
+        break;
+        
+      case 'na': // right-falling stroke (捺)
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const x = lerp(-s * 0.3, s, t);
+          const y = lerp(-s * 0.7, s * 0.5, t);
+          const curve = -sin(t * PI * 0.5) * s * 0.12;
+          // Thin start, thickens, then sharp tail
+          let pressure;
+          if (t < 0.7) pressure = map(t, 0, 0.7, 0.2, 1);
+          else pressure = map(t, 0.7, 1, 1, 0.6);
+          this.points.push({ x: x + curve, y, pressure });
+        }
+        break;
+        
+      case 'dian': // dot (点)
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const x = lerp(0, s * 0.25, t);
+          const y = lerp(-s * 0.15, s * 0.2, t);
+          const pressure = sin(t * PI) * 1.5;
+          this.points.push({ x, y, pressure });
+        }
+        break;
+        
+      case 'gou': // hook (钩)
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          let x, y;
+          if (t < 0.7) {
+            x = sin(t / 0.7 * PI * 0.15) * s * 0.04;
+            y = lerp(-s, s * 0.4, t / 0.7);
+          } else {
+            const ht = (t - 0.7) / 0.3;
+            x = lerp(0, -s * 0.35, ht);
+            y = lerp(s * 0.4, s * 0.15, ht);
+          }
+          const pressure = t < 0.7 ? 0.5 + 0.5 * sin(t / 0.7 * PI) : map(t, 0.7, 1, 0.8, 0.15);
+          this.points.push({ x, y, pressure });
+        }
+        break;
+        
+      case 'ti': // upward stroke (提)
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const x = lerp(-s * 0.2, s * 0.6, t);
+          const y = lerp(s * 0.5, -s * 0.4, t);
+          const pressure = map(t, 0, 1, 1, 0.1);
+          this.points.push({ x, y, pressure });
+        }
+        break;
+        
+      case 'zhe': // turning stroke (折)
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          let x, y;
+          if (t < 0.45) {
+            x = lerp(-s * 0.6, s * 0.3, t / 0.45);
+            y = -s * 0.5 + sin(t / 0.45 * PI * 0.3) * s * 0.05;
+          } else {
+            const vt = (t - 0.45) / 0.55;
+            x = s * 0.3 + sin(vt * PI * 0.15) * s * 0.04;
+            y = lerp(-s * 0.5, s * 0.6, vt);
+          }
+          const pressure = t < 0.45 ? 0.6 : (t < 0.55 ? 1.2 : 0.5 + 0.3 * sin((t-0.55)/0.45 * PI));
+          this.points.push({ x, y, pressure });
+        }
+        break;
+    }
+  }
+  
+  draw(currentTime) {
+    const elapsed = currentTime - this.birthTime;
+    if (elapsed < 0) return;
+    
+    this.alive = true;
+    this.progress = constrain(elapsed / this.duration, 0, 1);
+    
+    // Eased progress
+    const eased = 1 - pow(1 - this.progress, 3);
+    const visiblePoints = floor(eased * this.points.length);
+    
+    if (visiblePoints < 2) return;
+    
+    push();
+    translate(this.cx, this.cy);
+    rotate(this.rotation);
+    
+    // Draw stroke with varying width
+    const baseWidth = this.scale * 0.08;
+    
+    for (let i = 1; i < visiblePoints; i++) {
+      const p0 = this.points[i - 1];
+      const p1 = this.points[i];
+      
+      const w = baseWidth * p1.pressure;
+      
+      // Ink density varies with speed (fast = lighter)
+      const speed = dist(p0.x, p0.y, p1.x, p1.y);
+      const density = constrain(map(speed, 0, 5, 1, 0.6), 0.5, 1);
+      
+      // Flying white effect (飞白) — gaps in fast strokes
+      const flyingWhite = speed > 3 && random() > 0.7;
+      
+      if (!flyingWhite) {
+        // Main stroke body
+        stroke(this.ink[0], this.ink[1], this.ink[2], this.maxAlpha * density);
+        strokeWeight(w);
+        strokeCap(ROUND);
+        strokeJoin(ROUND);
+        line(p0.x, p0.y, p1.x, p1.y);
+        
+        // Ink bleed — subtle spread at edges
+        if (w > 3 && random() > 0.85) {
+          const bleedX = p1.x + random(-w * 0.5, w * 0.5);
+          const bleedY = p1.y + random(-w * 0.5, w * 0.5);
+          noStroke();
+          fill(this.ink[0], this.ink[1], this.ink[2], 15 + random(20));
+          ellipse(bleedX, bleedY, random(1, 3));
+        }
+      } else {
+        // Flying white: draw fragmented
+        for (let f = 0; f < 3; f++) {
+          const fx = lerp(p0.x, p1.x, random());
+          const fy = lerp(p0.y, p1.y, random()) + random(-w * 0.3, w * 0.3);
+          stroke(this.ink[0], this.ink[1], this.ink[2], this.maxAlpha * 0.4);
+          strokeWeight(w * 0.3);
+          point(fx, fy);
+        }
+      }
+    }
+    
+    // Ink splash at stroke start (入笔)
+    if (this.progress > 0.05 && this.progress < 0.15) {
+      const p = this.points[0];
+      for (let s = 0; s < 3; s++) {
+        noStroke();
+        fill(this.ink[0], this.ink[1], this.ink[2], 20 + random(15));
+        const splashR = random(1, baseWidth * 0.8);
+        ellipse(p.x + random(-baseWidth, baseWidth), p.y + random(-baseWidth, baseWidth), splashR);
+      }
+    }
+    
+    pop();
+  }
+}
+
+// Subtle ink particles floating
+let particles = [];
+
+function draw() {
+  // Very slow fade for accumulation effect
+  noStroke();
+  fill(10, 10, 10, 3);
+  rect(0, 0, width, height);
+  
+  time += deltaTime;
+  
+  // Draw all strokes
+  for (const s of strokes) {
+    s.draw(time);
+  }
+  
+  // Check if all strokes are complete
+  const allDone = strokes.every(s => s.progress >= 1);
+  if (allDone && time > strokes[strokes.length - 1].birthTime + strokes[strokes.length - 1].duration + 3000) {
+    // Pause, then regenerate
+    time = 0;
+    background(10);
+    generateStrokes();
+  }
+  
+  // Floating ink particles
+  if (random() > 0.95) {
+    particles.push({
+      x: random(width),
+      y: random(height),
+      size: random(0.5, 2),
+      alpha: random(10, 30),
+      vx: random(-0.1, 0.1),
+      vy: random(-0.2, -0.05),
+      life: 0,
+      maxLife: random(2000, 5000)
+    });
+  }
+  
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life += deltaTime;
+    if (p.life > p.maxLife) {
+      particles.splice(i, 1);
+      continue;
+    }
+    p.x += p.vx;
+    p.y += p.vy;
+    const fade = 1 - p.life / p.maxLife;
+    noStroke();
+    fill(30, 25, 22, p.alpha * fade);
+    ellipse(p.x, p.y, p.size);
+  }
+}
+
+// Click to regenerate
+function mousePressed() {
+  time = 0;
+  background(10);
+  generateStrokes();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  background(10);
+  time = 0;
+  generateStrokes();
+}
+</script>
+</body>
+</html>

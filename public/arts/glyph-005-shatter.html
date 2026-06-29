@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shatter 碎</title>
+<style>
+* { margin: 0; padding: 0; }
+html, body { overflow: hidden; background: #0E0D0C; width: 100%; height: 100%; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Glyph 005 - Shatter 碎
+// A character explodes into fragments, legibility dies
+// The moment between readable and abstract
+
+let fragments = [];
+let sourceChar = '';
+let phase = 'assembling'; // assembling, readable, shattering, dust
+let phaseTimer = 0;
+let time = 0;
+
+const characters = '永夢靜觀聽聲轉風雲龍鳳舞飛寒霜雪霧';
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  textAlign(CENTER, CENTER);
+  
+  newCycle();
+}
+
+function newCycle() {
+  sourceChar = characters[floor(random(characters.length))];
+  fragments = createFragments(sourceChar);
+  phase = 'assembling';
+  phaseTimer = 0;
+}
+
+function createFragments(char) {
+  // Render character, create Voronoi-like fragments
+  const pg = createGraphics(500, 500);
+  pg.background(0);
+  pg.fill(255);
+  pg.noStroke();
+  pg.textAlign(CENTER, CENTER);
+  pg.textFont('serif');
+  pg.textSize(380);
+  pg.text(char, 250, 240);
+  pg.loadPixels();
+  
+  // Generate Voronoi seed points
+  const seeds = [];
+  const seedCount = 30 + floor(random(20));
+  for (let i = 0; i < seedCount; i++) {
+    seeds.push({
+      x: random(500),
+      y: random(500)
+    });
+  }
+  
+  // For each seed, collect nearby character pixels
+  const frags = [];
+  const charSize = min(width, height) * 0.55;
+  const offsetX = (width - charSize) / 2;
+  const offsetY = (height - charSize) / 2;
+  
+  for (let s = 0; s < seeds.length; s++) {
+    const seed = seeds[s];
+    const fragPts = [];
+    
+    // Sample pixels near this seed
+    const sampleRadius = 500 / sqrt(seedCount) * 1.2;
+    const step = 4;
+    
+    for (let dy = -sampleRadius; dy <= sampleRadius; dy += step) {
+      for (let dx = -sampleRadius; dx <= sampleRadius; dx += step) {
+        const px = floor(seed.x + dx);
+        const py = floor(seed.y + dy);
+        
+        if (px < 0 || px >= 500 || py < 0 || py >= 500) continue;
+        
+        // Check if this pixel belongs to the character
+        const idx = (py * 500 + px) * 4;
+        if (pg.pixels[idx] < 128) continue;
+        
+        // Check if this seed is the closest
+        let closest = true;
+        for (let j = 0; j < seeds.length; j++) {
+          if (j === s) continue;
+          const d1 = dist(px, py, seed.x, seed.y);
+          const d2 = dist(px, py, seeds[j].x, seeds[j].y);
+          if (d2 < d1) { closest = false; break; }
+        }
+        
+        if (closest) {
+          fragPts.push({
+            // Local offset from seed
+            lx: (px - seed.x) / 500,
+            ly: (py - seed.y) / 500
+          });
+        }
+      }
+    }
+    
+    if (fragPts.length < 3) continue;
+    
+    // Fragment center in canvas space
+    const cx = offsetX + (seed.x / 500) * charSize;
+    const cy = offsetY + (seed.y / 500) * charSize;
+    
+    // Explosion vector — radiate from character center
+    const expAngle = atan2(cy - height / 2, cx - width / 2) + random(-0.4, 0.4);
+    const expForce = 2 + random(6);
+    
+    frags.push({
+      points: fragPts,
+      // Home position
+      homeX: cx,
+      homeY: cy,
+      // Current position
+      x: cx,
+      y: cy,
+      // Velocity for explosion
+      vx: cos(expAngle) * expForce,
+      vy: sin(expAngle) * expForce,
+      // Rotation
+      rotation: 0,
+      rotVel: (random() - 0.5) * 0.03,
+      // Scale
+      scale: charSize,
+      // Properties
+      alpha: 180 + random(75),
+      delay: random(0.2),
+      // Start position (for assembly) — offscreen or scattered
+      startX: cx + cos(random(TWO_PI)) * (400 + random(200)),
+      startY: cy + sin(random(TWO_PI)) * (400 + random(200)),
+      startRot: random(-PI, PI),
+      // Color
+      hue: random(), // 0-1 mapped to color
+      // Gravity
+      gravity: 0.02 + random(0.03),
+      // Dust particles spawned during shatter
+      dustSpawned: false
+    });
+  }
+  
+  pg.remove();
+  return frags;
+}
+
+let dustParticles = [];
+
+function draw() {
+  background(14, 13, 12, phase === 'dust' ? 8 : 15);
+  
+  time += deltaTime;
+  phaseTimer += deltaTime;
+  
+  // Phase transitions
+  switch (phase) {
+    case 'assembling':
+      if (phaseTimer > 3000) { phase = 'readable'; phaseTimer = 0; }
+      break;
+    case 'readable':
+      if (phaseTimer > 2500) { phase = 'shattering'; phaseTimer = 0; }
+      break;
+    case 'shattering':
+      if (phaseTimer > 4000) { phase = 'dust'; phaseTimer = 0; }
+      break;
+    case 'dust':
+      if (phaseTimer > 3000) { newCycle(); }
+      break;
+  }
+  
+  noStroke();
+  
+  for (const frag of fragments) {
+    let fx, fy, fRot, fAlpha;
+    
+    switch (phase) {
+      case 'assembling': {
+        const t = constrain((phaseTimer / 3000 - frag.delay) / (1 - frag.delay), 0, 1);
+        const e = easeOutQuart(t);
+        fx = lerp(frag.startX, frag.homeX, e);
+        fy = lerp(frag.startY, frag.homeY, e);
+        fRot = lerp(frag.startRot, 0, e);
+        fAlpha = frag.alpha * e;
+        break;
+      }
+      case 'readable': {
+        fx = frag.homeX + sin(time * 0.0005 + frag.hue * 10) * 0.5;
+        fy = frag.homeY + cos(time * 0.0004 + frag.hue * 7) * 0.5;
+        fRot = 0;
+        fAlpha = frag.alpha;
+        break;
+      }
+      case 'shattering': {
+        const t = constrain((phaseTimer / 2000 - frag.delay) / (1 - frag.delay), 0, 1);
+        if (t <= 0) {
+          // Not yet started shattering
+          fx = frag.homeX;
+          fy = frag.homeY;
+          fRot = 0;
+          fAlpha = frag.alpha;
+        } else {
+          const e = easeInQuad(t);
+          fx = frag.homeX + frag.vx * phaseTimer * 0.15 * e;
+          fy = frag.homeY + frag.vy * phaseTimer * 0.15 * e + frag.gravity * phaseTimer * 0.01 * e;
+          fRot = frag.rotVel * phaseTimer * e;
+          fAlpha = frag.alpha * (1 - e * 0.7);
+          
+          // Spawn dust
+          if (!frag.dustSpawned && t > 0.1) {
+            frag.dustSpawned = true;
+            for (let d = 0; d < 3; d++) {
+              dustParticles.push({
+                x: fx + random(-5, 5),
+                y: fy + random(-5, 5),
+                vx: frag.vx * 0.5 + random(-1, 1),
+                vy: frag.vy * 0.5 + random(-1, 1),
+                size: random(0.5, 2),
+                alpha: 40 + random(40),
+                life: 0,
+                maxLife: 1500 + random(2000)
+              });
+            }
+          }
+        }
+        break;
+      }
+      case 'dust': {
+        fx = frag.homeX + frag.vx * 2000 * 0.15;
+        fy = frag.homeY + frag.vy * 2000 * 0.15 + frag.gravity * 2000 * 0.01;
+        fRot = frag.rotVel * 2000;
+        fAlpha = max(0, frag.alpha * 0.3 - phaseTimer * 0.02);
+        break;
+      }
+    }
+    
+    if (fAlpha < 1) continue;
+    
+    // Draw fragment as a cluster of dots
+    push();
+    translate(fx, fy);
+    rotate(fRot);
+    
+    // Color — parchment tones with occasional deep amber
+    let r, g, b;
+    if (frag.hue < 0.1) {
+      r = 200; g = 140; b = 90; // amber accent
+    } else if (frag.hue < 0.4) {
+      r = 190; g = 180; b = 165; // warm white
+    } else if (frag.hue < 0.7) {
+      r = 165; g = 155; b = 140; // gray
+    } else {
+      r = 175; g = 165; b = 150; // neutral
+    }
+    
+    for (const pt of frag.points) {
+      fill(r, g, b, fAlpha);
+      const px = pt.lx * frag.scale;
+      const py = pt.ly * frag.scale;
+      circle(px, py, 2 + random(1.5));
+    }
+    
+    pop();
+  }
+  
+  // Draw dust particles
+  for (let i = dustParticles.length - 1; i >= 0; i--) {
+    const d = dustParticles[i];
+    d.life += deltaTime;
+    if (d.life > d.maxLife) {
+      dustParticles.splice(i, 1);
+      continue;
+    }
+    d.x += d.vx;
+    d.y += d.vy;
+    d.vy += 0.005; // gravity
+    d.vx *= 0.99;
+    d.vy *= 0.99;
+    
+    const fade = 1 - d.life / d.maxLife;
+    fill(170, 160, 145, d.alpha * fade);
+    circle(d.x, d.y, d.size);
+  }
+  
+  // Subtle character ghost during readable phase
+  if (phase === 'readable') {
+    push();
+    textFont('serif');
+    textSize(min(width, height) * 0.06);
+    textAlign(RIGHT, BOTTOM);
+    fill(60, 55, 50, 25);
+    text(sourceChar, width - 30, height - 20);
+    pop();
+  }
+}
+
+function easeOutQuart(t) { return 1 - pow(1 - t, 4); }
+function easeInQuad(t) { return t * t; }
+
+function mousePressed() {
+  dustParticles = [];
+  newCycle();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  dustParticles = [];
+  newCycle();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Morph 变</title>
+<style>
+* { margin: 0; padding: 0; }
+html, body { overflow: hidden; background: #0B0908; width: 100%; height: 100%; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Glyph 004 - Morph 变
+// One character morphing into another
+// Strokes disconnect, drift, reconnect into new meaning
+
+let morphPairs = [];
+let currentPair = 0;
+let morphProgress = 0;
+let particles = [];
+let time = 0;
+
+// Pairs of characters that share structural elements
+const pairs = [
+  ['天', '夫'],
+  ['日', '目'],
+  ['大', '太'],
+  ['人', '入'],
+  ['土', '王'],
+  ['木', '本'],
+  ['白', '百'],
+  ['口', '日'],
+  ['刀', '力'],
+  ['干', '千'],
+  ['己', '已'],
+  ['末', '未'],
+];
+
+let fromChar, toChar;
+let charParticles = [];
+let transitionPhase = 0; // 0=showing, 1=dissolving, 2=reforming, 3=showing new
+let phaseTimer = 0;
+const SHOW_TIME = 2500;
+const DISSOLVE_TIME = 2000;
+const REFORM_TIME = 2000;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  textAlign(CENTER, CENTER);
+  
+  pickNewPair();
+}
+
+function pickNewPair() {
+  const pair = pairs[floor(random(pairs.length))];
+  fromChar = pair[0];
+  toChar = pair[1];
+  transitionPhase = 0;
+  phaseTimer = 0;
+  
+  charParticles = createCharParticles(fromChar);
+}
+
+function createCharParticles(char) {
+  // Render character to an offscreen buffer, extract points
+  const pg = createGraphics(400, 400);
+  pg.background(0);
+  pg.fill(255);
+  pg.noStroke();
+  pg.textAlign(CENTER, CENTER);
+  pg.textFont('serif');
+  pg.textSize(300);
+  pg.text(char, 200, 195);
+  pg.loadPixels();
+  
+  const pts = [];
+  const step = 3; // sampling density
+  
+  for (let y = 0; y < 400; y += step) {
+    for (let x = 0; x < 400; x += step) {
+      const idx = (y * 400 + x) * 4;
+      if (pg.pixels[idx] > 128) {
+        pts.push({
+          // Normalized position (0-1)
+          nx: x / 400,
+          ny: y / 400,
+          // Actual position will be calculated based on canvas size
+          homeX: 0, homeY: 0,
+          x: 0, y: 0,
+          // Scatter target
+          scatterX: 0, scatterY: 0,
+          // Properties
+          size: 1.5 + random(1.5),
+          alpha: 150 + random(100),
+          delay: random(0.3), // stagger effect
+          driftPhase: random(TWO_PI),
+          driftSpeed: 0.001 + random(0.002)
+        });
+      }
+    }
+  }
+  
+  pg.remove();
+  
+  // Calculate actual positions
+  const charSize = min(width, height) * 0.6;
+  const offsetX = (width - charSize) / 2;
+  const offsetY = (height - charSize) / 2;
+  
+  for (const p of pts) {
+    p.homeX = offsetX + p.nx * charSize;
+    p.homeY = offsetY + p.ny * charSize;
+    p.x = p.homeX;
+    p.y = p.homeY;
+    
+    // Scatter position - radiate outward from center
+    const dx = p.homeX - width / 2;
+    const dy = p.homeY - height / 2;
+    const angle = atan2(dy, dx) + random(-0.5, 0.5);
+    const dist = 100 + random(250);
+    p.scatterX = p.homeX + cos(angle) * dist;
+    p.scatterY = p.homeY + sin(angle) * dist;
+  }
+  
+  return pts;
+}
+
+function draw() {
+  background(11, 9, 8, 20);
+  
+  time += deltaTime;
+  phaseTimer += deltaTime;
+  
+  // Phase management
+  switch (transitionPhase) {
+    case 0: // Showing current character
+      if (phaseTimer > SHOW_TIME) {
+        transitionPhase = 1;
+        phaseTimer = 0;
+      }
+      break;
+    case 1: // Dissolving
+      if (phaseTimer > DISSOLVE_TIME) {
+        transitionPhase = 2;
+        phaseTimer = 0;
+        // Create target particles for new character
+        const newPts = createCharParticles(toChar);
+        // Map old particles to new positions
+        redistributeParticles(newPts);
+      }
+      break;
+    case 2: // Reforming into new character
+      if (phaseTimer > REFORM_TIME) {
+        transitionPhase = 3;
+        phaseTimer = 0;
+      }
+      break;
+    case 3: // Showing new character
+      if (phaseTimer > SHOW_TIME) {
+        // Swap and pick new pair
+        const temp = fromChar;
+        fromChar = toChar;
+        // Pick a new target that isn't the current
+        let newTo;
+        do {
+          const pair = pairs[floor(random(pairs.length))];
+          newTo = random() > 0.5 ? pair[1] : pair[0];
+        } while (newTo === fromChar);
+        toChar = newTo;
+        
+        transitionPhase = 1;
+        phaseTimer = 0;
+      }
+      break;
+  }
+  
+  // Draw particles
+  noStroke();
+  
+  for (const p of charParticles) {
+    let targetX, targetY, targetAlpha;
+    
+    switch (transitionPhase) {
+      case 0: // Stable
+        targetX = p.homeX;
+        targetY = p.homeY;
+        targetAlpha = p.alpha;
+        break;
+      case 1: // Dissolving
+        const dt = constrain((phaseTimer / DISSOLVE_TIME - p.delay) / (1 - p.delay), 0, 1);
+        const edt = easeInCubic(dt);
+        targetX = lerp(p.homeX, p.scatterX, edt);
+        targetY = lerp(p.homeY, p.scatterY, edt);
+        targetAlpha = lerp(p.alpha, 0, edt);
+        break;
+      case 2: // Reforming
+        const rt = constrain((phaseTimer / REFORM_TIME - p.delay) / (1 - p.delay), 0, 1);
+        const ert = easeOutCubic(rt);
+        targetX = lerp(p.scatterX, p.homeX, ert);
+        targetY = lerp(p.scatterY, p.homeY, ert);
+        targetAlpha = lerp(0, p.alpha, ert);
+        break;
+      case 3: // Stable new
+        targetX = p.homeX;
+        targetY = p.homeY;
+        targetAlpha = p.alpha;
+        break;
+    }
+    
+    // Micro drift
+    const drift = (transitionPhase === 1 || transitionPhase === 2) ? 2 : 0.5;
+    targetX += cos(time * p.driftSpeed + p.driftPhase) * drift;
+    targetY += sin(time * p.driftSpeed * 0.8 + p.driftPhase + 2) * drift;
+    
+    // Smooth interpolation
+    p.x = lerp(p.x, targetX, 0.15);
+    p.y = lerp(p.y, targetY, 0.15);
+    
+    // Warm ink color
+    const warmth = noise(p.nx * 3, p.ny * 3, time * 0.0001);
+    const r = lerp(180, 210, warmth);
+    const g = lerp(160, 180, warmth);
+    const b = lerp(140, 150, warmth);
+    
+    fill(r, g, b, targetAlpha);
+    circle(p.x, p.y, p.size);
+  }
+  
+  // Ghost text label — very subtle
+  push();
+  textFont('monospace');
+  textSize(12);
+  textAlign(LEFT, BOTTOM);
+  const label = transitionPhase <= 1 ? fromChar : toChar;
+  fill(80, 75, 70, 30);
+  text(label, 30, height - 20);
+  pop();
+}
+
+function redistributeParticles(newPts) {
+  // Match existing particles to new target positions
+  // More new points: add particles. Fewer: remove some.
+  
+  while (charParticles.length > newPts.length) {
+    charParticles.pop();
+  }
+  while (charParticles.length < newPts.length) {
+    // Clone a random existing particle at scatter position
+    const src = charParticles[floor(random(charParticles.length))];
+    charParticles.push({
+      ...src,
+      x: src.scatterX + random(-50, 50),
+      y: src.scatterY + random(-50, 50),
+    });
+  }
+  
+  // Shuffle new targets for organic reassembly
+  const shuffledNew = [...newPts].sort(() => random() - 0.5);
+  
+  for (let i = 0; i < charParticles.length; i++) {
+    const p = charParticles[i];
+    const target = shuffledNew[i];
+    
+    // Keep current scattered position
+    p.scatterX = p.x;
+    p.scatterY = p.y;
+    
+    // New home
+    p.homeX = target.homeX;
+    p.homeY = target.homeY;
+    p.nx = target.nx;
+    p.ny = target.ny;
+    p.delay = random(0.3);
+    p.alpha = target.alpha;
+  }
+}
+
+function easeInCubic(t) { return t * t * t; }
+function easeOutCubic(t) { return 1 - pow(1 - t, 3); }
+
+function mousePressed() {
+  pickNewPair();
+  background(11, 9, 8);
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  pickNewPair();
+  background(11, 9, 8);
+}
+</script>
+</body>
+</html>
