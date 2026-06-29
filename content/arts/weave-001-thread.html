@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Thread 纱</title>
+<style>
+* { margin: 0; padding: 0; }
+html, body { overflow: hidden; background: #0D0B0A; width: 100%; height: 100%; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// Weave 001 - Thread 纱
+// A single fiber drifting through space, catching light
+// Tension, weight, the moment before weaving begins
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+let threads = [];
+let time = 0;
+const THREAD_COUNT = 7;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  initThreads();
+}
+
+class Thread {
+  constructor(index, total) {
+    this.index = index;
+    this.total = total;
+    // Each thread is a series of control points forming a flowing curve
+    this.pointCount = 80 + Math.floor(Math.random() * 40);
+    this.points = [];
+    this.phase = Math.random() * Math.PI * 2;
+    this.speed = 0.0003 + Math.random() * 0.0004;
+    this.amplitude = 20 + Math.random() * 60;
+    this.thickness = 0.3 + Math.random() * 1.2;
+    
+    // Vertical position - spread across canvas with golden ratio spacing
+    const margin = H * 0.15;
+    const span = H - margin * 2;
+    this.baseY = margin + (index / (total - 1)) * span;
+    
+    // Subtle vertical drift
+    this.yDrift = Math.random() * 30 - 15;
+    this.yDriftSpeed = 0.0001 + Math.random() * 0.0002;
+    
+    // Color - natural fiber palette: raw cotton, undyed linen, aged silk
+    const palettes = [
+      { r: 235, g: 225, b: 210, a: 0.7 },   // raw cotton
+      { r: 200, g: 185, b: 165, a: 0.5 },   // undyed linen
+      { r: 180, g: 170, b: 155, a: 0.4 },   // aged hemp
+      { r: 220, g: 200, b: 175, a: 0.6 },   // natural silk
+      { r: 160, g: 145, b: 130, a: 0.35 },  // dark flax
+      { r: 245, g: 238, b: 225, a: 0.8 },   // bleached cotton
+      { r: 190, g: 175, b: 150, a: 0.45 },  // jute
+    ];
+    this.color = palettes[index % palettes.length];
+    
+    // Tension properties
+    this.tensionPoints = [];
+    const tensionCount = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < tensionCount; i++) {
+      this.tensionPoints.push({
+        x: 0.1 + Math.random() * 0.8,  // position along thread (0-1)
+        strength: 0.3 + Math.random() * 0.7,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    // Micro-fibers (loose strands)
+    this.fibers = [];
+    const fiberCount = 3 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < fiberCount; i++) {
+      this.fibers.push({
+        pos: Math.random(),  // position along thread
+        length: 8 + Math.random() * 25,
+        angle: (Math.random() - 0.5) * 1.2,
+        sway: Math.random() * Math.PI * 2,
+        swaySpeed: 0.001 + Math.random() * 0.003,
+        opacity: 0.15 + Math.random() * 0.25
+      });
+    }
+  }
+
+  getPoint(t, time) {
+    const x = t * W;
+    let y = this.baseY;
+    
+    // Main wave
+    y += Math.sin(t * Math.PI * 2.5 + this.phase + time * this.speed * 1000) * this.amplitude;
+    
+    // Secondary wave
+    y += Math.sin(t * Math.PI * 5 + this.phase * 1.7 + time * this.speed * 700) * this.amplitude * 0.3;
+    
+    // Micro vibration - like a plucked string
+    y += Math.sin(t * Math.PI * 13 + time * this.speed * 2000) * 2;
+    
+    // Vertical drift
+    y += Math.sin(time * this.yDriftSpeed * 1000 + this.phase) * this.yDrift;
+    
+    // Tension distortion
+    for (const tp of this.tensionPoints) {
+      const dist = Math.abs(t - tp.x);
+      if (dist < 0.15) {
+        const influence = 1 - dist / 0.15;
+        const pull = Math.sin(time * 0.0005 * 1000 + tp.phase) * tp.strength * 15;
+        y += pull * influence * influence;
+      }
+    }
+    
+    // Gravity sag - subtle catenary
+    const sag = Math.sin(t * Math.PI) * 20;
+    y += sag;
+    
+    return { x, y };
+  }
+
+  draw(ctx, time) {
+    // Draw main thread body
+    ctx.beginPath();
+    const step = 1 / this.pointCount;
+    
+    let firstPt = this.getPoint(0, time);
+    ctx.moveTo(firstPt.x, firstPt.y);
+    
+    for (let t = step; t <= 1; t += step) {
+      const pt = this.getPoint(t, time);
+      ctx.lineTo(pt.x, pt.y);
+    }
+    
+    const { r, g, b, a } = this.color;
+    ctx.strokeStyle = `rgba(${r},${g},${b},${a})`;
+    ctx.lineWidth = this.thickness;
+    ctx.stroke();
+    
+    // Draw a slightly thicker, more transparent version for glow
+    ctx.beginPath();
+    firstPt = this.getPoint(0, time);
+    ctx.moveTo(firstPt.x, firstPt.y);
+    for (let t = step; t <= 1; t += step) {
+      const pt = this.getPoint(t, time);
+      ctx.lineTo(pt.x, pt.y);
+    }
+    ctx.strokeStyle = `rgba(${r},${g},${b},${a * 0.15})`;
+    ctx.lineWidth = this.thickness * 4;
+    ctx.stroke();
+
+    // Draw micro-fibers
+    for (const fiber of this.fibers) {
+      const basePt = this.getPoint(fiber.pos, time);
+      const angle = fiber.angle + Math.sin(time * fiber.swaySpeed * 1000 + fiber.sway) * 0.3;
+      const endX = basePt.x + Math.cos(angle + Math.PI / 2) * fiber.length;
+      const endY = basePt.y + Math.sin(angle + Math.PI / 2) * fiber.length;
+      
+      ctx.beginPath();
+      ctx.moveTo(basePt.x, basePt.y);
+      // Slight curve on the fiber
+      const midX = (basePt.x + endX) / 2 + Math.sin(time * 0.001 * 1000) * 3;
+      const midY = (basePt.y + endY) / 2 + Math.cos(time * 0.0013 * 1000) * 3;
+      ctx.quadraticCurveTo(midX, midY, endX, endY);
+      ctx.strokeStyle = `rgba(${r},${g},${b},${fiber.opacity * a})`;
+      ctx.lineWidth = this.thickness * 0.3;
+      ctx.stroke();
+    }
+  }
+}
+
+// Floating dust/lint particles
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.size = 0.5 + Math.random() * 1.5;
+    this.opacity = 0.03 + Math.random() * 0.08;
+    this.vx = (Math.random() - 0.5) * 0.15;
+    this.vy = -0.02 - Math.random() * 0.08;  // slowly rising, like lint
+    this.life = 0;
+    this.maxLife = 3000 + Math.random() * 5000;
+    this.phase = Math.random() * Math.PI * 2;
+  }
+  
+  update(dt) {
+    this.life += dt;
+    if (this.life > this.maxLife || this.y < -10 || this.x < -10 || this.x > W + 10) {
+      this.reset();
+      this.y = H + 5;
+    }
+    this.x += this.vx + Math.sin(this.life * 0.0003 + this.phase) * 0.1;
+    this.y += this.vy;
+  }
+  
+  draw(ctx) {
+    const fade = Math.min(1, this.life / 500) * Math.min(1, (this.maxLife - this.life) / 500);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200, 190, 175, ${this.opacity * fade})`;
+    ctx.fill();
+  }
+}
+
+let particles = [];
+const PARTICLE_COUNT = 30;
+
+function initThreads() {
+  threads = [];
+  for (let i = 0; i < THREAD_COUNT; i++) {
+    threads.push(new Thread(i, THREAD_COUNT));
+  }
+  particles = [];
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(new Particle());
+  }
+}
+
+let lastTime = 0;
+
+function draw(timestamp) {
+  const dt = lastTime ? timestamp - lastTime : 16;
+  lastTime = timestamp;
+  time = timestamp;
+  
+  // Very slow fade - trails create a sense of movement history
+  ctx.fillStyle = 'rgba(13, 11, 10, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+  
+  // Draw threads
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  
+  for (const thread of threads) {
+    thread.draw(ctx, time);
+  }
+  
+  // Draw particles
+  for (const p of particles) {
+    p.update(dt);
+    p.draw(ctx);
+  }
+  
+  requestAnimationFrame(draw);
+}
+
+// Interaction: mouse proximity creates tension ripple
+let mouseX = -1000, mouseY = -1000;
+canvas.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
+canvas.addEventListener('mouseleave', () => {
+  mouseX = -1000;
+  mouseY = -1000;
+});
+
+// Override getPoint to include mouse interaction
+const origGetPoint = Thread.prototype.getPoint;
+Thread.prototype.getPoint = function(t, time) {
+  const pt = origGetPoint.call(this, t, time);
+  
+  // Mouse proximity push
+  const dx = pt.x - mouseX;
+  const dy = pt.y - mouseY;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const radius = 120;
+  
+  if (dist < radius && dist > 0) {
+    const force = (1 - dist / radius) * 30;
+    pt.y += (dy / dist) * force;
+    pt.x += (dx / dist) * force * 0.3;
+  }
+  
+  return pt;
+};
+
+window.addEventListener('resize', resize);
+resize();
+// Clear once fully
+ctx.fillStyle = '#0D0B0A';
+ctx.fillRect(0, 0, W, H);
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
