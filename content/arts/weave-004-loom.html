@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Loom 织</title>
+<style>
+* { margin: 0; padding: 0; }
+html, body { overflow: hidden; background: #0C0B09; width: 100%; height: 100%; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Weave 004 - Loom 织
+// Complete woven textile — density variations, patterns emerging
+// The cloth breathes as a unified surface
+
+let grid = [];
+let cols, rows;
+let cellW, cellH;
+let time = 0;
+let patternZones = [];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  
+  generateCloth();
+}
+
+function generateCloth() {
+  // Dense grid representing warp × weft intersections
+  cols = floor(width / 6);
+  rows = floor(height / 6);
+  cellW = width / cols;
+  cellH = height / rows;
+  
+  // Define 3-5 pattern zones with different densities and weave structures
+  patternZones = [];
+  const zoneCount = 3 + floor(random(3));
+  
+  for (let z = 0; z < zoneCount; z++) {
+    patternZones.push({
+      cx: random(0.1, 0.9),
+      cy: random(0.1, 0.9),
+      radius: 0.15 + random(0.25),
+      // Weave density — threads per unit
+      density: 0.5 + random(0.5),
+      // Pattern type
+      pattern: floor(random(4)), // 0=plain, 1=twill, 2=satin, 3=herringbone
+      // Color palette for this zone
+      warpHue: random(),
+      weftHue: random(),
+    });
+  }
+  
+  // Generate the grid
+  grid = [];
+  for (let r = 0; r < rows; r++) {
+    grid[r] = [];
+    for (let c = 0; c < cols; c++) {
+      const nx = c / cols;
+      const ny = r / rows;
+      
+      // Find dominant zone influence
+      let totalWeight = 0;
+      let blendedDensity = 0.7;
+      let blendedPattern = 0;
+      let blendedWarpHue = 0.5;
+      let blendedWeftHue = 0.3;
+      
+      for (const zone of patternZones) {
+        const d = dist(nx, ny, zone.cx, zone.cy);
+        const w = max(0, 1 - d / zone.radius);
+        const ww = w * w; // softer falloff
+        totalWeight += ww;
+        blendedDensity += zone.density * ww;
+        blendedPattern += zone.pattern * ww;
+        blendedWarpHue += zone.warpHue * ww;
+        blendedWeftHue += zone.weftHue * ww;
+      }
+      
+      if (totalWeight > 0) {
+        blendedDensity /= totalWeight + 1;
+        blendedWarpHue /= totalWeight + 1;
+        blendedWeftHue /= totalWeight + 1;
+      }
+      
+      // Determine if warp or weft is on top
+      const pattern = round(blendedPattern) % 4;
+      let warpOnTop;
+      switch(pattern) {
+        case 0: // plain weave
+          warpOnTop = (c + r) % 2 === 0;
+          break;
+        case 1: // twill
+          warpOnTop = ((c + r * 2) % 4) < 2;
+          break;
+        case 2: // satin
+          warpOnTop = ((c * 3 + r * 2) % 5) === 0;
+          break;
+        case 3: // herringbone
+          const block = floor(r / 8) % 2;
+          warpOnTop = block === 0 ? ((c + r) % 4 < 2) : ((c - r + 100) % 4 < 2);
+          break;
+      }
+      
+      // Color based on which thread is on top
+      let cr, cg, cb, ca;
+      if (warpOnTop) {
+        // Warp color — cooler tones
+        const h = blendedWarpHue;
+        if (h < 0.25) { cr = 170; cg = 165; cb = 155; } // silver gray
+        else if (h < 0.5) { cr = 140; cg = 150; cb = 160; } // steel blue
+        else if (h < 0.75) { cr = 155; cg = 145; cb = 135; } // warm gray
+        else { cr = 125; cg = 130; cb = 140; } // slate
+      } else {
+        // Weft color — warmer tones
+        const h = blendedWeftHue;
+        if (h < 0.2) { cr = 190; cg = 170; cb = 140; } // honey
+        else if (h < 0.4) { cr = 165; cg = 140; cb = 110; } // amber
+        else if (h < 0.6) { cr = 180; cg = 165; cb = 150; } // sand
+        else if (h < 0.8) { cr = 145; cg = 120; cb = 95; } // walnut
+        else { cr = 200; cg = 185; cb = 165; } // cream
+      }
+      
+      // Add noise for natural variation
+      cr += random(-8, 8);
+      cg += random(-8, 8);
+      cb += random(-8, 8);
+      ca = 60 + blendedDensity * 100 + random(20);
+      
+      // Occasional missing thread (fabric imperfection)
+      const missing = random() > 0.995;
+      
+      grid[r][c] = {
+        warpOnTop,
+        cr, cg, cb, ca,
+        missing,
+        density: blendedDensity,
+      };
+    }
+  }
+}
+
+function draw() {
+  background(12, 11, 9);
+  time += deltaTime * 0.001;
+  
+  // Mouse creates a gentle push — like pressing fabric
+  const mx = mouseX / width;
+  const my = mouseY / height;
+  
+  noStroke();
+  
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = grid[r][c];
+      if (cell.missing) continue;
+      
+      const x = c * cellW;
+      const y = r * cellH;
+      
+      // Breathing — subtle scale/alpha oscillation
+      const breathPhase = sin(time * 0.3 + c * 0.05 + r * 0.03);
+      const breathAlpha = cell.ca + breathPhase * 5;
+      
+      // Mouse proximity — nearby cells brighten slightly
+      const nx = c / cols;
+      const ny = r / rows;
+      const mouseDist = dist(nx, ny, mx, my);
+      const mouseGlow = max(0, 1 - mouseDist / 0.15) * 25;
+      
+      // Wave ripple across fabric
+      const ripple = sin(time * 0.5 + nx * 8 + ny * 6) * 3;
+      
+      fill(
+        cell.cr + mouseGlow + ripple,
+        cell.cg + mouseGlow + ripple * 0.7,
+        cell.cb + mouseGlow + ripple * 0.5,
+        breathAlpha
+      );
+      
+      // Slight 3D effect — warp-on-top cells slightly larger
+      const sizeBoost = cell.warpOnTop ? 1.1 : 0.95;
+      const w = cellW * sizeBoost;
+      const h = cellH * sizeBoost;
+      const ox = (cellW - w) / 2;
+      const oy = (cellH - h) / 2;
+      
+      rect(x + ox, y + oy, w, h);
+    }
+  }
+  
+  // Fabric edge — subtle fringe on right side
+  for (let r = 0; r < rows; r += 3) {
+    const y = r * cellH;
+    const x = cols * cellW;
+    
+    stroke(170, 160, 145, 20 + random(15));
+    strokeWeight(0.5);
+    const fringeLen = 5 + random(15);
+    const angle = HALF_PI + sin(time * 0.5 + r * 0.1) * 0.15;
+    line(x, y, x + cos(angle) * fringeLen, y + sin(angle) * fringeLen);
+  }
+}
+
+function mousePressed() {
+  generateCloth();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  generateCloth();
+}
+</script>
+</body>
+</html>

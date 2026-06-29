@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Warp 经</title>
+<style>
+* { margin: 0; padding: 0; }
+html, body { overflow: hidden; background: #0A0B0D; width: 100%; height: 100%; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Weave 002 - Warp 经
+// Vertical threads stretched tight on a loom frame
+// Order, tension, the scaffold before weaving begins
+
+let warpThreads = [];
+let time = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  background(10, 11, 13);
+  
+  generateWarp();
+}
+
+function generateWarp() {
+  warpThreads = [];
+  
+  // Number of warp threads — dense but not uniform
+  const baseCount = floor(width / 12);
+  const count = baseCount + floor(random(-baseCount * 0.1, baseCount * 0.1));
+  
+  for (let i = 0; i < count; i++) {
+    const t = i / (count - 1); // 0 to 1
+    
+    // X position — mostly even but with slight clustering
+    let x = width * 0.05 + t * width * 0.9;
+    // Add subtle irregularity — hand-warped feel
+    x += sin(t * PI * 7 + 0.3) * 2;
+    x += random(-1, 1);
+    
+    // Thread properties
+    const thickness = 0.4 + random(0.8);
+    
+    // Color — different fiber types across the warp
+    // Sections of similar color (like a real warp plan)
+    const section = floor(t * 5);
+    let r, g, b, a;
+    
+    switch(section) {
+      case 0: // raw linen section
+        r = 195 + random(15); g = 185 + random(10); b = 170 + random(10);
+        a = 80 + random(40);
+        break;
+      case 1: // indigo-dipped section  
+        r = 75 + random(20); g = 85 + random(15); b = 110 + random(20);
+        a = 60 + random(30);
+        break;
+      case 2: // undyed cotton
+        r = 220 + random(15); g = 210 + random(15); b = 195 + random(10);
+        a = 90 + random(40);
+        break;
+      case 3: // persimmon-tannin dyed
+        r = 160 + random(20); g = 110 + random(15); b = 75 + random(15);
+        a = 70 + random(30);
+        break;
+      case 4: // dark hemp
+        r = 130 + random(15); g = 120 + random(10); b = 105 + random(10);
+        a = 65 + random(35);
+        break;
+    }
+    
+    // Tension — how much the thread vibrates
+    const tension = 0.7 + random(0.3); // high tension = less movement
+    
+    warpThreads.push({
+      x, thickness,
+      r, g, b, a,
+      tension,
+      phase: random(TWO_PI),
+      freq: 2 + random(3), // vibration frequency
+      // Slight bow — threads aren't perfectly straight
+      bow: random(-3, 3),
+      bowCenter: 0.3 + random(0.4),
+      // Micro texture
+      fuzz: random() > 0.7, // some threads are fuzzy
+    });
+  }
+}
+
+function draw() {
+  // Very slow accumulation
+  background(10, 11, 13, 12);
+  
+  time += deltaTime * 0.001;
+  
+  // Mouse as a breeze source
+  let windX = 0, windY = 0;
+  if (mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+    windX = (mouseX - pmouseX) * 0.3;
+    windY = (mouseY - pmouseY) * 0.1;
+  }
+  
+  for (const thread of warpThreads) {
+    // Draw thread as a vertical line with micro-movements
+    const segments = 60;
+    
+    beginShape();
+    noFill();
+    stroke(thread.r, thread.g, thread.b, thread.a);
+    strokeWeight(thread.thickness);
+    
+    for (let s = 0; s <= segments; s++) {
+      const ty = s / segments; // 0 = top, 1 = bottom
+      const y = ty * height;
+      
+      // Base position
+      let x = thread.x;
+      
+      // Bow — slight horizontal curve
+      const bowInfluence = sin((ty - thread.bowCenter) / (1 - thread.bowCenter) * PI);
+      x += thread.bow * bowInfluence;
+      
+      // Vibration — standing wave pattern (fixed at top and bottom)
+      const envelope = sin(ty * PI); // zero at ends
+      const vibration = sin(time * thread.freq + thread.phase + ty * PI * 2) * (2 / thread.tension) * envelope;
+      x += vibration;
+      
+      // Wind influence
+      const windInfluence = envelope * 0.5;
+      x += windX * windInfluence * (1 / thread.tension);
+      
+      // Very high frequency micro-tremor
+      x += sin(time * 15 + ty * 30 + thread.phase) * 0.15 / thread.tension;
+      
+      vertex(x, y);
+    }
+    
+    endShape();
+    
+    // Fuzzy threads get extra thin lines nearby
+    if (thread.fuzz) {
+      for (let f = 0; f < 2; f++) {
+        const fuzzOffset = random(-2, 2);
+        const fuzzStart = random(0.2, 0.6);
+        const fuzzLen = random(0.05, 0.2);
+        
+        stroke(thread.r, thread.g, thread.b, thread.a * 0.2);
+        strokeWeight(thread.thickness * 0.3);
+        
+        beginShape();
+        for (let s = floor(fuzzStart * segments); s <= floor((fuzzStart + fuzzLen) * segments); s++) {
+          const ty = s / segments;
+          const y = ty * height;
+          let x = thread.x + fuzzOffset;
+          const envelope = sin(ty * PI);
+          x += sin(time * thread.freq + thread.phase + ty * PI * 2) * (2 / thread.tension) * envelope;
+          x += sin(time * 8 + ty * 20) * 1.5;
+          vertex(x, y);
+        }
+        endShape();
+      }
+    }
+  }
+  
+  // Loom frame hints — very subtle top and bottom bars
+  noStroke();
+  // Top beam
+  fill(30, 28, 25, 40);
+  rect(0, 0, width, 8);
+  fill(45, 40, 35, 25);
+  rect(0, 6, width, 2);
+  
+  // Bottom beam
+  fill(30, 28, 25, 40);
+  rect(0, height - 8, width, 8);
+  fill(45, 40, 35, 25);
+  rect(0, height - 8, width, 2);
+}
+
+function mousePressed() {
+  background(10, 11, 13);
+  generateWarp();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  background(10, 11, 13);
+  generateWarp();
+}
+</script>
+</body>
+</html>

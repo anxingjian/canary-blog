@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Weft 纬</title>
+<style>
+* { margin: 0; padding: 0; }
+html, body { overflow: hidden; background: #0D0C0A; width: 100%; height: 100%; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Weave 003 - Weft 纬
+// Horizontal threads weaving through vertical warp
+// The first crossings — over, under, over, under
+
+let warpX = [];
+let weftRows = [];
+let time = 0;
+const WARP_COUNT = 40;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  background(13, 12, 10);
+  
+  generateWeave();
+}
+
+function generateWeave() {
+  // Warp threads — evenly spaced verticals
+  warpX = [];
+  const margin = width * 0.08;
+  const warpSpan = width - margin * 2;
+  for (let i = 0; i < WARP_COUNT; i++) {
+    warpX.push(margin + (i / (WARP_COUNT - 1)) * warpSpan + random(-1, 1));
+  }
+  
+  // Weft rows — each thread goes over/under the warp
+  weftRows = [];
+  const rowCount = floor(height / 14) + 5;
+  const topMargin = height * 0.06;
+  const rowSpan = height - topMargin * 2;
+  
+  for (let r = 0; r < rowCount; r++) {
+    const y = topMargin + (r / (rowCount - 1)) * rowSpan;
+    
+    // Weave pattern: plain, twill, or basket
+    let pattern;
+    const patternRoll = random();
+    if (patternRoll < 0.5) pattern = 'plain'; // over 1, under 1
+    else if (patternRoll < 0.8) pattern = 'twill'; // over 2, under 2, shifted
+    else pattern = 'basket'; // over 2, under 2, no shift
+    
+    // Color — warm natural tones, each row slightly different
+    const hueChoice = floor(random(6));
+    let cr, cg, cb;
+    switch(hueChoice) {
+      case 0: cr = 200; cg = 188; cb = 168; break; // cream
+      case 1: cr = 175; cg = 155; cb = 130; break; // tan
+      case 2: cr = 145; cg = 125; cb = 100; break; // sienna
+      case 3: cr = 85;  cg = 95;  cb = 75;  break; // olive
+      case 4: cr = 110; cg = 100; cb = 95;  break; // warm gray
+      case 5: cr = 165; cg = 140; cb = 110; break; // camel
+    }
+    cr += random(-10, 10);
+    cg += random(-10, 10);
+    cb += random(-10, 10);
+    
+    const alpha = 100 + random(80);
+    const thickness = 1.5 + random(2);
+    
+    // Over/under sequence
+    const overs = [];
+    for (let w = 0; w < WARP_COUNT; w++) {
+      let isOver;
+      switch(pattern) {
+        case 'plain':
+          isOver = (w + r) % 2 === 0;
+          break;
+        case 'twill':
+          isOver = ((w + r) % 4) < 2;
+          break;
+        case 'basket':
+          isOver = (w % 4) < 2 ? (r % 4 < 2) : (r % 4 >= 2);
+          break;
+      }
+      overs.push(isOver);
+    }
+    
+    weftRows.push({
+      y, pattern, overs,
+      cr, cg, cb, alpha, thickness,
+      phase: random(TWO_PI),
+      speed: 0.0005 + random(0.0003),
+      waveAmp: 1 + random(2),
+      // Birth animation
+      birthTime: r * 120,
+      born: false,
+      progress: 0,
+    });
+  }
+}
+
+function draw() {
+  background(13, 12, 10, 10);
+  time += deltaTime;
+  
+  // Draw warp threads first (background layer)
+  stroke(160, 150, 135, 25);
+  strokeWeight(0.8);
+  for (const x of warpX) {
+    const wobble = sin(time * 0.0003 + x * 0.01) * 0.5;
+    line(x + wobble, 0, x + wobble, height);
+  }
+  
+  // Draw weft rows
+  for (const row of weftRows) {
+    const elapsed = time - row.birthTime;
+    if (elapsed < 0) continue;
+    
+    // Progress animation — thread being woven left to right
+    if (!row.born) {
+      row.progress = constrain(elapsed / 1500, 0, 1);
+      if (row.progress >= 1) row.born = true;
+    }
+    
+    const visibleWarp = floor(row.progress * WARP_COUNT);
+    if (visibleWarp < 2) continue;
+    
+    // Vertical undulation
+    const yOffset = sin(time * row.speed + row.phase) * row.waveAmp;
+    
+    // Draw the weft thread segments
+    for (let w = 0; w < visibleWarp - 1; w++) {
+      const x0 = warpX[w];
+      const x1 = warpX[w + 1];
+      const isOver = row.overs[w];
+      const nextIsOver = row.overs[w + 1];
+      
+      // Y offset based on over/under
+      const yShift = isOver ? -1.5 : 1.5;
+      const y = row.y + yOffset + yShift;
+      
+      // Alpha varies — under sections are dimmer
+      const segAlpha = isOver ? row.alpha : row.alpha * 0.5;
+      
+      stroke(row.cr, row.cg, row.cb, segAlpha);
+      strokeWeight(row.thickness * (isOver ? 1 : 0.7));
+      strokeCap(ROUND);
+      
+      // Slight curve between warp threads
+      const midX = (x0 + x1) / 2;
+      const midY = y + sin(w * 0.5 + time * 0.001) * 0.5;
+      
+      noFill();
+      beginShape();
+      vertex(x0, y);
+      quadraticVertex(midX, midY, x1, row.y + yOffset + (nextIsOver ? -1.5 : 1.5));
+      endShape();
+      
+      // At crossing points, draw a tiny intersection mark
+      if (isOver !== nextIsOver) {
+        // Crossing point — where thread goes over/under
+        noStroke();
+        fill(row.cr, row.cg, row.cb, 20);
+        ellipse(x1, row.y + yOffset, 3, 3);
+      }
+    }
+    
+    // Weft thread being actively woven — shuttle hint
+    if (!row.born && visibleWarp > 0 && visibleWarp < WARP_COUNT) {
+      const tipX = warpX[visibleWarp - 1];
+      const tipY = row.y + yOffset;
+      noStroke();
+      fill(row.cr + 30, row.cg + 20, row.cb + 10, 60);
+      ellipse(tipX, tipY, 4, 3);
+    }
+  }
+  
+  // Subtle warp highlights where they pass OVER weft
+  for (let w = 0; w < WARP_COUNT; w++) {
+    for (const row of weftRows) {
+      if (!row.born && row.progress < w / WARP_COUNT) continue;
+      if (!row.overs[w]) { // weft is under = warp is over
+        const wobble = sin(time * 0.0003 + warpX[w] * 0.01) * 0.5;
+        const yOffset = sin(time * row.speed + row.phase) * row.waveAmp;
+        stroke(160, 150, 135, 40);
+        strokeWeight(1);
+        point(warpX[w] + wobble, row.y + yOffset);
+      }
+    }
+  }
+}
+
+function mousePressed() {
+  background(13, 12, 10);
+  generateWeave();
+  time = 0;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  background(13, 12, 10);
+  generateWeave();
+  time = 0;
+}
+</script>
+</body>
+</html>

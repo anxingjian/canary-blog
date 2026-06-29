@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fray 裂</title>
+<style>
+* { margin: 0; padding: 0; }
+html, body { overflow: hidden; background: #0E0C0B; width: 100%; height: 100%; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Weave 005 - Fray 裂
+// Fabric unraveling — threads pulling free, structure dissolving
+// The death of a textile
+
+let threads = [];
+let tearPoints = [];
+let time = 0;
+let dustMotes = [];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  
+  generateFabric();
+}
+
+function generateFabric() {
+  threads = [];
+  tearPoints = [];
+  dustMotes = [];
+  
+  // Create a grid of interwoven threads
+  const spacing = 8;
+  const margin = 50;
+  
+  // 2-4 tear points where unraveling originates
+  const tearCount = 2 + floor(random(3));
+  for (let i = 0; i < tearCount; i++) {
+    tearPoints.push({
+      x: random(width * 0.2, width * 0.8),
+      y: random(height * 0.2, height * 0.8),
+      radius: 60 + random(120),
+      intensity: 0.5 + random(0.5),
+      growSpeed: 0.00002 + random(0.00003),
+      phase: random(TWO_PI)
+    });
+  }
+  
+  // Warp threads (vertical)
+  for (let x = margin; x < width - margin; x += spacing) {
+    const thread = createThread(x, 0, x, height, 'warp', spacing);
+    threads.push(thread);
+  }
+  
+  // Weft threads (horizontal)
+  for (let y = margin; y < height - margin; y += spacing) {
+    const thread = createThread(0, y, width, y, 'weft', spacing);
+    threads.push(thread);
+  }
+}
+
+function createThread(x0, y0, x1, y1, type, spacing) {
+  const segments = 80;
+  const points = [];
+  
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    points.push({
+      baseX: lerp(x0, x1, t),
+      baseY: lerp(y0, y1, t),
+      x: lerp(x0, x1, t),
+      y: lerp(y0, y1, t),
+      // Displacement from tear
+      dx: 0, dy: 0,
+      // Velocity for freed segments
+      vx: 0, vy: 0,
+      freed: false,
+      freedTime: 0
+    });
+  }
+  
+  // Color
+  let r, g, b, a;
+  if (type === 'warp') {
+    const tone = random();
+    if (tone < 0.3) { r = 180; g = 175; b = 165; } // pale linen
+    else if (tone < 0.6) { r = 155; g = 148; b = 138; } // gray linen
+    else { r = 140; g = 135; b = 128; } // dark linen
+    a = 70 + random(30);
+  } else {
+    const tone = random();
+    if (tone < 0.25) { r = 185; g = 165; b = 135; } // golden
+    else if (tone < 0.5) { r = 160; g = 130; b = 100; } // brown
+    else if (tone < 0.75) { r = 170; g = 155; b = 140; } // taupe
+    else { r = 120; g = 100; b = 80; } // dark earth
+    a = 65 + random(30);
+  }
+  
+  return {
+    points, type,
+    r: r + random(-5, 5),
+    g: g + random(-5, 5),
+    b: b + random(-5, 5),
+    a,
+    thickness: 0.5 + random(1),
+    phase: random(TWO_PI),
+    curliness: 0, // increases as thread is freed
+  };
+}
+
+function draw() {
+  background(14, 12, 11, 8);
+  time += deltaTime;
+  
+  // Grow tear points slowly
+  for (const tear of tearPoints) {
+    tear.radius += tear.growSpeed * deltaTime * 10;
+    // Pulsing
+    const pulse = 1 + sin(time * 0.001 + tear.phase) * 0.05;
+    tear.currentRadius = tear.radius * pulse;
+  }
+  
+  // Update and draw threads
+  for (const thread of threads) {
+    // Update each point
+    for (const pt of thread.points) {
+      // Check if point is in a tear zone
+      let maxTearInfluence = 0;
+      let tearDirX = 0, tearDirY = 0;
+      
+      for (const tear of tearPoints) {
+        const d = dist(pt.baseX, pt.baseY, tear.x, tear.y);
+        if (d < tear.currentRadius) {
+          const influence = pow(1 - d / tear.currentRadius, 2) * tear.intensity;
+          if (influence > maxTearInfluence) {
+            maxTearInfluence = influence;
+            // Direction away from tear center
+            if (d > 0) {
+              tearDirX = (pt.baseX - tear.x) / d;
+              tearDirY = (pt.baseY - tear.y) / d;
+            }
+          }
+        }
+      }
+      
+      if (maxTearInfluence > 0.3 && !pt.freed) {
+        pt.freed = true;
+        pt.freedTime = time;
+        pt.vx = tearDirX * maxTearInfluence * 0.5 + random(-0.2, 0.2);
+        pt.vy = tearDirY * maxTearInfluence * 0.5 + random(-0.2, 0.2);
+        
+        // Spawn dust
+        if (random() > 0.7) {
+          dustMotes.push({
+            x: pt.baseX + pt.dx,
+            y: pt.baseY + pt.dy,
+            vx: random(-0.3, 0.3),
+            vy: random(-0.3, -0.05),
+            size: random(0.5, 2),
+            alpha: 30 + random(30),
+            life: 0,
+            maxLife: 3000 + random(3000)
+          });
+        }
+      }
+      
+      if (pt.freed) {
+        const age = (time - pt.freedTime) * 0.001;
+        // Freed thread curls and drifts
+        pt.dx += pt.vx * 0.3;
+        pt.dy += pt.vy * 0.3;
+        pt.vy += 0.002; // slight gravity
+        pt.vx *= 0.998; // drag
+        pt.vy *= 0.998;
+        
+        // Curl effect
+        const curlAmount = min(age * 2, 8);
+        pt.dx += sin(time * 0.003 + pt.baseY * 0.05 + thread.phase) * curlAmount * 0.02;
+        pt.dy += cos(time * 0.002 + pt.baseX * 0.04 + thread.phase) * curlAmount * 0.01;
+        
+        thread.curliness = max(thread.curliness, curlAmount);
+      } else if (maxTearInfluence > 0) {
+        // Stressed but not freed — slight distortion
+        pt.dx = tearDirX * maxTearInfluence * 5;
+        pt.dy = tearDirY * maxTearInfluence * 5;
+      } else {
+        pt.dx *= 0.95;
+        pt.dy *= 0.95;
+      }
+      
+      pt.x = pt.baseX + pt.dx;
+      pt.y = pt.baseY + pt.dy;
+    }
+    
+    // Draw thread
+    noFill();
+    
+    // Draw in segments for varying opacity
+    for (let i = 1; i < thread.points.length; i++) {
+      const p0 = thread.points[i - 1];
+      const p1 = thread.points[i];
+      
+      // Freed segments are more transparent and thinner
+      let segAlpha = thread.a;
+      let segWeight = thread.thickness;
+      
+      if (p1.freed) {
+        const age = (time - p1.freedTime) * 0.0005;
+        segAlpha *= max(0.1, 1 - age * 0.3);
+        segWeight *= max(0.3, 1 - age * 0.2);
+      }
+      
+      // Stress coloring — near tear points, threads lighten
+      let stressed = false;
+      for (const tear of tearPoints) {
+        const d = dist(p1.baseX, p1.baseY, tear.x, tear.y);
+        if (d < tear.currentRadius * 1.3 && !p1.freed) {
+          stressed = true;
+          break;
+        }
+      }
+      
+      if (stressed) {
+        stroke(thread.r + 20, thread.g + 15, thread.b + 10, segAlpha * 0.8);
+      } else {
+        stroke(thread.r, thread.g, thread.b, segAlpha);
+      }
+      strokeWeight(segWeight);
+      strokeCap(ROUND);
+      
+      line(p0.x, p0.y, p1.x, p1.y);
+    }
+  }
+  
+  // Draw dust motes
+  noStroke();
+  for (let i = dustMotes.length - 1; i >= 0; i--) {
+    const d = dustMotes[i];
+    d.life += deltaTime;
+    if (d.life > d.maxLife) {
+      dustMotes.splice(i, 1);
+      continue;
+    }
+    d.x += d.vx;
+    d.y += d.vy;
+    d.vx += sin(time * 0.001 + d.x * 0.01) * 0.002;
+    d.vy -= 0.001;
+    
+    const fade = 1 - d.life / d.maxLife;
+    fill(180, 170, 155, d.alpha * fade);
+    ellipse(d.x, d.y, d.size);
+  }
+  
+  // Tear zone glow — subtle warm light from holes
+  for (const tear of tearPoints) {
+    const glowSize = tear.currentRadius * 0.6;
+    for (let i = 3; i >= 0; i--) {
+      const s = glowSize * (0.3 + i * 0.25);
+      fill(25, 20, 18, 3);
+      noStroke();
+      ellipse(tear.x, tear.y, s * 2, s * 2);
+    }
+  }
+}
+
+function mousePressed() {
+  // Add a new tear at mouse position
+  tearPoints.push({
+    x: mouseX,
+    y: mouseY,
+    radius: 20,
+    intensity: 0.8,
+    growSpeed: 0.00004,
+    phase: random(TWO_PI),
+    currentRadius: 20
+  });
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  generateFabric();
+}
+</script>
+</body>
+</html>
