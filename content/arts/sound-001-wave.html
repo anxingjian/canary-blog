@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wave 波</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #07111F; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+
+// Sound 001 — Wave 波
+// A slow oscilloscope river: pressure becoming luminous contour.
+let strands = [], init;
+function setup(){ createCanvas(windowWidth, windowHeight); pixelDensity(1); init(); }
+init = function(){
+  strands = [];
+  const n = 42;
+  for(let i=0;i<n;i++){
+    strands.push({
+      y: map(i,0,n-1,height*.16,height*.84),
+      amp: random(10,54), freq: random(.006,.02), phase: random(TAU),
+      speed: random(.004,.018), weight: random(.35,1.7), hue: random()
+    });
+  }
+};
+function draw(){
+  background(7,17,31,42);
+  noStroke();
+  for(let i=0;i<160;i++){
+    fill(180,225,255, random(4,13));
+    circle(random(width), random(height), random(.4,1.4));
+  }
+  blendMode(ADD);
+  const t = frameCount;
+  for(const s of strands){
+    const cyan = lerpColor(color(44,196,232), color(198,238,255), s.hue);
+    stroke(red(cyan), green(cyan), blue(cyan), 26);
+    strokeWeight(s.weight*5.5);
+    drawWave(s, t, true);
+    stroke(216,248,255,145);
+    strokeWeight(s.weight);
+    drawWave(s, t, false);
+  }
+  // central pressure line
+  stroke(255,196,112,160); strokeWeight(1.2); noFill();
+  beginShape();
+  for(let x=-20;x<=width+20;x+=8){
+    let y = height/2 + sin(x*.018 + t*.026)*18 + sin(x*.004 - t*.009)*28;
+    vertex(x,y);
+  }
+  endShape();
+  blendMode(BLEND);
+  vignette();
+}
+function drawWave(s,t,soft){
+  noFill(); beginShape();
+  for(let x=-40;x<=width+40;x+=6){
+    let envelope = sin(map(x,0,width,0,PI));
+    let y = s.y + sin(x*s.freq + s.phase + t*s.speed)*s.amp*envelope + noise(x*.003, s.y*.006, t*.006)*18 - 9;
+    curveVertex(x,y);
+  }
+  endShape();
+}
+function vignette(){
+  noFill();
+  for(let r=0;r<90;r++){ stroke(0,0,0,r*.55); strokeWeight(2); rect(r,r,width-r*2,height-r*2,18); }
+}
+
+function windowResized(){ resizeCanvas(windowWidth, windowHeight); init && init(); }
+function mousePressed(){ init && init(); }
+</script>
+</body>
+</html>

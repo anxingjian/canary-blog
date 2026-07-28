@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Silence 静</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #F6F1E8; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+
+// Sound 005 — Silence 静
+// Not absence: the last pressure rings disappearing into paper.
+let rings=[], motes=[], init;
+function setup(){ createCanvas(windowWidth, windowHeight); pixelDensity(1); init(); }
+init=function(){
+  rings=[]; motes=[];
+  for(let i=0;i<11;i++) rings.push({r:i*36+20, p:random(TAU), drift:random(-.2,.2)});
+  for(let i=0;i<240;i++) motes.push({x:random(width), y:random(height), p:random(TAU), s:random(.4,1.5)});
+};
+function draw(){
+  background(246,241,232);
+  const cx=width/2+sin(frameCount*.004)*10, cy=height/2+cos(frameCount*.005)*8;
+  const t=frameCount*.01;
+  // barely moving paper dust
+  noStroke(); fill(42,39,34,24);
+  for(const m of motes){
+    let x=m.x+sin(t+m.p)*2.5, y=m.y+cos(t*.7+m.p)*2.5;
+    circle(x,y,m.s);
+  }
+  // vanishing rings
+  noFill();
+  for(const rg of rings){
+    let rr=(rg.r + frameCount*.22) % (min(width,height)*.58);
+    let alpha=map(rr,0,min(width,height)*.58,46,0);
+    stroke(60,55,48,alpha); strokeWeight(.65);
+    beginShape();
+    for(let a=0;a<=TAU+.04;a+=.035){
+      let wob=sin(a*3+t+rg.p)*1.8 + noise(cos(a)*.7+3,sin(a)*.7+3,t*.1)*3;
+      curveVertex(cx+cos(a)*(rr+wob), cy+sin(a)*(rr+wob));
+    }
+    endShape(CLOSE);
+  }
+  // a single held breath
+  stroke(24,23,21,105); strokeWeight(1); line(width*.22, height*.5, width*.78, height*.5);
+  stroke(24,23,21,38); strokeWeight(8); line(width*.39, height*.5, width*.61, height*.5);
+  noStroke(); fill(132,108,73,70); circle(cx,cy,4+sin(t)*1.2);
+}
+
+function windowResized(){ resizeCanvas(windowWidth, windowHeight); init && init(); }
+function mousePressed(){ init && init(); }
+</script>
+</body>
+</html>

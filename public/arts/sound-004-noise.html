@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noise 噪</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #D8D1C5; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+
+// Sound 004 — Noise 噪
+// Signal shredded into static: bright collisions with no stable center.
+let shards=[], init;
+function setup(){ createCanvas(windowWidth, windowHeight); pixelDensity(1); init(); }
+init=function(){
+  shards=[];
+  for(let i=0;i<420;i++) shards.push({x:random(width), y:random(height), len:random(8,70), a:random(TAU), v:random(.2,1.8), w:random(.5,2.8), p:random(TAU)});
+};
+function draw(){
+  background(216,209,197,72);
+  const t=frameCount*.028;
+  // paper/static grain
+  loadPixels();
+  for(let i=0;i<pixels.length;i+=32){
+    let n=random(-10,10); pixels[i]+=n; pixels[i+1]+=n; pixels[i+2]+=n;
+  }
+  updatePixels();
+  // broken scan blocks
+  noStroke();
+  for(let i=0;i<24;i++){
+    fill(30,28,25,random(5,16)); rect(random(width), random(height), random(12,130), random(1,5));
+  }
+  blendMode(MULTIPLY);
+  for(const s of shards){
+    s.x += cos(s.a)*s.v + random(-.8,.8); s.y += sin(s.a)*s.v + random(-.8,.8);
+    if(s.x<-80||s.x>width+80||s.y<-80||s.y>height+80){ s.x=random(width); s.y=random(height); s.a=random(TAU); }
+    let amp=sin(t*3+s.p);
+    strokeWeight(s.w); stroke(22,24,25,42+amp*18);
+    line(s.x,s.y,s.x+cos(s.a)*s.len,s.y+sin(s.a)*s.len);
+    if(random()<.035){ stroke(168,36,28,165); strokeWeight(random(.8,2.4)); line(s.x,s.y,s.x+cos(s.a+HALF_PI)*random(12,48),s.y+sin(s.a+HALF_PI)*random(12,48)); }
+  }
+  blendMode(BLEND);
+  // clipped waveform that never settles
+  noFill(); stroke(168,36,28,190); strokeWeight(1.4); beginShape();
+  for(let x=0;x<=width;x+=3){
+    let y=height*.5 + (noise(x*.022,t)-.5)*height*.42 + sin(x*.21+t*18)*18;
+    y=constrain(y,height*.18,height*.82); vertex(x,y);
+  }
+  endShape();
+}
+
+function windowResized(){ resizeCanvas(windowWidth, windowHeight); init && init(); }
+function mousePressed(){ init && init(); }
+</script>
+</body>
+</html>

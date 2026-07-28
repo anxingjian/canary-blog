@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resonance 共</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #F2E8D2; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+
+// Sound 002 — Resonance 共
+// Chladni-like sand paths on a warm resonant plate.
+let nodes=[], grains=[], init;
+function setup(){ createCanvas(windowWidth, windowHeight); pixelDensity(1); init(); }
+init = function(){
+  nodes=[]; grains=[];
+  const cx=width/2, cy=height/2, R=min(width,height)*.36;
+  for(let i=0;i<10;i++){
+    let a=i*TAU/10 + random(-.08,.08);
+    nodes.push({x:cx+cos(a)*R*random(.38,1), y:cy+sin(a)*R*random(.38,1), p:random(TAU), w:random(.8,1.9)});
+  }
+  for(let i=0;i<1800;i++){
+    let a=random(TAU), r=pow(random(),.55)*R*.98;
+    grains.push({a,r,off:random(TAU), size:random(.55,1.8)});
+  }
+};
+function draw(){
+  background(242,232,210);
+  const cx=width/2, cy=height/2, R=min(width,height)*.38, t=frameCount*.012;
+  noStroke(); fill(40,31,22,8); circle(cx,cy,R*2.14); fill(242,232,210); circle(cx,cy,R*2.02);
+  // brass plate rings
+  noFill();
+  for(let k=0;k<7;k++){ stroke(128,92,45,24+k*5); strokeWeight(k===0?1.2:.6); circle(cx,cy,R*2*(1-k*.105)); }
+  // nodal curves
+  stroke(65,44,28,58); strokeWeight(1.1); noFill();
+  for(let m=2;m<=7;m++){
+    beginShape();
+    for(let a=0;a<=TAU+.03;a+=.018){
+      let rr=R*(.42+.08*sin(m*a+t)+.22*abs(sin((m-1)*a-t*.7)));
+      curveVertex(cx+cos(a)*rr, cy+sin(a)*rr);
+    }
+    endShape(CLOSE);
+  }
+  // vibrating sand
+  for(const g of grains){
+    let a=g.a, rr=g.r;
+    let field = sin(5*a+t)*cos(rr*.025-t*1.1) + sin(3*a-t*.8)*.6;
+    let settle = abs(field);
+    if(settle < .42){
+      let jitter=(.42-settle)*8;
+      let x=cx+cos(a)*(rr+jitter*sin(t+g.off));
+      let y=cy+sin(a)*(rr+jitter*cos(t*.9+g.off));
+      fill(62,43,29, 95-settle*120); circle(x,y,g.size);
+    }
+  }
+  // active tuning nodes
+  blendMode(MULTIPLY);
+  for(const n of nodes){ fill(170,113,44,42+25*sin(t*2+n.p)); circle(n.x,n.y,8*n.w); }
+  blendMode(BLEND);
+}
+
+function windowResized(){ resizeCanvas(windowWidth, windowHeight); init && init(); }
+function mousePressed(){ init && init(); }
+</script>
+</body>
+</html>

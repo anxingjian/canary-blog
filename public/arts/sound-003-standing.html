@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Standing 驻</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #080705; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+
+// Sound 003 — Standing 驻
+// Locked interference: two opposite waves pin energy into glowing nodes.
+let bands=[], init;
+function setup(){ createCanvas(windowWidth, windowHeight); pixelDensity(1); init(); }
+init=function(){ bands=[]; for(let i=0;i<9;i++) bands.push({y:map(i,0,8,height*.18,height*.82), mode:i+2, phase:random(TAU)}); };
+function draw(){
+  background(8,7,5,36);
+  const t=frameCount*.018;
+  // vertical listening chamber
+  noFill(); stroke(212,186,142,18); strokeWeight(1);
+  for(let x=width*.14;x<=width*.86;x+=width*.09) line(x,height*.09,x,height*.91);
+  blendMode(ADD);
+  for(const b of bands){
+    const amp = min(width,height)*.045;
+    // ghost envelopes
+    for(let o=-2;o<=2;o++){
+      stroke(104,126,255, o===0?42:14); strokeWeight(o===0?1.4:.8); noFill();
+      beginShape();
+      for(let x=width*.08;x<=width*.92;x+=5){
+        let u=map(x,width*.08,width*.92,0,1);
+        let y=b.y + sin(u*PI*b.mode)*sin(t+b.phase)*amp + o*7;
+        curveVertex(x,y);
+      }
+      endShape();
+    }
+    // copper nodes at fixed pressure points
+    for(let k=0;k<=b.mode;k++){
+      let x=map(k,0,b.mode,width*.08,width*.92);
+      let glow=80+60*sin(t*3+b.phase+k);
+      noStroke(); fill(218,137,67,glow*.35); circle(x,b.y,18+8*sin(t+k));
+      fill(255,209,142,180); circle(x,b.y,2.2);
+    }
+  }
+  // central silent slit
+  blendMode(BLEND); noStroke(); fill(8,7,5,190); rect(width*.492,0,width*.016,height);
+  stroke(244,231,205,95); strokeWeight(.7); line(width*.5,height*.08,width*.5,height*.92);
+}
+
+function windowResized(){ resizeCanvas(windowWidth, windowHeight); init && init(); }
+function mousePressed(){ init && init(); }
+</script>
+</body>
+</html>
