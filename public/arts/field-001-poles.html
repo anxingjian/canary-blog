@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poles 极</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #F4F0E7; }
+canvas { display: block; }
+</style>
+<script src="./p5.min.js"></script>
+</head>
+<body>
+<script>
+// Field 001 — Poles 极
+// The force is invisible. Only the trajectories confess it exists.
+
+let particles = [];
+let paper;
+let poleA, poleB, targetB;
+let seed = 807;
+
+const INK = [36, 54, 71];
+const WARM = [215, 124, 104];
+const COOL = [74, 155, 173];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 13);
+  const s = min(width, height);
+  poleA = createVector(width * 0.32, height * 0.52);
+  poleB = createVector(width * 0.68, height * 0.48);
+  targetB = poleB.copy();
+  particles = [];
+
+  for (let i = 0; i < 210; i++) {
+    const warm = i % 2 === 0;
+    const p = warm ? poleA : poleB;
+    const a = random(TAU);
+    const r = random(s * 0.035, s * 0.31);
+    particles.push({
+      pos: createVector(p.x + cos(a) * r, p.y + sin(a) * r),
+      prev: createVector(0, 0),
+      warm,
+      life: random(80, 280),
+      maxLife: random(180, 360),
+      speed: random(0.45, 1.2),
+      weight: random(0.45, 1.5),
+      offset: random(1000)
+    });
+  }
+  makePaper();
+}
+
+function makePaper() {
+  paper = createGraphics(width, height);
+  paper.pixelDensity(1);
+  paper.background(244, 240, 231);
+  paper.noStroke();
+  for (let i = 0; i < width * height / 90; i++) {
+    const a = random(4, 13);
+    if (i % 3 === 0) paper.fill(255, 253, 248, a);
+    else paper.fill(71, 61, 49, a * 0.48);
+    paper.circle(random(width), random(height), random(0.25, 1.15));
+  }
+}
+
+function fieldAt(x, y) {
+  // Opposite scalar poles: field leaves A and enters B.
+  const v = createVector(0, 0);
+  const soft = sq(min(width, height) * 0.035);
+  addPole(v, x, y, poleA, 1, soft);
+  addPole(v, x, y, poleB, -1, soft);
+  // Barely perceptible atmospheric drift keeps the geometry alive.
+  const n = noise(x * 0.0018, y * 0.0018, frameCount * 0.0015) - 0.5;
+  v.rotate(n * 0.10);
+  return v;
+}
+
+function addPole(out, x, y, pole, charge, soft) {
+  const dx = x - pole.x;
+  const dy = y - pole.y;
+  const d2 = dx * dx + dy * dy + soft;
+  const f = charge / pow(d2, 1.35);
+  out.x += dx * f;
+  out.y += dy * f;
+}
+
+function draw() {
+  image(paper, 0, 0);
+
+  if (mouseX >= 0 && mouseX <= width && mouseY >= 0 && mouseY <= height) {
+    targetB.set(
+      constrain(mouseX, width * 0.50, width * 0.86),
+      constrain(mouseY, height * 0.18, height * 0.82)
+    );
+  } else {
+    targetB.set(width * 0.68, height * 0.48);
+  }
+  poleB.lerp(targetB, 0.025);
+
+  drawStreamlines();
+  drawParticles();
+  drawPoles();
+  drawQuietFrame();
+}
+
+function drawStreamlines() {
+  const s = min(width, height);
+  const count = 34;
+  noFill();
+
+  for (let i = 0; i < count; i++) {
+    const angle = map(i, 0, count, -PI, PI);
+    let p = createVector(
+      poleA.x + cos(angle) * s * 0.045,
+      poleA.y + sin(angle) * s * 0.045
+    );
+    const points = [];
+
+    for (let step = 0; step < 260; step++) {
+      if (p.x < -40 || p.x > width + 40 || p.y < -40 || p.y > height + 40) break;
+      points.push(p.copy());
+      const v = fieldAt(p.x, p.y);
+      if (v.magSq() < 0.0000000001) break;
+      v.setMag(s * 0.0105);
+      p.add(v);
+      if (p5.Vector.dist(p, poleB) < s * 0.045) break;
+    }
+
+    const emphasis = 0.55 + 0.45 * sin(i * 2.399 + frameCount * 0.003);
+    stroke(INK[0], INK[1], INK[2], 32 + emphasis * 30);
+    strokeWeight(0.62 + emphasis * 0.38);
+    beginShape();
+    for (const point of points) curveVertex(point.x, point.y);
+    endShape();
+  }
+}
+
+function drawParticles() {
+  blendMode(MULTIPLY);
+  for (const pt of particles) {
+    pt.prev.set(pt.pos);
+    const v = fieldAt(pt.pos.x, pt.pos.y);
+    if (!pt.warm) v.mult(-1);
+    if (v.magSq() > 0) v.setMag(pt.speed);
+    const curl = (noise(pt.offset, frameCount * 0.003) - 0.5) * 0.18;
+    v.rotate(curl);
+    pt.pos.add(v);
+    pt.life--;
+
+    const c = pt.warm ? WARM : COOL;
+    const fade = constrain(map(pt.life, 0, 50, 0, 1), 0, 1);
+    stroke(c[0], c[1], c[2], 52 * fade);
+    strokeWeight(pt.weight * 3.4);
+    line(pt.prev.x, pt.prev.y, pt.pos.x, pt.pos.y);
+    stroke(c[0], c[1], c[2], 175 * fade);
+    strokeWeight(pt.weight * 0.55);
+    line(pt.prev.x, pt.prev.y, pt.pos.x, pt.pos.y);
+
+    const outside = pt.pos.x < -10 || pt.pos.x > width + 10 || pt.pos.y < -10 || pt.pos.y > height + 10;
+    const swallowed = p5.Vector.dist(pt.pos, pt.warm ? poleB : poleA) < min(width, height) * 0.055;
+    if (pt.life <= 0 || outside || swallowed) resetParticle(pt);
+  }
+  blendMode(BLEND);
+}
+
+function resetParticle(pt) {
+  const p = pt.warm ? poleA : poleB;
+  const a = random(TAU);
+  const r = random(min(width, height) * 0.05, min(width, height) * 0.18);
+  pt.pos.set(p.x + cos(a) * r, p.y + sin(a) * r);
+  pt.prev.set(pt.pos);
+  pt.life = random(160, pt.maxLife);
+}
+
+function drawPoles() {
+  const breathe = 1 + sin(frameCount * 0.018) * 0.06;
+  drawPole(poleA, WARM, breathe, 1);
+  drawPole(poleB, COOL, 2 - breathe, -1);
+}
+
+function drawPole(p, c, pulse, direction) {
+  const s = min(width, height);
+  noStroke();
+  for (let r = 6; r >= 1; r--) {
+    fill(c[0], c[1], c[2], 5 + (6 - r) * 4);
+    circle(p.x, p.y, s * 0.025 * r * pulse);
+  }
+  fill(255, 253, 248, 235);
+  circle(p.x, p.y, s * 0.038);
+  fill(c[0], c[1], c[2], 235);
+  circle(p.x, p.y, s * 0.025);
+  stroke(255, 253, 248, 180);
+  strokeWeight(max(0.7, s * 0.0013));
+  line(p.x - s * 0.005, p.y, p.x + s * 0.005, p.y);
+  if (direction > 0) line(p.x, p.y - s * 0.005, p.x, p.y + s * 0.005);
+}
+
+function drawQuietFrame() {
+  const pad = min(width, height) * 0.028;
+  noFill();
+  stroke(36, 54, 71, 28);
+  strokeWeight(0.7);
+  rect(pad, pad, width - pad * 2, height - pad * 2);
+}
+
+function mousePressed() {
+  initialise();
+}
+
+function touchStarted() {
+  initialise();
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
