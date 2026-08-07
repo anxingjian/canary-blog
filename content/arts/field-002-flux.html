@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flux 流</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #E7F4F7; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Field 002 — Flux 流
+// A field becomes legible when we count what crosses a surface.
+
+let paper;
+let ribbons = [];
+let motes = [];
+let seed = 80702;
+let focus;
+
+const SKY = [231, 244, 247];
+const CREAM = [255, 248, 240];
+const LAVENDER = [200, 162, 200];
+const GREEN = [168, 216, 185];
+const PINK = [255, 183, 197];
+const VIOLET = [108, 80, 126];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 17);
+  focus = createVector(width * 0.64, height * 0.50);
+  ribbons = [];
+  motes = [];
+
+  const palette = [LAVENDER, GREEN, PINK, LAVENDER, GREEN, PINK, LAVENDER];
+  const count = 11;
+  for (let i = 0; i < count; i++) {
+    const n = i - (count - 1) / 2;
+    ribbons.push({
+      offset: n * min(width, height) * 0.044,
+      width: min(width, height) * random(0.024, 0.052),
+      phase: random(TAU),
+      speed: random(0.0022, 0.0048),
+      color: palette[i % palette.length],
+      alpha: random(46, 82),
+      bend: random(-0.20, 0.20)
+    });
+  }
+
+  for (let i = 0; i < 74; i++) {
+    motes.push({
+      ribbon: floor(random(ribbons.length)),
+      t: random(1),
+      speed: random(0.0008, 0.0022),
+      size: random(1.2, 4.4),
+      phase: random(TAU)
+    });
+  }
+  makePaper();
+}
+
+function makePaper() {
+  paper = createGraphics(width, height);
+  paper.pixelDensity(1);
+  paper.background(...SKY);
+  paper.noStroke();
+
+  // A quiet atmospheric wash, kept brighter around the measuring plane.
+  for (let r = 12; r >= 1; r--) {
+    paper.fill(CREAM[0], CREAM[1], CREAM[2], 7);
+    paper.ellipse(focus.x, focus.y, width * 0.11 * r, height * 0.16 * r);
+  }
+
+  for (let i = 0; i < width * height / 115; i++) {
+    const pale = i % 4 === 0;
+    paper.fill(pale ? 255 : 91, pale ? 248 : 121, pale ? 240 : 132, pale ? 9 : 3);
+    paper.circle(random(width), random(height), random(0.3, 1.2));
+  }
+}
+
+function draw() {
+  image(paper, 0, 0);
+
+  drawFarContours();
+  drawMeasuringPlane(false);
+
+  blendMode(MULTIPLY);
+  for (const ribbon of ribbons) drawRibbon(ribbon);
+  blendMode(BLEND);
+
+  drawMeasuringPlane(true);
+  drawMotes();
+  drawFluxTicks();
+  drawFrame();
+}
+
+function pathPoint(ribbon, t, edge = 0) {
+  const s = min(width, height);
+  const x = lerp(-width * 0.10, width * 1.10, t);
+  const gather = pow(sin(PI * constrain(t, 0, 1)), 2.4);
+  const baseY = height * 0.50 + ribbon.offset * (1 - gather * 0.86);
+  const longWave = sin(t * TAU * 1.08 + ribbon.phase + frameCount * ribbon.speed) * s * 0.060;
+  const fineWave = sin(t * TAU * 3.0 - ribbon.phase * 0.7 - frameCount * ribbon.speed * 1.6) * s * 0.012;
+  const diagonal = (t - 0.5) * s * ribbon.bend;
+  const pinch = 1 - gather * 0.66;
+  const y = baseY + longWave * (0.35 + 0.65 * abs(t - 0.53)) + fineWave + diagonal + edge * ribbon.width * pinch;
+  return createVector(x, y);
+}
+
+function drawRibbon(ribbon) {
+  const breathe = 0.93 + sin(frameCount * 0.010 + ribbon.phase) * 0.07;
+  const c = ribbon.color;
+  noStroke();
+  fill(c[0], c[1], c[2], ribbon.alpha * breathe);
+
+  beginShape();
+  for (let i = 0; i <= 54; i++) {
+    const p = pathPoint(ribbon, i / 54, -0.5);
+    curveVertex(p.x, p.y);
+  }
+  for (let i = 54; i >= 0; i--) {
+    const p = pathPoint(ribbon, i / 54, 0.5);
+    curveVertex(p.x, p.y);
+  }
+  endShape(CLOSE);
+
+  // A slim luminous seam gives each broad band direction without turning it into line art.
+  noFill();
+  stroke(255, 248, 240, 74);
+  strokeWeight(max(0.55, min(width, height) * 0.0011));
+  beginShape();
+  for (let i = 0; i <= 42; i++) {
+    const p = pathPoint(ribbon, i / 42, -0.18);
+    curveVertex(p.x, p.y);
+  }
+  endShape();
+}
+
+function drawFarContours() {
+  const s = min(width, height);
+  noFill();
+  stroke(VIOLET[0], VIOLET[1], VIOLET[2], 17);
+  strokeWeight(0.7);
+  for (let j = 0; j < 9; j++) {
+    beginShape();
+    for (let i = 0; i <= 70; i++) {
+      const t = i / 70;
+      const x = t * width;
+      const y = height * (0.16 + j * 0.085) + sin(t * TAU + j * 0.72 + frameCount * 0.002) * s * 0.022;
+      curveVertex(x, y);
+    }
+    endShape();
+  }
+}
+
+function drawMeasuringPlane(front) {
+  const s = min(width, height);
+  push();
+  translate(focus.x, focus.y);
+  rotate(-0.14);
+
+  if (!front) {
+    noStroke();
+    fill(CREAM[0], CREAM[1], CREAM[2], 120);
+    ellipse(0, 0, s * 0.30, s * 0.47);
+    for (let r = 5; r >= 1; r--) {
+      fill(LAVENDER[0], LAVENDER[1], LAVENDER[2], 5);
+      ellipse(0, 0, s * 0.30 * r / 5, s * 0.47 * r / 5);
+    }
+  } else {
+    noFill();
+    stroke(CREAM[0], CREAM[1], CREAM[2], 220);
+    strokeWeight(s * 0.012);
+    ellipse(0, 0, s * 0.30, s * 0.47);
+    stroke(VIOLET[0], VIOLET[1], VIOLET[2], 154);
+    strokeWeight(max(1, s * 0.0021));
+    ellipse(0, 0, s * 0.30, s * 0.47);
+    stroke(255, 255, 255, 120);
+    strokeWeight(max(0.7, s * 0.001));
+    arc(-s * 0.006, -s * 0.008, s * 0.27, s * 0.43, PI * 1.05, PI * 1.68);
+  }
+  pop();
+}
+
+function drawMotes() {
+  noStroke();
+  for (const mote of motes) {
+    mote.t = (mote.t + mote.speed) % 1;
+    const ribbon = ribbons[mote.ribbon];
+    const p = pathPoint(ribbon, mote.t, sin(mote.phase) * 0.34);
+    const gather = pow(sin(PI * mote.t), 2.4);
+    const glow = 0.45 + gather * 0.55;
+    const c = ribbon.color;
+
+    fill(CREAM[0], CREAM[1], CREAM[2], 62 * glow);
+    circle(p.x, p.y, mote.size * 4.6);
+    fill(c[0], c[1], c[2], 205 * glow);
+    circle(p.x, p.y, mote.size * (0.8 + gather * 0.7));
+  }
+}
+
+function drawFluxTicks() {
+  const s = min(width, height);
+  push();
+  translate(focus.x, focus.y);
+  rotate(-0.14);
+  stroke(VIOLET[0], VIOLET[1], VIOLET[2], 115);
+  strokeWeight(max(0.7, s * 0.0012));
+  for (let i = -4; i <= 4; i++) {
+    const y = i * s * 0.044;
+    const pulse = 0.5 + 0.5 * sin(frameCount * 0.025 - i * 0.8);
+    const len = s * (0.010 + pulse * 0.014);
+    line(-s * 0.157, y, -s * 0.157 - len, y);
+  }
+  pop();
+}
+
+function drawFrame() {
+  const pad = min(width, height) * 0.028;
+  noFill();
+  stroke(VIOLET[0], VIOLET[1], VIOLET[2], 24);
+  strokeWeight(0.7);
+  rect(pad, pad, width - pad * 2, height - pad * 2);
+}
+
+function mousePressed() {
+  initialise();
+}
+
+function touchStarted() {
+  initialise();
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
