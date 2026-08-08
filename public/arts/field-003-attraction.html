@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attraction 引</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #F2D7C9; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Field 003 — Attraction 引
+// We never see attraction itself; only the distance it quietly removes.
+
+const PEACH = [242, 215, 201];
+const OLIVE = [122, 128, 81];
+const OCHRE = [194, 110, 59];
+const DEEP = [23, 63, 53];
+const IVORY = [255, 249, 238];
+
+let paper;
+let bodies = [];
+let well;
+let seed = 80803;
+let unit;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 29);
+  unit = min(width, height);
+  well = createVector(width * 0.64, height * 0.43);
+  bodies = [];
+
+  // Each body follows an eccentric orbit. Their unequal sizes make the field
+  // readable as mass rather than as another collection of streamlines.
+  const count = 46;
+  for (let i = 0; i < count; i++) {
+    const outer = i / (count - 1);
+    bodies.push({
+      angle: random(TAU),
+      radius: lerp(unit * 0.12, unit * 0.76, pow(outer, 0.72)) * random(0.88, 1.08),
+      eccentricity: random(0.31, 0.66),
+      tilt: random(-0.72, 0.42),
+      speed: random(0.0015, 0.0042) * (random() < 0.16 ? -1 : 1),
+      size: random(unit * 0.009, unit * 0.036) * (1.35 - outer * 0.55),
+      phase: random(TAU),
+      color: random() < 0.58 ? OLIVE : OCHRE,
+      trail: []
+    });
+  }
+  makePaper();
+}
+
+function makePaper() {
+  paper = createGraphics(width, height);
+  paper.pixelDensity(1);
+  paper.background(...PEACH);
+  paper.noStroke();
+
+  // Broad, off-centre washes prepare a visual basin without drawing the force.
+  for (let r = 14; r >= 1; r--) {
+    const t = r / 14;
+    paper.fill(IVORY[0], IVORY[1], IVORY[2], 4 + (1 - t) * 3);
+    paper.ellipse(well.x, well.y, unit * 0.085 * r, unit * 0.065 * r);
+  }
+
+  for (let i = 0; i < width * height / 105; i++) {
+    if (i % 4 === 0) paper.fill(255, 249, 238, random(5, 12));
+    else paper.fill(65, 52, 40, random(1.5, 4));
+    paper.circle(random(width), random(height), random(0.25, 1.1));
+  }
+}
+
+function orbitPoint(body, angle) {
+  const breathe = 1 + sin(frameCount * 0.006 + body.phase) * 0.018;
+  const r = body.radius * breathe;
+  let x = cos(angle) * r;
+  let y = sin(angle) * r * body.eccentricity;
+  const c = cos(body.tilt);
+  const s = sin(body.tilt);
+  const rx = x * c - y * s;
+  const ry = x * s + y * c;
+
+  // The far side stays open; on approach every orbit is pinched toward the well.
+  const approach = pow((1 + cos(angle - 0.22)) * 0.5, 3);
+  return createVector(
+    well.x + rx - approach * unit * 0.058,
+    well.y + ry + sin(angle * 2 + body.phase) * unit * 0.006
+  );
+}
+
+function draw() {
+  image(paper, 0, 0);
+  drawBasin();
+  drawBodies();
+  drawWell();
+  drawFrame();
+}
+
+function drawBasin() {
+  push();
+  translate(well.x, well.y);
+  rotate(-0.14);
+  noFill();
+
+  // Sparse contour masses: enough to imply compression, never a literal grid.
+  for (let i = 9; i >= 0; i--) {
+    const pulse = sin(frameCount * 0.008 - i * 0.44) * unit * 0.004;
+    const d = unit * (0.10 + i * 0.047) + pulse;
+    stroke(DEEP[0], DEEP[1], DEEP[2], 10 + (9 - i) * 2.8);
+    strokeWeight(max(0.6, unit * 0.00095));
+    arc(0, 0, d * 1.62, d, -PI * 0.72, PI * 0.78);
+  }
+  pop();
+}
+
+function drawBodies() {
+  for (const body of bodies) {
+    body.angle += body.speed * (0.72 + unit * 0.00022);
+    const p = orbitPoint(body, body.angle);
+    body.trail.push(p);
+    if (body.trail.length > 19) body.trail.shift();
+
+    // Soft painted tail: a mass leaving evidence of the curve it was made to take.
+    noFill();
+    for (let layer = 3; layer >= 1; layer--) {
+      const c = body.color;
+      stroke(c[0], c[1], c[2], 7 + layer * 5);
+      strokeWeight(body.size * layer * 0.20);
+      beginShape();
+      for (let i = 0; i < body.trail.length; i++) {
+        const q = body.trail[i];
+        curveVertex(q.x, q.y);
+      }
+      endShape();
+    }
+
+    const nearness = constrain(1 - p5.Vector.dist(p, well) / (unit * 0.58), 0, 1);
+    const d = body.size * (0.78 + nearness * 0.62);
+    const c = body.color;
+
+    noStroke();
+    fill(c[0], c[1], c[2], 20);
+    circle(p.x, p.y, d * 2.7);
+    fill(c[0], c[1], c[2], 178 + nearness * 52);
+    ellipse(p.x, p.y, d * 1.25, d * 0.86);
+    fill(IVORY[0], IVORY[1], IVORY[2], 118);
+    circle(p.x - d * 0.14, p.y - d * 0.10, max(1, d * 0.16));
+  }
+}
+
+function drawWell() {
+  const breathe = 1 + sin(frameCount * 0.015) * 0.045;
+
+  // The dark mass is deliberately small. Its influence occupies the whole frame.
+  noStroke();
+  for (let i = 7; i >= 1; i--) {
+    const d = unit * 0.031 * i * breathe;
+    fill(DEEP[0], DEEP[1], DEEP[2], 3 + (7 - i) * 3);
+    ellipse(well.x, well.y, d * 1.16, d);
+  }
+
+  fill(IVORY[0], IVORY[1], IVORY[2], 220);
+  ellipse(well.x, well.y, unit * 0.083 * breathe, unit * 0.071 * breathe);
+  fill(DEEP[0], DEEP[1], DEEP[2], 245);
+  ellipse(well.x, well.y, unit * 0.061 * breathe, unit * 0.052 * breathe);
+  fill(OCHRE[0], OCHRE[1], OCHRE[2], 210);
+  circle(well.x - unit * 0.009, well.y - unit * 0.008, unit * 0.010);
+}
+
+function drawFrame() {
+  const pad = unit * 0.028;
+  noFill();
+  stroke(DEEP[0], DEEP[1], DEEP[2], 28);
+  strokeWeight(0.7);
+  rect(pad, pad, width - pad * 2, height - pad * 2);
+}
+
+function mousePressed() {
+  initialise();
+}
+
+function touchStarted() {
+  initialise();
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
