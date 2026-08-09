@@ -15,6 +15,44 @@ export default async function ResearchDetailPage({ params }: { params: Promise<{
   const post = getResearch(slug);
   if (!post) notFound();
 
+  function escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function isSafeImageSrc(src: string): boolean {
+    const trimmed = src.trim();
+    if (!trimmed || /[\u0000-\u001f\u007f]/.test(trimmed)) return false;
+
+    if (trimmed.startsWith("/")) return !trimmed.startsWith("//");
+    if (trimmed.startsWith("./") || trimmed.startsWith("../")) return true;
+
+    try {
+      const url = new URL(trimmed);
+      return url.protocol === "https:" || url.protocol === "http:";
+    } catch {
+      return false;
+    }
+  }
+
+  function renderMarkdownImages(md: string): string {
+    return md.replace(/!\[([^\]\n]*)\]\(([^)\s]+)\)/g, (match: string, rawAlt: string, rawSrc: string) => {
+      const src = rawSrc.trim();
+      if (!isSafeImageSrc(src)) return escapeHtml(match);
+
+      const alt = rawAlt.trim();
+      const safeAlt = escapeHtml(alt);
+      const safeSrc = escapeHtml(src);
+      const caption = alt ? `<figcaption>${safeAlt}</figcaption>` : "";
+
+      return `<figure class="research-image-figure"><img class="research-image" src="${safeSrc}" alt="${safeAlt}" loading="lazy" decoding="async" />${caption}</figure>`;
+    });
+  }
+
   // Parse markdown tables into HTML
   function parseTables(md: string): string {
     return md.replace(
@@ -31,7 +69,17 @@ export default async function ResearchDetailPage({ params }: { params: Promise<{
     );
   }
 
-  const html = parseTables(post.content)
+  const imageBlocks: string[] = [];
+  const contentWithImageTokens = renderMarkdownImages(parseTables(post.content)).replace(
+    /<figure class="research-image-figure">[\s\S]*?<\/figure>/g,
+    (imageHtml) => {
+      const token = `<research-image-token data-index="${imageBlocks.length}"></research-image-token>`;
+      imageBlocks.push(imageHtml);
+      return token;
+    }
+  );
+
+  const html = contentWithImageTokens
     .replace(/^### (.+)$/gm, '<h3 class="post-h3">$1</h3>')
     .replace(/^## (.+)$/gm, '<h2 class="post-h2">$1</h2>')
     .replace(/^# (.+)$/gm, '<h1>$1</h1>')
@@ -43,7 +91,11 @@ export default async function ResearchDetailPage({ params }: { params: Promise<{
     .replace(/```([\s\S]*?)```/g, '<pre class="post-pre">$1</pre>')
     .replace(/^> (.+)$/gm, '<blockquote class="post-blockquote"><p>$1</p></blockquote>')
     .replace(/^(?!<[huplobr])((?!<\/)[^\n<].+)$/gm, '<p class="post-p">$1</p>')
-    .replace(/\n{2,}/g, "\n");
+    .replace(/\n{2,}/g, "\n")
+    .replace(
+      /<research-image-token data-index="(\d+)"><\/research-image-token>/g,
+      (_match, index: string) => imageBlocks[Number(index)] || ""
+    );
 
   return (
     <main style={{ minHeight: "100vh" }}>
