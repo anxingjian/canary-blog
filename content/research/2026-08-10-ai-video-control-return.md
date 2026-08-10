@@ -61,7 +61,7 @@ Google Flow 把 ingredients、Camera Controls、Scenebuilder 放进 AI filmmakin
 
 ### 横向对比：产品 × 控制层级
 
-> 只列官方页面明确支持的能力；Adobe Firefly 页面本轮抓取超时，暂不作为强论据写入表格。
+> 只列本轮已核实的一手官方页面明确支持的能力。
 
 | 产品 / 来源 | 输入控制 | 镜头控制 | 时间控制 | 工作流控制 |
 |---|---|---|---|---|
@@ -398,13 +398,6 @@ AI 视频工具的下一场竞争，不是谁更会“梦见画面”，而是�
    - 本轮抓取：2026-08-10，HTTP 200。
    - 使用信息：in-context video model；添加、删除、变换对象；生成场景新角度；修改 style 和 lighting。
    - 使用边界：不写 Aleph 2.0 / Edit Studio 未验证能力。
-
-### 🟡 待复核来源
-
-1. Adobe Firefly — *AI Video Generator*
-   - URL: https://www.adobe.com/products/firefly/features/ai-video-generator.html
-   - 本轮抓取：curl / web_fetch 均失败或超时，暂不作为本文强论据。
-   - 后续如要写 multi-model workspace、edit / refine / extend、swap models / compare results，需要重新补官方可访问证据。
 
 ## 附录：本轮证据文件
 
