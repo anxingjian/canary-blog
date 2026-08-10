@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Remanence 留磁</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #F8F1E3; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Field 005 — Remanence 留磁
+// The field is gone. The alignment has not yet let go.
+
+const PAPER = [248, 241, 227];
+const APRICOT = [246, 195, 139];
+const SKY = [141, 182, 242];
+const CELADON = [185, 217, 183];
+const LILAC = [191, 167, 212];
+const PLUM = [75, 68, 83];
+const WHITE = [255, 249, 241];
+
+let paper;
+let lanes = [];
+let filings = [];
+let knot;
+let ghost;
+let seed = 81005;
+let unit;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 37);
+  unit = min(width, height);
+  knot = createVector(width * 0.59, height * 0.47);
+  ghost = createVector(width * 0.43, height * 0.53);
+  lanes = [];
+  filings = [];
+
+  const count = 28;
+  for (let i = 0; i < count; i++) {
+    const side = map(i, 0, count - 1, -1, 1);
+    const spread = pow(abs(side), 0.9);
+    const start = createVector(
+      width * 0.12 + random(-unit * 0.015, unit * 0.015),
+      height * (0.63 + side * 0.18) + random(-unit * 0.01, unit * 0.01)
+    );
+    const end = createVector(
+      width * 0.90 + random(-unit * 0.02, unit * 0.01),
+      height * (0.34 + side * 0.15) + random(-unit * 0.012, unit * 0.012)
+    );
+
+    const pinch = 1 - spread * 0.72;
+    const c1 = createVector(
+      lerp(start.x, ghost.x, 0.62),
+      lerp(start.y, ghost.y, 0.62) + side * unit * 0.05 * pinch
+    );
+    const c2 = createVector(
+      lerp(knot.x, end.x, 0.26),
+      lerp(knot.y, end.y, 0.26) - side * unit * 0.07 * pinch
+    );
+
+    const palettePick = random();
+    const color = palettePick < 0.30 ? APRICOT : palettePick < 0.56 ? SKY : palettePick < 0.80 ? CELADON : LILAC;
+
+    const lane = {
+      start, c1, c2, end,
+      side,
+      color,
+      width: random(unit * 0.004, unit * 0.012) * (1.08 - spread * 0.28),
+      alpha: random(28, 60),
+      drift: random(TAU),
+      bend: random(-0.018, 0.018)
+    };
+    lanes.push(lane);
+
+    const segments = floor(random(4, 7));
+    for (let j = 0; j < segments; j++) {
+      filings.push({
+        lane,
+        t: random(0.38, 0.72),
+        width: lane.width * random(0.9, 1.6),
+        length: random(unit * 0.018, unit * 0.062),
+        speed: random(0.0015, 0.0042),
+        phase: random(TAU),
+        shimmer: random(0.65, 1.2)
+      });
+    }
+  }
+
+  makePaper();
+}
+
+function makePaper() {
+  paper = createGraphics(width, height);
+  paper.pixelDensity(1);
+  paper.background(...PAPER);
+  paper.noStroke();
+
+  for (let i = 0; i < 16; i++) {
+    const t = i / 15;
+    const x = lerp(width * 0.26, width * 0.72, t);
+    const y = lerp(height * 0.62, height * 0.39, t);
+    paper.fill(APRICOT[0], APRICOT[1], APRICOT[2], 3.4);
+    paper.ellipse(x, y, unit * (0.19 + t * 0.18), unit * (0.08 + t * 0.07));
+    paper.fill(SKY[0], SKY[1], SKY[2], 2.4);
+    paper.ellipse(x + unit * 0.03, y - unit * 0.015, unit * (0.12 + t * 0.12), unit * (0.05 + t * 0.05));
+  }
+
+  for (let i = 0; i < width * height / 110; i++) {
+    const tone = random();
+    if (tone < 0.45) paper.fill(255, 249, 241, random(5, 12));
+    else if (tone < 0.8) paper.fill(75, 68, 83, random(1.6, 3.5));
+    else paper.fill(185, 217, 183, random(3, 7));
+    paper.circle(random(width), random(height), random(0.2, 1.05));
+  }
+}
+
+function bezierAt(lane, t) {
+  return createVector(
+    bezierPoint(lane.start.x, lane.c1.x, lane.c2.x, lane.end.x, t),
+    bezierPoint(lane.start.y, lane.c1.y, lane.c2.y, lane.end.y, t)
+  );
+}
+
+function tangentAt(lane, t) {
+  return createVector(
+    bezierTangent(lane.start.x, lane.c1.x, lane.c2.x, lane.end.x, t),
+    bezierTangent(lane.start.y, lane.c1.y, lane.c2.y, lane.end.y, t)
+  );
+}
+
+function draw() {
+  image(paper, 0, 0);
+  drawGhostField();
+  drawResidualLanes();
+  drawFilings();
+  drawKnot();
+  drawFrame();
+}
+
+function drawGhostField() {
+  push();
+  translate(ghost.x, ghost.y);
+  rotate(-0.28);
+  noStroke();
+
+  for (let i = 7; i >= 1; i--) {
+    const breathe = sin(frameCount * 0.007 - i * 0.4) * unit * 0.003;
+    const w = unit * (0.06 + i * 0.02) + breathe;
+    const h = unit * (0.028 + i * 0.009) + breathe * 0.5;
+    fill(WHITE[0], WHITE[1], WHITE[2], 6 + (7 - i) * 2.4);
+    ellipse(0, 0, w, h);
+  }
+
+  fill(PAPER[0], PAPER[1], PAPER[2], 255);
+  ellipse(0, 0, unit * 0.14, unit * 0.06);
+  stroke(PLUM[0], PLUM[1], PLUM[2], 24);
+  strokeWeight(unit * 0.0011);
+  noFill();
+  ellipse(0, 0, unit * 0.16, unit * 0.073);
+  pop();
+
+  noFill();
+  for (let i = 0; i < 6; i++) {
+    const alpha = 12 + i * 5;
+    stroke(APRICOT[0], APRICOT[1], APRICOT[2], alpha);
+    strokeWeight(max(0.5, unit * 0.0008));
+    arc(ghost.x + unit * 0.09, ghost.y - unit * 0.05, unit * (0.18 + i * 0.055), unit * (0.11 + i * 0.032), -PI * 0.2, PI * 0.62);
+  }
+}
+
+function drawResidualLanes() {
+  noFill();
+  for (const lane of lanes) {
+    const c = lane.color;
+    stroke(c[0], c[1], c[2], lane.alpha * 0.42);
+    strokeWeight(lane.width * 0.92);
+    beginShape();
+    for (let step = 0; step <= 48; step++) {
+      const t = step / 48;
+      const p = bezierAt(lane, t);
+      const breathe = sin(frameCount * 0.008 + lane.drift + t * TAU) * unit * 0.0022;
+      curveVertex(p.x, p.y + breathe * (1 - abs(lane.side) * 0.3));
+    }
+    endShape();
+  }
+}
+
+function drawFilings() {
+  blendMode(MULTIPLY);
+  for (const filing of filings) {
+    const lane = filing.lane;
+    const c = lane.color;
+    const local = sin(frameCount * filing.speed + filing.phase);
+    const t = constrain(filing.t + local * 0.028, 0.24, 0.82);
+    const p = bezierAt(lane, t);
+    const tangent = tangentAt(lane, t);
+    const angle = atan2(tangent.y, tangent.x) + lane.bend;
+    const fade = 0.55 + 0.45 * pow(sin(map(t, 0.24, 0.82, 0, PI)), 0.8);
+    const shine = 0.72 + 0.28 * sin(frameCount * 0.02 + filing.phase);
+
+    push();
+    translate(p.x, p.y);
+    rotate(angle);
+    noStroke();
+    fill(c[0], c[1], c[2], 20 * fade * filing.shimmer);
+    ellipse(0, 0, filing.length * 2.4, filing.width * 3.1);
+    fill(c[0], c[1], c[2], 118 * fade);
+    rectMode(CENTER);
+    rect(0, 0, filing.length, filing.width, filing.width * 0.45);
+    fill(WHITE[0], WHITE[1], WHITE[2], 132 * shine * fade);
+    circle(filing.length * 0.12, -filing.width * 0.05, max(0.9, filing.width * 0.18));
+    pop();
+  }
+  blendMode(BLEND);
+}
+
+function drawKnot() {
+  const pulse = 1 + sin(frameCount * 0.014) * 0.04;
+
+  noStroke();
+  for (let i = 8; i >= 1; i--) {
+    const d = unit * (0.035 + i * 0.015) * pulse;
+    fill(APRICOT[0], APRICOT[1], APRICOT[2], 3 + (8 - i) * 2.8);
+    ellipse(knot.x, knot.y, d * 1.7, d * 0.86);
+    fill(LILAC[0], LILAC[1], LILAC[2], 2 + (8 - i) * 2.1);
+    ellipse(knot.x + unit * 0.01, knot.y - unit * 0.005, d * 1.15, d * 0.56);
+  }
+
+  stroke(PLUM[0], PLUM[1], PLUM[2], 28);
+  strokeWeight(unit * 0.001);
+  noFill();
+  for (let i = 0; i < 5; i++) {
+    const w = unit * (0.12 + i * 0.032) * pulse;
+    const h = unit * (0.044 + i * 0.015) * pulse;
+    arc(knot.x, knot.y, w, h, -PI * 0.68, PI * 0.7);
+  }
+
+  noStroke();
+  fill(WHITE[0], WHITE[1], WHITE[2], 220);
+  ellipse(knot.x, knot.y, unit * 0.1 * pulse, unit * 0.048 * pulse);
+  fill(APRICOT[0], APRICOT[1], APRICOT[2], 205);
+  ellipse(knot.x, knot.y, unit * 0.068 * pulse, unit * 0.03 * pulse);
+  fill(PLUM[0], PLUM[1], PLUM[2], 220);
+  ellipse(knot.x, knot.y, unit * 0.034 * pulse, unit * 0.015 * pulse);
+  fill(SKY[0], SKY[1], SKY[2], 140);
+  circle(knot.x - unit * 0.012, knot.y - unit * 0.007, unit * 0.011);
+}
+
+function drawFrame() {
+  const pad = unit * 0.028;
+  noFill();
+  stroke(PLUM[0], PLUM[1], PLUM[2], 26);
+  strokeWeight(0.7);
+  rect(pad, pad, width - pad * 2, height - pad * 2);
+}
+
+function mousePressed() {
+  initialise();
+}
+
+function touchStarted() {
+  initialise();
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
