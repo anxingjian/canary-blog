@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Repulsion 斥</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #311D3F; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Field 004 — Repulsion 斥
+// The force is invisible. The cleared distance is its portrait.
+
+const VIOLET = [49, 29, 63];
+const SULFUR = [229, 240, 75];
+const MINERAL = [67, 214, 181];
+const COLD = [184, 186, 199];
+const INK = [18, 11, 24];
+
+let paper;
+let source;
+let motes = [];
+let shells = [];
+let seed = 81004;
+let unit;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 31);
+  unit = min(width, height);
+  source = createVector(width * 0.31, height * 0.62);
+  motes = [];
+  shells = [];
+
+  for (let i = 0; i < 132; i++) {
+    motes.push(makeMote(random(0.04, 1)));
+  }
+
+  // Uneven shells leave the lower-left source and open toward the upper right.
+  for (let i = 0; i < 8; i++) {
+    shells.push({
+      phase: i / 8,
+      wobble: random(TAU),
+      weight: random(0.75, 1.6)
+    });
+  }
+
+  makePaper();
+}
+
+function makeMote(progress = 0) {
+  // A broad directional fan, not a symmetrical explosion. The empty wedge at
+  // the lower left keeps the composition from becoming a generic starburst.
+  let angle;
+  if (random() < 0.76) angle = random(-1.12, 0.54);
+  else angle = random(0.72, 1.42);
+
+  const family = random();
+  return {
+    angle,
+    progress,
+    speed: random(0.0017, 0.0047),
+    bend: random(-0.16, 0.16),
+    length: random(unit * 0.018, unit * 0.078),
+    width: random(unit * 0.003, unit * 0.012),
+    phase: random(TAU),
+    color: family < 0.52 ? SULFUR : family < 0.80 ? MINERAL : COLD,
+    orbit: random(-1, 1)
+  };
+}
+
+function makePaper() {
+  paper = createGraphics(width, height);
+  paper.pixelDensity(1);
+  paper.background(...VIOLET);
+  paper.noStroke();
+
+  // A dim mineral haze makes the dark field feel chromatic rather than black.
+  for (let i = 0; i < 18; i++) {
+    const x = lerp(source.x, width * 0.82, i / 17);
+    const y = lerp(source.y, height * 0.31, i / 17);
+    paper.fill(MINERAL[0], MINERAL[1], MINERAL[2], 1.8);
+    paper.ellipse(x, y, unit * (0.18 + i * 0.025), unit * (0.10 + i * 0.018));
+  }
+
+  for (let i = 0; i < width * height / 115; i++) {
+    const bright = random() < 0.16;
+    if (bright) paper.fill(COLD[0], COLD[1], COLD[2], random(5, 12));
+    else paper.fill(INK[0], INK[1], INK[2], random(4, 11));
+    paper.circle(random(width), random(height), random(0.25, 1.15));
+  }
+}
+
+function draw() {
+  image(paper, 0, 0);
+  drawClearedField();
+  drawShells();
+  drawMotes();
+  drawSource();
+  drawFrame();
+}
+
+function drawClearedField() {
+  push();
+  translate(source.x, source.y);
+  rotate(-0.25);
+  noStroke();
+
+  // The dark void is the negative image of repulsion: matter cannot remain here.
+  for (let i = 9; i >= 1; i--) {
+    const breathe = sin(frameCount * 0.009 - i * 0.45) * unit * 0.004;
+    const d = unit * (0.10 + i * 0.026) + breathe;
+    fill(INK[0], INK[1], INK[2], 5 + (9 - i) * 2.5);
+    arc(0, 0, d * 1.75, d * 1.28, -PI * 0.82, PI * 0.78, PIE);
+  }
+  pop();
+}
+
+function drawShells() {
+  noFill();
+  for (const shell of shells) {
+    shell.phase += 0.00135;
+    if (shell.phase > 1) shell.phase -= 1;
+
+    const eased = pow(shell.phase, 0.74);
+    const radius = unit * lerp(0.075, 0.76, eased);
+    const alpha = sin(PI * shell.phase) * 78;
+    const pulse = sin(frameCount * 0.008 + shell.wobble) * unit * 0.006;
+
+    push();
+    translate(source.x, source.y);
+    rotate(-0.26 + sin(shell.wobble) * 0.035);
+    stroke(SULFUR[0], SULFUR[1], SULFUR[2], alpha);
+    strokeWeight(max(0.7, unit * 0.0013 * shell.weight));
+    arc(0, 0, radius * 1.82 + pulse, radius * 1.25, -PI * 0.72, PI * 0.64);
+    pop();
+  }
+}
+
+function motePosition(m) {
+  const p = pow(m.progress, 0.72);
+  const distance = unit * lerp(0.045, 0.88, p);
+  const liveAngle = m.angle + m.bend * p + sin(frameCount * 0.006 + m.phase) * 0.012;
+  const sideways = sin(p * PI * 2 + m.phase) * unit * 0.012 * p * m.orbit;
+  return createVector(
+    source.x + cos(liveAngle) * distance - sin(liveAngle) * sideways,
+    source.y + sin(liveAngle) * distance + cos(liveAngle) * sideways
+  );
+}
+
+function drawMotes() {
+  blendMode(ADD);
+  for (let i = 0; i < motes.length; i++) {
+    const m = motes[i];
+    m.progress += m.speed;
+    if (m.progress > 1.04) motes[i] = makeMote(random(0, 0.08));
+
+    const p = motePosition(m);
+    const fade = pow(sin(constrain(m.progress, 0, 1) * PI), 0.56);
+    const expansion = lerp(0.38, 1.15, m.progress);
+    const tangent = m.angle + m.bend * m.progress;
+    const c = m.color;
+
+    push();
+    translate(p.x, p.y);
+    rotate(tangent);
+    noStroke();
+    fill(c[0], c[1], c[2], 11 * fade);
+    ellipse(0, 0, m.length * expansion * 2.4, m.width * expansion * 3.6);
+    fill(c[0], c[1], c[2], 126 * fade);
+    rectMode(CENTER);
+    rect(0, 0, m.length * expansion, m.width * expansion, m.width * 0.45);
+    fill(255, 255, 225, 118 * fade);
+    circle(m.length * expansion * 0.28, -m.width * 0.08, max(0.8, m.width * 0.22));
+    pop();
+  }
+  blendMode(BLEND);
+}
+
+function drawSource() {
+  const pulse = 1 + sin(frameCount * 0.021) * 0.055;
+
+  noFill();
+  for (let i = 5; i >= 1; i--) {
+    const d = unit * (0.060 + i * 0.018) * pulse;
+    stroke(SULFUR[0], SULFUR[1], SULFUR[2], 15 + (5 - i) * 22);
+    strokeWeight(unit * 0.0011);
+    circle(source.x, source.y, d);
+  }
+
+  noStroke();
+  fill(SULFUR[0], SULFUR[1], SULFUR[2], 16);
+  circle(source.x, source.y, unit * 0.17 * pulse);
+  fill(SULFUR[0], SULFUR[1], SULFUR[2], 245);
+  circle(source.x, source.y, unit * 0.086 * pulse);
+  fill(INK[0], INK[1], INK[2], 255);
+  circle(source.x, source.y, unit * 0.052 * pulse);
+  fill(MINERAL[0], MINERAL[1], MINERAL[2], 238);
+  circle(source.x - unit * 0.009, source.y - unit * 0.009, unit * 0.011);
+}
+
+function drawFrame() {
+  const pad = unit * 0.028;
+  noFill();
+  stroke(COLD[0], COLD[1], COLD[2], 30);
+  strokeWeight(0.7);
+  rect(pad, pad, width - pad * 2, height - pad * 2);
+}
+
+function mousePressed() {
+  initialise();
+}
+
+function touchStarted() {
+  initialise();
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
