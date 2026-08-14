@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Immerse 浸入</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #FFF3D6; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Development 002 — Immerse 浸入
+// The bath does not reveal the image from above; it climbs into the paper.
+
+const CREAM = [255, 243, 214];
+const DEEP = [18, 59, 58];
+const TEAL = [42, 157, 143];
+const APRICOT = [233, 196, 106];
+const CORAL = [231, 111, 81];
+const PALE = [247, 216, 160];
+const WHITE = [255, 252, 239];
+
+let paperTexture;
+let fibres = [];
+let droplets = [];
+let seed = 81402;
+let u;
+let sheet;
+let bathY;
+let cycleOffset = 250;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  frameRate(40);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 23);
+  u = min(width, height);
+  bathY = height * 0.61;
+  sheet = {
+    x: width * 0.23,
+    y: height * 0.10,
+    w: width * 0.54,
+    h: height * 0.76
+  };
+  makePaperTexture();
+  makeFibres();
+  makeDroplets();
+}
+
+function makePaperTexture() {
+  paperTexture = createGraphics(width, height);
+  paperTexture.pixelDensity(1);
+  paperTexture.background(...CREAM);
+  paperTexture.noStroke();
+
+  // Warm translucent atmosphere, kept almost weightless above the bath.
+  for (let i = 0; i < 16; i++) {
+    const x = width * (0.08 + i * 0.058);
+    paperTexture.fill(APRICOT[0], APRICOT[1], APRICOT[2], 2.8);
+    paperTexture.ellipse(x, height * 0.43, u * 0.24, height * 0.82);
+  }
+
+  const specks = constrain(floor(width * height / 420), 900, 3600);
+  for (let i = 0; i < specks; i++) {
+    const warm = random() < 0.72;
+    const c = warm ? APRICOT : TEAL;
+    paperTexture.fill(c[0], c[1], c[2], random(1.5, 5.5));
+    paperTexture.circle(random(width), random(height), random(0.25, 1.15));
+  }
+}
+
+function makeFibres() {
+  fibres = [];
+  const count = constrain(floor(width / 5.8), 130, 300);
+
+  for (let i = 0; i < count; i++) {
+    const nx = count === 1 ? 0.5 : i / (count - 1);
+    const x = sheet.x + sheet.w * (0.035 + nx * 0.93) + randomGaussian() * u * 0.0028;
+    const familyRoll = random();
+    const family = familyRoll < 0.48 ? TEAL : familyRoll < 0.77 ? CORAL : APRICOT;
+    const sideBias = 0.55 + 0.45 * sin(nx * PI);
+    const reach = u * random(0.14, 0.43) * sideBias;
+    const branches = floor(random(2, 6));
+    fibres.push({
+      x,
+      reach,
+      width: random(u * 0.0012, u * 0.0056),
+      phase: random(TAU),
+      speed: random(0.72, 1.22),
+      family,
+      branches,
+      kink: random(-1, 1),
+      delay: random(0.0, 0.30),
+      opacity: random(22, 68)
+    });
+  }
+}
+
+function makeDroplets() {
+  droplets = [];
+  for (let i = 0; i < 32; i++) {
+    droplets.push({
+      x: random(width * 0.08, width * 0.92),
+      y: random(bathY + u * 0.025, height + u * 0.10),
+      r: random(u * 0.0018, u * 0.007),
+      phase: random(TAU),
+      speed: random(0.25, 0.7),
+      family: random() < 0.68 ? APRICOT : CORAL
+    });
+  }
+}
+
+function draw() {
+  image(paperTexture, 0, 0);
+
+  const cycle = ((frameCount + cycleOffset) % 720) / 720;
+  const wet = cycle < 0.68
+    ? smoothstep(0.02, 0.55, cycle)
+    : 1 - smoothstep(0.78, 0.99, cycle);
+  const settle = 0.5 - 0.5 * cos(TAU * cycle);
+  const tide = sin(frameCount * 0.012) * u * 0.0055;
+
+  drawDrySheet();
+  drawBath(tide, settle);
+  drawCapillaryField(wet, tide);
+  drawLowerBloom(wet, tide);
+  drawSurface(tide);
+  drawDroplets(wet, tide);
+  drawSheetEdge();
+}
+
+function drawDrySheet() {
+  noStroke();
+  fill(WHITE[0], WHITE[1], WHITE[2], 74);
+  rect(sheet.x, sheet.y, sheet.w, sheet.h);
+
+  // Quiet vertical fibres prepare a direction for the liquid to climb.
+  for (let i = 0; i < 38; i++) {
+    const x = sheet.x + sheet.w * (i + 0.5) / 38;
+    stroke(DEEP[0], DEEP[1], DEEP[2], 4.5);
+    strokeWeight(max(0.45, u * 0.00048));
+    line(x, sheet.y + u * 0.012, x, sheet.y + sheet.h - u * 0.012);
+  }
+}
+
+function drawBath(tide, settle) {
+  noStroke();
+  const y = bathY + tide;
+
+  // The lower field carries most of the mass: the squint-test anchor.
+  fill(DEEP[0], DEEP[1], DEEP[2], 234);
+  rect(0, y, width, height - y);
+
+  fill(TEAL[0], TEAL[1], TEAL[2], 38 + settle * 22);
+  beginShape();
+  vertex(0, y + u * 0.035);
+  for (let x = 0; x <= width; x += max(18, u * 0.032)) {
+    const yy = y + u * (0.045 + 0.018 * noise(x * 0.004, frameCount * 0.004));
+    vertex(x, yy);
+  }
+  vertex(width, height);
+  vertex(0, height);
+  endShape(CLOSE);
+
+  fill(CORAL[0], CORAL[1], CORAL[2], 18 + settle * 14);
+  ellipse(width * 0.50, height * 0.91, width * 0.62, u * 0.22);
+}
+
+function drawCapillaryField(wet, tide) {
+  push();
+  drawingContext.save();
+  drawingContext.beginPath();
+  drawingContext.rect(sheet.x, sheet.y, sheet.w, sheet.h);
+  drawingContext.clip();
+  blendMode(MULTIPLY);
+  noFill();
+
+  for (const f of fibres) {
+    const local = constrain((wet - f.delay) / max(0.05, 1 - f.delay), 0, 1);
+    if (local <= 0) continue;
+    const climb = easeOut(local) * f.reach;
+    const bottom = bathY + tide + u * 0.06;
+    const top = bathY + tide - climb;
+    const sway = sin(frameCount * 0.018 * f.speed + f.phase) * u * 0.005;
+    const c = f.family;
+
+    stroke(c[0], c[1], c[2], f.opacity * (0.45 + local * 0.55));
+    strokeWeight(f.width * (0.85 + local * 0.5));
+    beginShape();
+    for (let s = 0; s <= 12; s++) {
+      const t = s / 12;
+      const y = lerp(bottom, top, t);
+      const noiseBend = (noise(f.x * 0.012, t * 2.2, frameCount * 0.002) - 0.5) * u * 0.018 * t;
+      const x = f.x + sway * sin(t * PI) + noiseBend + f.kink * u * 0.006 * t * t;
+      curveVertex(x, y);
+    }
+    endShape();
+
+    // Tiny lateral wicks make the process capillary, not a forest of straight lines.
+    for (let b = 0; b < f.branches; b++) {
+      const bt = 0.26 + (b + 1) / (f.branches + 2) * 0.62;
+      if (bt > local + 0.18) continue;
+      const by = lerp(bottom, top, bt);
+      const dir = (b + floor(f.phase * 10)) % 2 ? 1 : -1;
+      const len = u * (0.005 + 0.014 * (1 - bt)) * local;
+      stroke(c[0], c[1], c[2], f.opacity * 0.46);
+      strokeWeight(max(0.45, f.width * 0.42));
+      line(f.x, by, f.x + dir * len, by - len * 0.38);
+    }
+  }
+
+  blendMode(BLEND);
+  drawingContext.restore();
+  pop();
+}
+
+function drawLowerBloom(wet, tide) {
+  push();
+  blendMode(SCREEN);
+  noStroke();
+  const cy = bathY + tide + u * 0.105;
+  const pulse = 1 + sin(frameCount * 0.015) * 0.035;
+
+  for (let i = 10; i >= 1; i--) {
+    const t = i / 10;
+    fill(APRICOT[0], APRICOT[1], APRICOT[2], (2.5 + wet * 5.5) * (1 - t * 0.35));
+    ellipse(width * 0.50, cy, u * (0.12 + i * 0.058) * pulse, u * (0.028 + i * 0.016));
+  }
+
+  fill(CORAL[0], CORAL[1], CORAL[2], 30 + wet * 72);
+  ellipse(width * 0.50, cy + u * 0.012, u * 0.22 * pulse, u * 0.058 * pulse);
+  fill(PALE[0], PALE[1], PALE[2], 32 + wet * 74);
+  ellipse(width * 0.50, cy - u * 0.003, u * 0.095 * pulse, u * 0.022 * pulse);
+  blendMode(BLEND);
+  pop();
+}
+
+function drawSurface(tide) {
+  const y = bathY + tide;
+  noFill();
+
+  // A firm horizontal boundary holds the composition together from a distance.
+  stroke(PALE[0], PALE[1], PALE[2], 176);
+  strokeWeight(max(1.2, u * 0.0022));
+  beginShape();
+  for (let x = 0; x <= width + 12; x += 12) {
+    const ripple = sin(x * 0.019 + frameCount * 0.026) * u * 0.0025;
+    vertex(x, y + ripple);
+  }
+  endShape();
+
+  stroke(TEAL[0], TEAL[1], TEAL[2], 72);
+  strokeWeight(max(0.7, u * 0.001));
+  line(0, y + u * 0.010, width, y + u * 0.010);
+}
+
+function drawDroplets(wet, tide) {
+  noStroke();
+  for (const d of droplets) {
+    const y = d.y + sin(frameCount * 0.012 * d.speed + d.phase) * u * 0.012;
+    if (y < bathY + tide + u * 0.012) continue;
+    const c = d.family;
+    fill(c[0], c[1], c[2], 18 + wet * 28);
+    circle(d.x, y, d.r * (1 + 0.18 * sin(frameCount * 0.018 + d.phase)));
+  }
+}
+
+function drawSheetEdge() {
+  noFill();
+  stroke(DEEP[0], DEEP[1], DEEP[2], 22);
+  strokeWeight(max(0.6, u * 0.00075));
+  rect(sheet.x, sheet.y, sheet.w, sheet.h);
+  stroke(WHITE[0], WHITE[1], WHITE[2], 115);
+  line(sheet.x + 1, sheet.y + 1, sheet.x + sheet.w - 1, sheet.y + 1);
+}
+
+function smoothstep(a, b, x) {
+  const t = constrain((x - a) / (b - a), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+function easeOut(t) {
+  return 1 - pow(1 - t, 3);
+}
+
+function mousePressed() {
+  initialise();
+  frameCount = 0;
+}
+
+function touchStarted() {
+  initialise();
+  frameCount = 0;
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
