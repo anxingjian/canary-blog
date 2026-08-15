@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agitate 摇洗</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #3B163E; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Development 003 — Agitate 摇洗
+// The tray moves in a small orbit; the image repeatedly changes sides.
+
+const PLUM = [59, 22, 62];
+const SKY = [135, 206, 235];
+const PEACH = [255, 222, 173];
+const ROSE = [255, 90, 138];
+const ICE = [231, 250, 255];
+const MINT = [98, 214, 197];
+const INK = [26, 8, 30];
+
+let grain;
+let fragments = [];
+let bubbles = [];
+let seed = 81503;
+let u;
+let tray;
+let timeOffset = 130;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  frameRate(40);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 17);
+  u = min(width, height);
+  tray = {
+    x: width * 0.56,
+    y: height * 0.49,
+    rx: min(width * 0.34, u * 0.46),
+    ry: min(height * 0.34, u * 0.31),
+    tilt: -0.12
+  };
+  makeGrain();
+  makeFragments();
+  makeBubbles();
+}
+
+function makeGrain() {
+  grain = createGraphics(width, height);
+  grain.pixelDensity(1);
+  grain.background(...PLUM);
+  grain.noStroke();
+
+  const count = constrain(floor(width * height / 330), 1200, 5200);
+  for (let i = 0; i < count; i++) {
+    const c = random() < 0.82 ? ICE : SKY;
+    grain.fill(c[0], c[1], c[2], random(1.2, 6));
+    grain.circle(random(width), random(height), random(0.25, 1.3));
+  }
+
+  // A quiet falloff keeps the ring legible at squint distance.
+  for (let i = 14; i >= 1; i--) {
+    const a = map(i, 1, 14, 1.5, 7);
+    grain.fill(INK[0], INK[1], INK[2], a);
+    grain.ellipse(width * 0.10, height * 0.84, u * i * 0.12, u * i * 0.07);
+  }
+}
+
+function makeFragments() {
+  fragments = [];
+  const palette = [SKY, PEACH, MINT, ICE];
+  const count = constrain(floor(u / 18), 34, 62);
+
+  for (let i = 0; i < count; i++) {
+    const angle = TAU * i / count + random(-0.045, 0.045);
+    fragments.push({
+      angle,
+      lane: random([-0.11, -0.045, 0.035, 0.10]),
+      w: random(u * 0.035, u * 0.105),
+      h: random(u * 0.008, u * 0.026),
+      phase: random(TAU),
+      speed: random(0.72, 1.24),
+      color: palette[i % palette.length],
+      alpha: random(62, 148),
+      skew: random(-0.28, 0.28)
+    });
+  }
+}
+
+function makeBubbles() {
+  bubbles = [];
+  for (let i = 0; i < 36; i++) {
+    const a = random(TAU);
+    const r = sqrt(random(0.07, 0.94));
+    bubbles.push({
+      a,
+      r,
+      size: random(u * 0.002, u * 0.009),
+      phase: random(TAU),
+      speed: random(0.4, 1.1)
+    });
+  }
+}
+
+function draw() {
+  image(grain, 0, 0);
+
+  const t = (frameCount + timeOffset) * 0.017;
+  const cycle = ((frameCount + timeOffset) % 680) / 680;
+  const reveal = cycle < 0.72
+    ? smoothstep(0.03, 0.42, cycle)
+    : 1 - smoothstep(0.78, 0.99, cycle);
+
+  // Photographic trays are agitated by a small, repeated orbital motion.
+  const agitation = 0.5 - 0.5 * cos(TAU * cycle);
+  const ox = cos(t * 0.83) * u * 0.010;
+  const oy = sin(t * 1.09) * u * 0.008;
+  const lean = tray.tilt + sin(t * 0.51) * 0.018;
+
+  push();
+  translate(tray.x + ox, tray.y + oy);
+  rotate(lean);
+  drawTrayShadow();
+  drawTray();
+  drawBath(agitation);
+  drawOrbitalWash(t, reveal);
+  drawFlippingLayers(t, reveal);
+  drawRoseAnchor(t, reveal);
+  drawBubbles(t);
+  drawRim();
+  pop();
+
+  drawRegistrationMarks(t, reveal);
+}
+
+function drawTrayShadow() {
+  noStroke();
+  fill(INK[0], INK[1], INK[2], 94);
+  ellipse(-u * 0.015, u * 0.035, tray.rx * 2.16, tray.ry * 2.20);
+}
+
+function drawTray() {
+  noStroke();
+  fill(ICE[0], ICE[1], ICE[2], 34);
+  ellipse(0, 0, tray.rx * 2.11, tray.ry * 2.17);
+  fill(INK[0], INK[1], INK[2], 225);
+  ellipse(0, 0, tray.rx * 1.96, tray.ry * 1.96);
+}
+
+function drawBath(agitation) {
+  noStroke();
+  fill(SKY[0], SKY[1], SKY[2], 13 + agitation * 7);
+  ellipse(0, 0, tray.rx * 1.86, tray.ry * 1.82);
+
+  for (let i = 9; i >= 1; i--) {
+    const q = i / 9;
+    fill(MINT[0], MINT[1], MINT[2], 1.5 + (1 - q) * 2.4);
+    ellipse(0, 0, tray.rx * (0.38 + q * 1.38), tray.ry * (0.30 + q * 1.36));
+  }
+}
+
+function drawOrbitalWash(t, reveal) {
+  noFill();
+  blendMode(SCREEN);
+
+  for (let lane = 0; lane < 5; lane++) {
+    const inset = lane * u * 0.025;
+    const phase = t * (0.42 + lane * 0.035) + lane * 1.1;
+    const c = lane % 2 ? SKY : MINT;
+    stroke(c[0], c[1], c[2], (16 + lane * 5) * reveal);
+    strokeWeight(max(0.7, u * (0.001 + lane * 0.0003)));
+    arc(
+      0, 0,
+      tray.rx * 1.52 - inset,
+      tray.ry * 1.46 - inset * 0.62,
+      phase,
+      phase + PI * (0.72 + lane * 0.06)
+    );
+  }
+  blendMode(BLEND);
+}
+
+function drawFlippingLayers(t, reveal) {
+  push();
+  blendMode(SCREEN);
+  rectMode(CENTER);
+
+  for (const f of fragments) {
+    const a = f.angle + t * 0.085 * f.speed;
+    const laneScale = 1 + f.lane;
+    const x = cos(a) * tray.rx * 0.72 * laneScale;
+    const y = sin(a) * tray.ry * 0.68 * laneScale;
+    const flip = sin(t * 1.35 * f.speed + f.phase);
+    const edge = max(0.035, abs(flip));
+    const c = f.color;
+
+    push();
+    translate(x, y);
+    rotate(a + HALF_PI + f.skew);
+    scale(flip < 0 ? -edge : edge, 1);
+
+    fill(c[0], c[1], c[2], f.alpha * reveal * (0.58 + edge * 0.42));
+    noStroke();
+    rect(0, 0, f.w, f.h, f.h * 0.18);
+
+    stroke(ICE[0], ICE[1], ICE[2], 52 * reveal * edge);
+    strokeWeight(max(0.45, u * 0.00065));
+    line(-f.w * 0.38, 0, f.w * 0.38, 0);
+    pop();
+  }
+
+  blendMode(BLEND);
+  pop();
+}
+
+function drawRoseAnchor(t, reveal) {
+  const a = -0.63 + sin(t * 0.22) * 0.045;
+  const x = cos(a) * tray.rx * 0.73;
+  const y = sin(a) * tray.ry * 0.68;
+  const pulse = 1 + sin(t * 1.8) * 0.045;
+
+  push();
+  translate(x, y);
+  rotate(a + HALF_PI);
+  blendMode(SCREEN);
+  noStroke();
+
+  for (let i = 8; i >= 1; i--) {
+    fill(ROSE[0], ROSE[1], ROSE[2], (3 + (9 - i) * 2.1) * reveal);
+    ellipse(0, 0, u * (0.035 + i * 0.022) * pulse, u * (0.018 + i * 0.008));
+  }
+
+  fill(ROSE[0], ROSE[1], ROSE[2], 210 * reveal);
+  rectMode(CENTER);
+  rect(0, 0, u * 0.125 * pulse, u * 0.024, u * 0.006);
+  fill(PEACH[0], PEACH[1], PEACH[2], 192 * reveal);
+  rect(0, 0, u * 0.048, u * 0.008, u * 0.004);
+  blendMode(BLEND);
+  pop();
+}
+
+function drawBubbles(t) {
+  noFill();
+  for (const b of bubbles) {
+    const a = b.a + sin(t * 0.18 + b.phase) * 0.12;
+    const x = cos(a) * tray.rx * 0.76 * b.r;
+    const y = sin(a) * tray.ry * 0.70 * b.r;
+    stroke(ICE[0], ICE[1], ICE[2], 22 + 24 * sin(t * b.speed + b.phase) ** 2);
+    strokeWeight(max(0.45, u * 0.00055));
+    circle(x, y, b.size);
+  }
+}
+
+function drawRim() {
+  noFill();
+  stroke(ICE[0], ICE[1], ICE[2], 116);
+  strokeWeight(max(1.1, u * 0.0022));
+  ellipse(0, 0, tray.rx * 2.05, tray.ry * 2.08);
+
+  stroke(SKY[0], SKY[1], SKY[2], 52);
+  strokeWeight(max(0.55, u * 0.0009));
+  ellipse(0, 0, tray.rx * 1.91, tray.ry * 1.90);
+}
+
+function drawRegistrationMarks(t, reveal) {
+  push();
+  stroke(PEACH[0], PEACH[1], PEACH[2], 42 * reveal);
+  strokeWeight(max(0.6, u * 0.0008));
+  noFill();
+
+  const drift = sin(t * 0.7) * u * 0.004;
+  line(width * 0.11 + drift, height * 0.24, width * 0.20 + drift, height * 0.24);
+  line(width * 0.155 + drift, height * 0.205, width * 0.155 + drift, height * 0.275);
+  line(width * 0.84 - drift, height * 0.78, width * 0.91 - drift, height * 0.78);
+  line(width * 0.875 - drift, height * 0.75, width * 0.875 - drift, height * 0.81);
+  pop();
+}
+
+function smoothstep(a, b, x) {
+  const q = constrain((x - a) / (b - a), 0, 1);
+  return q * q * (3 - 2 * q);
+}
+
+function mousePressed() {
+  initialise();
+  frameCount = 0;
+}
+
+function touchStarted() {
+  initialise();
+  frameCount = 0;
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
