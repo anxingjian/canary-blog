@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fix 定影</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #E83C2E; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Development 004 — Fix 定影
+// A moving chemical front arrests each drifting trace, one strip at a time.
+
+const VERMILION = [232, 60, 46];
+const CARBON = [16, 24, 32];
+const CYAN = [84, 198, 235];
+const SULFUR = [247, 243, 161];
+const WHITE = [255, 255, 246];
+
+let textureLayer;
+let strips = [];
+let scratches = [];
+let seed = 81604;
+let unit;
+let printShape;
+let cycleOffset = 390;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  frameRate(40);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 31);
+  unit = min(width, height);
+  printShape = {
+    cx: width * 0.43,
+    cy: height * 0.52,
+    w: min(width * 0.68, unit * 0.94),
+    h: min(height * 0.82, unit * 0.88),
+    angle: -0.16
+  };
+  makeTexture();
+  makeStrips();
+  makeScratches();
+}
+
+function makeTexture() {
+  textureLayer = createGraphics(width, height);
+  textureLayer.pixelDensity(1);
+  textureLayer.background(...VERMILION);
+  textureLayer.noStroke();
+
+  // Broad vertical ink changes keep the red field alive without weakening its mass.
+  for (let i = 0; i < 22; i++) {
+    const x = width * i / 21;
+    textureLayer.fill(CARBON[0], CARBON[1], CARBON[2], i % 3 === 0 ? 5 : 2);
+    textureLayer.rect(x, 0, width / 22 + 1, height);
+  }
+
+  const grainCount = constrain(floor(width * height / 360), 1000, 4600);
+  for (let i = 0; i < grainCount; i++) {
+    const light = random() < 0.32;
+    const c = light ? WHITE : CARBON;
+    textureLayer.fill(c[0], c[1], c[2], random(2, 9));
+    textureLayer.rect(random(width), random(height), random(0.3, 1.5), random(0.3, 1.5));
+  }
+}
+
+function makeStrips() {
+  strips = [];
+  const count = constrain(floor(printShape.h / 13), 40, 72);
+  for (let i = 0; i < count; i++) {
+    const p = count === 1 ? 0.5 : i / (count - 1);
+    const leftHeavy = pow(1 - p, 0.36);
+    strips.push({
+      p,
+      x: random(-0.26, 0.09) * printShape.w,
+      length: printShape.w * random(0.20, 0.72) * (0.72 + leftHeavy * 0.28),
+      thickness: random(unit * 0.004, unit * 0.016),
+      phase: random(TAU),
+      speed: random(0.75, 1.28),
+      delay: random(-0.025, 0.025),
+      cyan: random() < 0.18,
+      notch: random(0.12, 0.82)
+    });
+  }
+}
+
+function makeScratches() {
+  scratches = [];
+  for (let i = 0; i < 54; i++) {
+    scratches.push({
+      x: random(-0.43, 0.43) * printShape.w,
+      y: random(-0.46, 0.46) * printShape.h,
+      length: random(unit * 0.015, unit * 0.10),
+      alpha: random(18, 54)
+    });
+  }
+}
+
+function draw() {
+  image(textureLayer, 0, 0);
+
+  const cycle = ((frameCount + cycleOffset) % 760) / 760;
+  const fixingFront = cycle < 0.72
+    ? smoothstep(0.04, 0.66, cycle)
+    : 1 - smoothstep(0.82, 0.995, cycle);
+  const t = frameCount * 0.018;
+
+  drawBlackWeight();
+
+  push();
+  translate(printShape.cx, printShape.cy);
+  rotate(printShape.angle);
+  drawPrintShadow();
+  drawPaper();
+  clipToPrint(() => {
+    drawUnfixedGhosts(t, fixingFront);
+    drawFixedStrips(t, fixingFront);
+    drawChemicalFront(fixingFront, t);
+    drawSurfaceScratches();
+  });
+  drawPrintEdge();
+  pop();
+
+  drawLockBar(fixingFront, t);
+  drawCornerIndex(fixingFront);
+}
+
+function drawBlackWeight() {
+  // This near-black block deliberately overweights the lower-left corner.
+  noStroke();
+  fill(CARBON[0], CARBON[1], CARBON[2], 248);
+  beginShape();
+  vertex(0, height * 0.47);
+  vertex(width * 0.27, height * 0.56);
+  vertex(width * 0.39, height);
+  vertex(0, height);
+  endShape(CLOSE);
+
+  fill(SULFUR[0], SULFUR[1], SULFUR[2], 210);
+  rect(0, height * 0.47, width * 0.115, max(3, unit * 0.014));
+}
+
+function drawPrintShadow() {
+  noStroke();
+  fill(CARBON[0], CARBON[1], CARBON[2], 82);
+  rect(-printShape.w * 0.47 + unit * 0.025, -printShape.h * 0.47 + unit * 0.035,
+       printShape.w * 0.94, printShape.h * 0.94);
+}
+
+function drawPaper() {
+  noStroke();
+  fill(SULFUR[0], SULFUR[1], SULFUR[2], 246);
+  rect(-printShape.w * 0.5, -printShape.h * 0.5, printShape.w, printShape.h);
+
+  fill(WHITE[0], WHITE[1], WHITE[2], 62);
+  rect(-printShape.w * 0.47, -printShape.h * 0.47, printShape.w * 0.09, printShape.h * 0.94);
+}
+
+function clipToPrint(drawInside) {
+  drawingContext.save();
+  drawingContext.beginPath();
+  drawingContext.rect(-printShape.w * 0.5, -printShape.h * 0.5, printShape.w, printShape.h);
+  drawingContext.clip();
+  drawInside();
+  drawingContext.restore();
+}
+
+function drawUnfixedGhosts(t, front) {
+  rectMode(CORNER);
+  noStroke();
+
+  for (const s of strips) {
+    const lock = stripLock(s, front);
+    const drift = (1 - lock) * unit * 0.045;
+    const wave = sin(t * s.speed + s.phase) * drift;
+    const y = lerp(-printShape.h * 0.43, printShape.h * 0.43, s.p);
+    const baseX = -printShape.w * 0.41 + s.x;
+
+    for (let echo = 3; echo >= 1; echo--) {
+      const alpha = (1 - lock) * (8 + echo * 7);
+      fill(CYAN[0], CYAN[1], CYAN[2], alpha);
+      rect(baseX + wave * echo * 0.58, y - s.thickness * 0.45,
+           s.length * (0.62 + echo * 0.09), s.thickness);
+    }
+  }
+}
+
+function drawFixedStrips(t, front) {
+  rectMode(CORNER);
+  noStroke();
+
+  for (const s of strips) {
+    const lock = stripLock(s, front);
+    if (lock <= 0.001) continue;
+
+    const y = lerp(-printShape.h * 0.43, printShape.h * 0.43, s.p);
+    const baseX = -printShape.w * 0.41 + s.x;
+    const preLockDrift = sin(t * s.speed + s.phase) * unit * 0.045;
+    const snap = 1 - pow(1 - lock, 4);
+    const x = baseX + preLockDrift * (1 - snap);
+    const c = s.cyan ? CYAN : CARBON;
+
+    fill(c[0], c[1], c[2], 45 + lock * 205);
+    rect(x, y - s.thickness * 0.5, s.length * snap, s.thickness);
+
+    // A small blank notch makes each fixed strip read as recorded evidence, not decoration.
+    if (snap > s.notch) {
+      fill(SULFUR[0], SULFUR[1], SULFUR[2], 210 * lock);
+      rect(x + s.length * s.notch, y - s.thickness * 0.56,
+           max(1, unit * 0.004), s.thickness * 1.12);
+    }
+  }
+}
+
+function drawChemicalFront(front, t) {
+  const y = lerp(-printShape.h * 0.54, printShape.h * 0.54, front);
+  const pulse = 0.82 + 0.18 * sin(t * 2.1);
+
+  noStroke();
+  fill(CYAN[0], CYAN[1], CYAN[2], 22);
+  rect(-printShape.w * 0.55, y - unit * 0.05, printShape.w * 1.1, unit * 0.10);
+
+  fill(CYAN[0], CYAN[1], CYAN[2], 238 * pulse);
+  rect(-printShape.w * 0.55, y - unit * 0.006, printShape.w * 1.1, unit * 0.012);
+
+  fill(WHITE[0], WHITE[1], WHITE[2], 170 * pulse);
+  rect(-printShape.w * 0.55, y - unit * 0.0015, printShape.w * 0.62, unit * 0.003);
+}
+
+function drawSurfaceScratches() {
+  strokeWeight(max(0.45, unit * 0.0007));
+  for (const s of scratches) {
+    stroke(CARBON[0], CARBON[1], CARBON[2], s.alpha);
+    line(s.x, s.y, s.x + s.length, s.y - s.length * 0.12);
+  }
+}
+
+function drawPrintEdge() {
+  noFill();
+  stroke(CARBON[0], CARBON[1], CARBON[2], 190);
+  strokeWeight(max(1.2, unit * 0.0024));
+  rect(-printShape.w * 0.5, -printShape.h * 0.5, printShape.w, printShape.h);
+
+  stroke(WHITE[0], WHITE[1], WHITE[2], 145);
+  strokeWeight(max(0.6, unit * 0.0009));
+  line(-printShape.w * 0.5, -printShape.h * 0.5,
+       printShape.w * 0.5, -printShape.h * 0.5);
+}
+
+function drawLockBar(front, t) {
+  // The cyan latch is the sharpest accent and the near-left focal point.
+  const x = width * 0.205;
+  const y = height * 0.29;
+  const pulse = 1 + sin(t * 1.4) * 0.025;
+  const engaged = smoothstep(0.58, 0.86, front);
+
+  push();
+  translate(x, y);
+  rotate(-0.16);
+  noStroke();
+  fill(CARBON[0], CARBON[1], CARBON[2], 135);
+  rect(-unit * 0.018, unit * 0.018, unit * 0.31, unit * 0.09);
+  fill(CYAN[0], CYAN[1], CYAN[2], 235);
+  rect(-unit * 0.038, 0, unit * (0.22 + engaged * 0.13) * pulse, unit * 0.072);
+  fill(WHITE[0], WHITE[1], WHITE[2], 220);
+  rect(-unit * 0.020, unit * 0.025, unit * 0.07, unit * 0.012);
+  fill(CARBON[0], CARBON[1], CARBON[2], 245);
+  rect(unit * (0.12 + engaged * 0.12), -unit * 0.014, unit * 0.052, unit * 0.10);
+  pop();
+}
+
+function drawCornerIndex(front) {
+  const count = 7;
+  noStroke();
+  for (let i = 0; i < count; i++) {
+    const active = front > i / count;
+    fill(active ? SULFUR[0] : CARBON[0], active ? SULFUR[1] : CARBON[1], active ? SULFUR[2] : CARBON[2], active ? 235 : 110);
+    rect(width * 0.885, height * (0.15 + i * 0.027), unit * 0.026, unit * 0.010);
+  }
+}
+
+function stripLock(strip, front) {
+  const threshold = strip.p * 0.92 + strip.delay;
+  return smoothstep(threshold - 0.018, threshold + 0.045, front);
+}
+
+function smoothstep(a, b, x) {
+  const q = constrain((x - a) / (b - a), 0, 1);
+  return q * q * (3 - 2 * q);
+}
+
+function mousePressed() {
+  initialise();
+  frameCount = 0;
+}
+
+function touchStarted() {
+  initialise();
+  frameCount = 0;
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
