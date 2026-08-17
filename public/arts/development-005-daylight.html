@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daylight 见光</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #FFF8F0; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Development 005 — Daylight 见光
+// The final image appears by subtraction: four emulsion leaves retreat from a white opening.
+
+const MILK = [255, 248, 240];
+const CHERRY = [255, 183, 197];
+const LEAF = [168, 216, 185];
+const LAVENDER = [200, 162, 200];
+const SLATE = [47, 51, 69];
+const DAY = [255, 255, 255];
+
+let paper;
+let motes = [];
+let imprints = [];
+let seed = 81705;
+let u;
+let cycleOffset = 145;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  frameRate(40);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 23);
+  u = min(width, height);
+  makePaper();
+  makeMotes();
+  makeImprints();
+}
+
+function makePaper() {
+  paper = createGraphics(width, height);
+  paper.pixelDensity(1);
+  paper.background(...MILK);
+  paper.noStroke();
+
+  // Warm fibres make the bright field feel physical rather than digitally empty.
+  const fibres = constrain(floor(width * height / 260), 1800, 6200);
+  for (let i = 0; i < fibres; i++) {
+    const pale = random() < 0.68;
+    const c = pale ? DAY : SLATE;
+    paper.fill(c[0], c[1], c[2], pale ? random(7, 22) : random(1, 4));
+    const x = random(width);
+    const y = random(height);
+    paper.rect(x, y, random(0.4, 2.2), random(0.3, 0.9));
+  }
+
+  // A nearly invisible daylight wash radiates from the exact centre.
+  for (let i = 18; i > 0; i--) {
+    const a = map(i, 18, 1, 1, 8);
+    paper.fill(DAY[0], DAY[1], DAY[2], a);
+    paper.ellipse(width * 0.5, height * 0.5, u * i * 0.12, u * i * 0.12);
+  }
+}
+
+function makeMotes() {
+  motes = [];
+  const count = constrain(floor(width * height / 9500), 70, 190);
+  for (let i = 0; i < count; i++) {
+    const angle = random(TAU);
+    const radius = u * random(0.05, 0.50);
+    motes.push({
+      angle,
+      radius,
+      size: random(u * 0.0012, u * 0.0058),
+      phase: random(TAU),
+      speed: random(0.22, 0.75),
+      family: random([CHERRY, LEAF, LAVENDER])
+    });
+  }
+}
+
+function makeImprints() {
+  imprints = [];
+  for (let i = 0; i < 22; i++) {
+    imprints.push({
+      axis: i % 2,
+      offset: random(-0.44, 0.44),
+      length: random(0.06, 0.24),
+      thickness: random(0.002, 0.009),
+      phase: random(TAU)
+    });
+  }
+}
+
+function draw() {
+  image(paper, 0, 0);
+
+  const raw = ((frameCount + cycleOffset) % 720) / 720;
+  const opening = raw < 0.72
+    ? smootherstep(0.02, 0.56, raw)
+    : 1 - smootherstep(0.82, 0.995, raw);
+  const held = smootherstep(0.30, 0.68, opening);
+  const t = frameCount * 0.018;
+
+  drawOuterRegister();
+  drawExposureLeaves(opening, t);
+  drawCentralDay(opening, held, t);
+  drawBleachedImprints(opening, t);
+  drawMotes(opening, t);
+  drawFineRegister(opening);
+}
+
+function drawOuterRegister() {
+  noStroke();
+  fill(SLATE[0], SLATE[1], SLATE[2], 220);
+  rect(0, 0, width, max(3, u * 0.014));
+  rect(0, height - max(3, u * 0.014), width, max(3, u * 0.014));
+
+  // Two quiet corner weights keep the white centre from floating away.
+  fill(SLATE[0], SLATE[1], SLATE[2], 242);
+  rect(0, 0, width * 0.074, height * 0.18);
+  rect(width * 0.926, height * 0.82, width * 0.074, height * 0.18);
+}
+
+function drawExposureLeaves(opening, t) {
+  const cx = width * 0.5;
+  const cy = height * 0.5;
+  const halfW = lerp(width * 0.018, min(width * 0.235, u * 0.34), opening);
+  const halfH = lerp(height * 0.025, min(height * 0.33, u * 0.45), opening);
+  const quiver = (1 - opening) * u * 0.008 * sin(t * 1.7);
+
+  noStroke();
+
+  // Top leaf: cherry emulsion lifts upward and becomes pale at the aperture.
+  fill(CHERRY[0], CHERRY[1], CHERRY[2], 238);
+  beginShape();
+  vertex(0, 0);
+  vertex(width, 0);
+  vertex(cx + halfW + quiver, cy - halfH);
+  vertex(cx - halfW - quiver, cy - halfH);
+  endShape(CLOSE);
+
+  // Bottom leaf: green chemistry drains down instead of mirroring the top perfectly.
+  fill(LEAF[0], LEAF[1], LEAF[2], 242);
+  beginShape();
+  vertex(0, height);
+  vertex(width, height);
+  vertex(cx + halfW * 0.91, cy + halfH);
+  vertex(cx - halfW * 1.08, cy + halfH);
+  endShape(CLOSE);
+
+  // Side leaves are unequal, preventing a decorative mandala reading.
+  fill(LAVENDER[0], LAVENDER[1], LAVENDER[2], 235);
+  beginShape();
+  vertex(0, 0);
+  vertex(cx - halfW, cy - halfH);
+  vertex(cx - halfW * 1.08, cy + halfH);
+  vertex(0, height);
+  endShape(CLOSE);
+
+  fill(SLATE[0], SLATE[1], SLATE[2], 246);
+  beginShape();
+  vertex(width, 0);
+  vertex(cx + halfW, cy - halfH);
+  vertex(cx + halfW * 0.91, cy + halfH);
+  vertex(width, height);
+  endShape(CLOSE);
+
+  // Broad translucent washes show colour being carried out toward the edges.
+  fill(DAY[0], DAY[1], DAY[2], 34 + opening * 72);
+  quad(0, height * 0.24, cx - halfW, cy - halfH * 0.48,
+       cx - halfW * 1.08, cy + halfH * 0.08, 0, height * 0.43);
+  quad(width, height * 0.57, cx + halfW * 0.95, cy + halfH * 0.10,
+       cx + halfW * 0.93, cy + halfH * 0.64, width, height * 0.81);
+}
+
+function drawCentralDay(opening, held, t) {
+  const cx = width * 0.5;
+  const cy = height * 0.5;
+  const halfW = lerp(width * 0.012, min(width * 0.235, u * 0.34), opening);
+  const halfH = lerp(height * 0.018, min(height * 0.33, u * 0.45), opening);
+  const breathe = 1 + held * 0.012 * sin(t * 0.72);
+
+  // Soft halo first, then a hard blank plate: the focal object is literally absence.
+  noStroke();
+  for (let i = 5; i >= 1; i--) {
+    fill(DAY[0], DAY[1], DAY[2], 15 + i * 7);
+    rectMode(CENTER);
+    rect(cx, cy, halfW * 2 * breathe + i * u * 0.026,
+         halfH * 2 * breathe + i * u * 0.026, u * 0.018);
+  }
+
+  fill(DAY[0], DAY[1], DAY[2], 255);
+  rect(cx, cy, halfW * 2 * breathe, halfH * 2 * breathe, u * 0.012);
+
+  // One small dark registration mark makes the white measurable without occupying it.
+  const markAlpha = 210 * smootherstep(0.50, 0.86, opening);
+  fill(SLATE[0], SLATE[1], SLATE[2], markAlpha);
+  rect(cx - halfW * 0.72, cy + halfH * 0.70, u * 0.052, max(2, u * 0.006));
+  rectMode(CORNER);
+}
+
+function drawBleachedImprints(opening, t) {
+  const cx = width * 0.5;
+  const cy = height * 0.5;
+  const spreadX = lerp(width * 0.02, min(width * 0.235, u * 0.34), opening);
+  const spreadY = lerp(height * 0.03, min(height * 0.33, u * 0.45), opening);
+  const fade = 1 - smootherstep(0.18, 0.92, opening);
+
+  noStroke();
+  for (let i = 0; i < imprints.length; i++) {
+    const p = imprints[i];
+    const wobble = sin(t * 1.1 + p.phase) * u * 0.006 * fade;
+    const c = i % 3 === 0 ? CHERRY : i % 3 === 1 ? LEAF : LAVENDER;
+    fill(c[0], c[1], c[2], 18 + fade * 80);
+
+    if (p.axis === 0) {
+      const y = cy + p.offset * spreadY * 2 + wobble;
+      rect(cx - spreadX * p.length * 2.2, y,
+           spreadX * p.length * 4.4, max(1, u * p.thickness));
+    } else {
+      const x = cx + p.offset * spreadX * 2 + wobble;
+      rect(x, cy - spreadY * p.length * 2.2,
+           max(1, u * p.thickness), spreadY * p.length * 4.4);
+    }
+  }
+}
+
+function drawMotes(opening, t) {
+  const cx = width * 0.5;
+  const cy = height * 0.5;
+  const visibility = smootherstep(0.28, 0.76, opening);
+  noStroke();
+
+  for (const mote of motes) {
+    const outward = mote.radius * (0.20 + opening * 1.05);
+    const angle = mote.angle + sin(t * mote.speed + mote.phase) * 0.035;
+    const x = cx + cos(angle) * outward;
+    const y = cy + sin(angle) * outward * 0.78;
+    const c = mote.family;
+    fill(c[0], c[1], c[2], 18 + visibility * 72);
+    circle(x, y, mote.size * (0.7 + visibility * 0.9));
+  }
+}
+
+function drawFineRegister(opening) {
+  const alpha = 60 + opening * 120;
+  stroke(SLATE[0], SLATE[1], SLATE[2], alpha);
+  strokeWeight(max(1, u * 0.0015));
+  noFill();
+
+  const len = u * 0.038;
+  const inset = u * 0.045;
+  line(inset, height * 0.5, inset + len, height * 0.5);
+  line(width - inset - len, height * 0.5, width - inset, height * 0.5);
+  line(width * 0.5, inset, width * 0.5, inset + len);
+  line(width * 0.5, height - inset - len, width * 0.5, height - inset);
+}
+
+function smootherstep(a, b, x) {
+  const q = constrain((x - a) / (b - a), 0, 1);
+  return q * q * q * (q * (q * 6 - 15) + 10);
+}
+
+function mousePressed() {
+  initialise();
+  frameCount = 0;
+}
+
+function touchStarted() {
+  initialise();
+  frameCount = 0;
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
