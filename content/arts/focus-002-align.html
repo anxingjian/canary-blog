@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Align 校准</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #F3EBDD; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Focus 002 — Align 校准
+// Separate coordinates briefly agree, overshoot, and return.
+
+const PAPER = [243, 235, 221];
+const COBALT = [23, 59, 122];
+const VERMILION = [228, 87, 46];
+const SULFUR = [242, 201, 76];
+const VERDIGRIS = [99, 183, 175];
+const INK = [42, 37, 32];
+
+let grain;
+let seed = 91202;
+let unit;
+let anchor;
+let plates = [];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  frameRate(36);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 37);
+  unit = min(width, height);
+  anchor = createVector(width * 0.36, height * 0.43);
+  plates = [
+    { color: COBALT, from: createVector(-0.24, 0.04), delay: 0.00, spin: -0.11 },
+    { color: VERMILION, from: createVector(0.08, -0.22), delay: 0.08, spin: 0.08 },
+    { color: SULFUR, from: createVector(0.23, 0.12), delay: 0.16, spin: 0.13 },
+    { color: VERDIGRIS, from: createVector(-0.04, 0.25), delay: 0.24, spin: -0.07 }
+  ];
+  makeGrain();
+}
+
+function makeGrain() {
+  grain = createGraphics(width, height);
+  grain.pixelDensity(1);
+  grain.background(...PAPER);
+  grain.noStroke();
+  const count = constrain(floor(width * height / 360), 1800, 7000);
+  for (let i = 0; i < count; i++) {
+    const dark = random() < 0.18;
+    const c = dark ? INK : random() < 0.5 ? VERMILION : COBALT;
+    grain.fill(c[0], c[1], c[2], dark ? random(3, 8) : random(1, 4));
+    grain.circle(random(width), random(height), random(0.25, 1.25));
+  }
+}
+
+function draw() {
+  image(grain, 0, 0);
+  const phase = (frameCount % 720) / 720;
+  const t = frameCount * 0.018;
+  drawRegistrationField(phase, t);
+  drawAlignmentSpine(phase, t);
+  drawCoordinateTail(phase, t);
+  drawWitnessMarks(phase);
+}
+
+function drawRegistrationField(phase, t) {
+  push();
+  translate(anchor.x, anchor.y);
+  rotate(-0.27);
+  blendMode(MULTIPLY);
+  noStroke();
+
+  for (let i = 0; i < plates.length; i++) {
+    const p = plates[i];
+    const local = (phase - p.delay + 1) % 1;
+    const lock = registrationPulse(local);
+    const overshoot = sin(constrain((local - 0.16) / 0.44, 0, 1) * PI) * 0.12;
+    const x = p.from.x * unit * (1 - lock) - p.from.x * unit * overshoot;
+    const y = p.from.y * unit * (1 - lock) - p.from.y * unit * overshoot;
+    const angle = p.spin * (1 - lock) + sin(t * 0.55 + i) * 0.008;
+
+    push();
+    translate(x, y);
+    rotate(angle);
+    drawPlate(p.color, i, lock);
+    pop();
+  }
+  blendMode(BLEND);
+  pop();
+}
+
+function drawPlate(c, index, lock) {
+  fill(c[0], c[1], c[2], 128);
+  beginShape();
+  vertex(-unit * 0.27, -unit * 0.18);
+  vertex(unit * 0.18, -unit * 0.145);
+  vertex(unit * 0.29, -unit * 0.015);
+  vertex(unit * 0.13, unit * 0.20);
+  vertex(-unit * 0.235, unit * 0.145);
+  vertex(-unit * 0.31, unit * 0.015);
+  endShape(CLOSE);
+
+  // Unequal cuts make the object a folded registration plate rather than a target.
+  fill(PAPER[0], PAPER[1], PAPER[2], 120 + lock * 45);
+  const slit = unit * (0.020 + index * 0.006);
+  quad(-unit * 0.19, -slit, unit * 0.03, -unit * 0.05,
+       unit * 0.22, slit, -unit * 0.07, unit * 0.055);
+
+  fill(c[0], c[1], c[2], 155);
+  const step = unit * 0.036;
+  rect(-unit * 0.22 + index * step, unit * 0.102 - index * step * 0.42,
+       unit * (0.18 + index * 0.028), unit * 0.018);
+}
+
+function drawAlignmentSpine(phase, t) {
+  const agreement = combinedAgreement(phase);
+  push();
+  translate(anchor.x, anchor.y);
+  rotate(-0.27);
+  noFill();
+  strokeCap(SQUARE);
+
+  // The shared edge appears only when all four moving plates agree.
+  for (let i = 0; i < 7; i++) {
+    const drift = (1 - agreement) * sin(t * 1.1 + i * 1.7) * unit * 0.015;
+    stroke(INK[0], INK[1], INK[2], 36 + agreement * 185 - i * 3);
+    strokeWeight(max(1, unit * (0.016 - i * 0.0018)));
+    line(-unit * 0.225 + drift, unit * (0.13 - i * 0.016),
+         unit * (0.17 + i * 0.012) + drift, -unit * (0.105 + i * 0.006));
+  }
+
+  stroke(PAPER[0], PAPER[1], PAPER[2], 90 + agreement * 130);
+  strokeWeight(max(1, unit * 0.004));
+  line(-unit * 0.205, unit * 0.115, unit * 0.205, -unit * 0.125);
+  pop();
+}
+
+function drawCoordinateTail(phase, t) {
+  const agreement = combinedAgreement(phase);
+  const startX = anchor.x + unit * 0.235;
+  const startY = anchor.y + unit * 0.125;
+  const endX = min(width * 0.91, startX + unit * 0.43);
+  const endY = min(height * 0.86, startY + unit * 0.31);
+
+  strokeCap(SQUARE);
+  stroke(INK[0], INK[1], INK[2], 90);
+  strokeWeight(max(1, unit * 0.003));
+  line(startX, startY, endX, endY);
+
+  const colors = [COBALT, VERMILION, SULFUR, VERDIGRIS];
+  noStroke();
+  for (let i = 0; i < 18; i++) {
+    const q = i / 17;
+    const x = lerp(startX, endX, q);
+    const y = lerp(startY, endY, q);
+    const c = colors[i % colors.length];
+    const pulse = 0.65 + 0.35 * sin(t * 1.25 - q * 8);
+    fill(c[0], c[1], c[2], 75 + agreement * 80);
+    rect(x - unit * 0.006, y - unit * 0.006,
+         unit * (0.009 + pulse * 0.008), unit * (0.009 + pulse * 0.008));
+  }
+
+  push();
+  translate(endX, endY);
+  rotate(atan2(endY - startY, endX - startX));
+  noFill();
+  stroke(INK[0], INK[1], INK[2], 150);
+  strokeWeight(max(1, unit * 0.002));
+  rect(-unit * 0.032, -unit * 0.032, unit * 0.064, unit * 0.064);
+  line(-unit * 0.045, 0, unit * 0.045, 0);
+  line(0, -unit * 0.045, 0, unit * 0.045);
+  pop();
+}
+
+function drawWitnessMarks(phase) {
+  const agreement = combinedAgreement(phase);
+  push();
+  translate(anchor.x, anchor.y);
+  rotate(-0.27);
+  stroke(INK[0], INK[1], INK[2], 85 + agreement * 45);
+  strokeWeight(max(1, unit * 0.0015));
+  for (let i = 0; i < 9; i++) {
+    const x = map(i, 0, 8, -unit * 0.28, unit * 0.23);
+    const h = unit * (i % 4 === 0 ? 0.028 : 0.014);
+    line(x, -unit * 0.225, x, -unit * 0.225 + h);
+  }
+  for (let i = 0; i < 6; i++) {
+    const y = map(i, 0, 5, -unit * 0.15, unit * 0.17);
+    const w = unit * (i % 3 === 0 ? 0.028 : 0.014);
+    line(-unit * 0.35, y, -unit * 0.35 + w, y);
+  }
+  pop();
+}
+
+function registrationPulse(local) {
+  if (local < 0.18) return 0;
+  if (local < 0.43) return easeOutBack(map(local, 0.18, 0.43, 0, 1));
+  if (local < 0.71) return 1;
+  if (local < 0.94) return 1 - smootherstep(0.71, 0.94, local);
+  return 0;
+}
+
+function combinedAgreement(phase) {
+  let sum = 0;
+  for (const p of plates) {
+    const local = (phase - p.delay + 1) % 1;
+    sum += constrain(registrationPulse(local), 0, 1);
+  }
+  return pow(sum / plates.length, 3.2);
+}
+
+function easeOutBack(x) {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * pow(x - 1, 3) + c1 * pow(x - 1, 2);
+}
+
+function smootherstep(a, b, x) {
+  const q = constrain((x - a) / (b - a), 0, 1);
+  return q * q * q * (q * (q * 6 - 15) + 10);
+}
+
+function mousePressed() {
+  initialise();
+  frameCount = 0;
+}
+
+function touchStarted() {
+  initialise();
+  frameCount = 0;
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
