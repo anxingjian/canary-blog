@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blur 模糊</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #071A12; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Focus 001 — Blur 模糊
+// Blur is not emptiness. It is a decision that has not settled yet.
+
+const NIGHT = [7, 26, 18];
+const ACID = [183, 255, 60];
+const AUBERGINE = [75, 46, 131];
+const CELADON = [215, 242, 186];
+const UMBER = [138, 90, 68];
+
+let field;
+let veils = [];
+let seed = 91201;
+let u;
+let focus;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  frameRate(36);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 29);
+  u = min(width, height);
+  focus = createVector(width * 0.64, height * 0.56);
+  makeField();
+  makeVeils();
+}
+
+function makeField() {
+  field = createGraphics(width, height);
+  field.pixelDensity(1);
+  field.background(...NIGHT);
+  field.noStroke();
+
+  // Broad, low-frequency stains: readable as weight before they read as detail.
+  const stains = [
+    { x: 0.18, y: 0.22, w: 0.56, h: 0.72, c: AUBERGINE, a: 80 },
+    { x: 0.86, y: 0.18, w: 0.48, h: 0.52, c: UMBER, a: 70 },
+    { x: 0.66, y: 0.58, w: 0.58, h: 0.74, c: ACID, a: 34 }
+  ];
+  for (const s of stains) {
+    for (let i = 18; i >= 1; i--) {
+      const spread = i / 18;
+      field.fill(s.c[0], s.c[1], s.c[2], s.a * (1 - spread) * 0.13 + 1.5);
+      field.ellipse(width * s.x, height * s.y, width * s.w * spread, height * s.h * spread);
+    }
+  }
+
+  // Sparse paper-like noise stops the dark ground feeling synthetic.
+  const grainCount = constrain(floor(width * height / 520), 1200, 4500);
+  for (let i = 0; i < grainCount; i++) {
+    const light = random() < 0.72;
+    const c = light ? CELADON : AUBERGINE;
+    field.fill(c[0], c[1], c[2], light ? random(2, 7) : random(3, 10));
+    field.circle(random(width), random(height), random(0.3, 1.4));
+  }
+}
+
+function makeVeils() {
+  veils = [];
+  const palette = [AUBERGINE, UMBER, CELADON, ACID];
+  for (let i = 0; i < 11; i++) {
+    veils.push({
+      angle: random(-0.38, 0.32),
+      radius: u * random(0.045, 0.31),
+      width: u * random(0.13, 0.42),
+      height: u * random(0.025, 0.095),
+      phase: random(TAU),
+      speed: random(0.35, 0.82),
+      color: palette[i % palette.length],
+      alpha: random(10, 28)
+    });
+  }
+}
+
+function draw() {
+  image(field, 0, 0);
+  const t = frameCount * 0.012;
+  const cycle = ((frameCount + 210) % 660) / 660;
+  const clarity = cycle < 0.62
+    ? smootherstep(0.02, 0.54, cycle)
+    : 1 - smootherstep(0.75, 0.99, cycle);
+
+  drawDriftVeils(t, clarity);
+  drawBlurMass(t, clarity);
+  drawUncertainEdge(t, clarity);
+  drawFocusSeed(t, clarity);
+  drawCounterweight(t);
+}
+
+function drawDriftVeils(t, clarity) {
+  push();
+  translate(focus.x, focus.y);
+  rotate(-0.12);
+  noStroke();
+
+  for (let i = 0; i < veils.length; i++) {
+    const v = veils[i];
+    const orbit = v.angle + sin(t * v.speed + v.phase) * 0.16;
+    const looseness = 1 - clarity * 0.58;
+    const x = cos(orbit) * v.radius + sin(t * 0.7 + v.phase) * u * 0.035 * looseness;
+    const y = sin(orbit) * v.radius * 1.45 + cos(t * 0.55 + v.phase) * u * 0.026;
+    const c = v.color;
+
+    for (let halo = 5; halo >= 1; halo--) {
+      const spread = 1 + halo * 0.26 * looseness;
+      fill(c[0], c[1], c[2], v.alpha / (halo * 0.8));
+      ellipse(x, y, v.width * spread, v.height * spread);
+    }
+  }
+  pop();
+}
+
+function drawBlurMass(t, clarity) {
+  const breathe = 1 + sin(t * 0.72) * 0.035;
+  const wanderX = sin(t * 0.43) * u * 0.025 * (1 - clarity * 0.65);
+  const wanderY = cos(t * 0.37) * u * 0.018;
+  const cx = focus.x + wanderX;
+  const cy = focus.y + wanderY;
+
+  noStroke();
+  // Unequal nested ellipses make one dominant body, not a decorative target.
+  for (let i = 13; i >= 1; i--) {
+    const q = i / 13;
+    const c = i > 7 ? AUBERGINE : i > 3 ? UMBER : ACID;
+    const alpha = map(i, 13, 1, 3, 30 + clarity * 18);
+    const offsetX = (q - 0.5) * u * 0.072 + sin(t + i) * u * 0.004;
+    const offsetY = cos(i * 1.7) * u * 0.009;
+    fill(c[0], c[1], c[2], alpha);
+    ellipse(
+      cx + offsetX,
+      cy + offsetY,
+      u * (0.18 + q * 0.32) * breathe,
+      u * (0.10 + q * 0.20) * (1.05 - clarity * 0.20)
+    );
+  }
+}
+
+function drawUncertainEdge(t, clarity) {
+  push();
+  translate(focus.x, focus.y);
+  rotate(-0.12);
+  noFill();
+
+  // Many displaced contours never fully agree; they only approach one another.
+  for (let k = 0; k < 9; k++) {
+    const displacement = (k - 4) * u * 0.012 * (1 - clarity * 0.72);
+    stroke(
+      k % 3 === 0 ? CELADON[0] : ACID[0],
+      k % 3 === 0 ? CELADON[1] : ACID[1],
+      k % 3 === 0 ? CELADON[2] : ACID[2],
+      14 + clarity * 15
+    );
+    strokeWeight(max(0.7, u * 0.0012));
+    beginShape();
+    for (let a = -PI * 0.92; a < PI * 0.88; a += 0.08) {
+      const fuzz = (noise(k * 3.1, a * 0.8 + 4, t * 0.16) - 0.5) * u * 0.045 * (1 - clarity * 0.48);
+      const rx = u * 0.255 + displacement + fuzz;
+      const ry = u * 0.145 + displacement * 0.35 + fuzz * 0.28;
+      curveVertex(cos(a) * rx, sin(a) * ry);
+    }
+    endShape();
+  }
+  pop();
+}
+
+function drawFocusSeed(t, clarity) {
+  const pulse = 1 + sin(t * 1.25) * 0.055;
+  const x = focus.x + u * 0.045;
+  const y = focus.y - u * 0.012;
+
+  noStroke();
+  for (let i = 8; i >= 1; i--) {
+    const q = i / 8;
+    fill(ACID[0], ACID[1], ACID[2], 5 + (1 - q) * 20 + clarity * 9);
+    ellipse(x, y, u * (0.055 + q * 0.15) * pulse, u * (0.028 + q * 0.072) * pulse);
+  }
+  fill(CELADON[0], CELADON[1], CELADON[2], 110 + clarity * 90);
+  ellipse(x, y, u * 0.046 * pulse, u * 0.022 * pulse);
+}
+
+function drawCounterweight(t) {
+  // A quiet vertical weight on the far left prevents the focal cloud from centring itself.
+  noStroke();
+  fill(UMBER[0], UMBER[1], UMBER[2], 165);
+  rect(width * 0.075, height * 0.17, max(4, u * 0.014), height * 0.41);
+  fill(AUBERGINE[0], AUBERGINE[1], AUBERGINE[2], 185);
+  rect(width * 0.075, height * 0.17 + (sin(t * 0.4) + 1) * height * 0.035,
+       max(4, u * 0.014), height * 0.12);
+  fill(CELADON[0], CELADON[1], CELADON[2], 125);
+  rect(width * 0.075, height * 0.605, width * 0.12, max(2, u * 0.005));
+}
+
+function smootherstep(a, b, x) {
+  const t = constrain((x - a) / (b - a), 0, 1);
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+function mousePressed() {
+  initialise();
+  frameCount = 0;
+}
+
+function touchStarted() {
+  initialise();
+  frameCount = 0;
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
