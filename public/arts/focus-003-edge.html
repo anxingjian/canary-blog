@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edge 轮廓</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #E9E2D0; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Focus 003 — Edge 轮廓
+// A noisy boundary becomes legible through directional sampling, not sharpening.
+
+const PAPER = [233, 226, 208];
+const INK = [36, 48, 40];
+const CARMINE = [143, 29, 44];
+const OCHRE = [197, 139, 42];
+const SAGE = [147, 166, 138];
+const LIGHT = [255, 249, 232];
+
+let seed = 91303;
+let grain;
+let samples = [];
+let unit;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  frameRate(36);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 41);
+  unit = min(width, height);
+  samples = [];
+  for (let i = 0; i < 84; i++) {
+    samples.push({
+      y: i / 83,
+      phase: random(TWO_PI),
+      speed: random(0.7, 1.25),
+      reach: random(0.025, 0.085),
+      weight: random(0.7, 1.8)
+    });
+  }
+  makeGrain();
+}
+
+function makeGrain() {
+  grain = createGraphics(width, height);
+  grain.pixelDensity(1);
+  grain.background(...PAPER);
+  grain.noStroke();
+  const count = constrain(floor(width * height / 330), 1800, 7600);
+  for (let i = 0; i < count; i++) {
+    const c = random() < 0.74 ? INK : random() < 0.5 ? OCHRE : SAGE;
+    grain.fill(c[0], c[1], c[2], random(2, 8));
+    grain.circle(random(width), random(height), random(0.25, 1.2));
+  }
+}
+
+function draw() {
+  image(grain, 0, 0);
+  const t = frameCount * 0.012;
+  const reveal = 0.5 - 0.5 * cos(TWO_PI * ((frameCount % 640) / 640));
+  drawQuietCandidates(t, reveal);
+  drawDarkMass(t);
+  drawEdgeSamples(t, reveal);
+  drawNotch(t, reveal);
+}
+
+function boundaryX(yNorm, t) {
+  const broad = sin(yNorm * PI * 1.18 - 0.55) * unit * 0.105;
+  const fold = sin(yNorm * 11.5 + 1.2) * unit * 0.018;
+  const living = (noise(yNorm * 3.4, t * 0.12) - 0.5) * unit * 0.052;
+  return width * 0.665 + broad + fold + living;
+}
+
+function drawDarkMass(t) {
+  noStroke();
+  fill(...INK);
+  beginShape();
+  vertex(width + 2, -2);
+  vertex(width + 2, height + 2);
+  for (let i = 110; i >= 0; i--) {
+    const y = map(i, 0, 110, 0, height);
+    vertex(boundaryX(i / 110, t), y);
+  }
+  endShape(CLOSE);
+
+  // A restrained inner plane keeps the mass dimensional without becoming scenery.
+  fill(SAGE[0], SAGE[1], SAGE[2], 28);
+  beginShape();
+  vertex(width, height * 0.08);
+  vertex(width, height * 0.88);
+  for (let i = 72; i >= 10; i--) {
+    const yNorm = i / 82;
+    const y = yNorm * height;
+    vertex(boundaryX(yNorm, t) + unit * (0.10 + 0.018 * sin(yNorm * 9)), y);
+  }
+  endShape(CLOSE);
+}
+
+function drawQuietCandidates(t, reveal) {
+  noFill();
+  strokeCap(SQUARE);
+  const offsets = [-0.17, -0.115, -0.067];
+  const colors = [SAGE, OCHRE, SAGE];
+  for (let k = 0; k < offsets.length; k++) {
+    const c = colors[k];
+    stroke(c[0], c[1], c[2], 42 + reveal * 28);
+    strokeWeight(max(1, unit * (0.0022 - k * 0.00035)));
+    beginShape();
+    for (let i = 0; i <= 54; i++) {
+      const yNorm = i / 54;
+      const gate = noise(k * 20 + i * 0.14, t * 0.18);
+      if (gate < 0.34) {
+        endShape();
+        beginShape();
+        continue;
+      }
+      const x = boundaryX(yNorm, t) + offsets[k] * unit +
+        sin(yNorm * 18 + k * 2.1) * unit * 0.009;
+      vertex(x, yNorm * height);
+    }
+    endShape();
+  }
+}
+
+function drawEdgeSamples(t, reveal) {
+  strokeCap(SQUARE);
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i];
+    const y = s.y * height;
+    const x = boundaryX(s.y, t);
+    const scanner = 0.5 + 0.5 * sin(t * s.speed * 4.2 - s.y * 12 + s.phase);
+    const certainty = pow(scanner, 2.2) * (0.48 + reveal * 0.52);
+    const inward = s.reach * unit * (0.3 + certainty * 0.7);
+    const c = i % 9 === 0 ? OCHRE : LIGHT;
+    stroke(c[0], c[1], c[2], 42 + certainty * 188);
+    strokeWeight(max(1, unit * 0.0015 * s.weight));
+    line(x - inward, y, x + unit * 0.018, y);
+
+    if (i % 6 === 0) {
+      noStroke();
+      fill(OCHRE[0], OCHRE[1], OCHRE[2], 45 + certainty * 120);
+      rect(x - inward - unit * 0.012, y - unit * 0.003,
+        unit * 0.007, unit * (0.006 + certainty * 0.009));
+    }
+  }
+}
+
+function drawNotch(t, reveal) {
+  const yNorm = 0.69;
+  const y = yNorm * height;
+  const x = boundaryX(yNorm, t);
+  const pulse = 0.92 + sin(t * 2.1) * 0.08;
+  const w = unit * 0.145 * pulse;
+  const h = unit * 0.047;
+
+  noStroke();
+  fill(...CARMINE);
+  beginShape();
+  vertex(x - w, y - h * 0.5);
+  vertex(x + unit * 0.025, y - h * 0.32);
+  vertex(x + unit * 0.058, y);
+  vertex(x + unit * 0.019, y + h * 0.37);
+  vertex(x - w * 0.82, y + h * 0.5);
+  endShape(CLOSE);
+
+  stroke(LIGHT[0], LIGHT[1], LIGHT[2], 145 + reveal * 80);
+  strokeWeight(max(1, unit * 0.003));
+  line(x - w * 0.62, y, x + unit * 0.045, y);
+
+  noFill();
+  stroke(CARMINE[0], CARMINE[1], CARMINE[2], 90);
+  strokeWeight(max(1, unit * 0.0015));
+  arc(x - w * 1.08, y, unit * 0.10, unit * 0.10, -HALF_PI, HALF_PI);
+}
+
+function mousePressed() {
+  initialise();
+  frameCount = 0;
+}
+
+function touchStarted() {
+  initialise();
+  frameCount = 0;
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
