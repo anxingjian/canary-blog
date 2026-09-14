@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Depth 景深</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #DCE8E5; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Focus 004 — Depth 景深
+// Depth is built through scale, spatial frequency, parallax and occlusion;
+// opacity only supports the hierarchy, it does not create it.
+
+const HAZE = [220, 232, 229];
+const DISTANT = [122, 148, 158];
+const MID = [59, 91, 112];
+const NEAR = [25, 34, 48];
+const APERTURE = [222, 111, 78];
+const LIGHT = [255, 238, 213];
+
+let seed = 91404;
+let grain;
+let farMarks = [];
+let midRibs = [];
+let unit;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  frameRate(36);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 31);
+  unit = min(width, height);
+  farMarks = Array.from({ length: 42 }, () => ({
+    x: random(-0.08, 1.08),
+    y: random(0.06, 0.92),
+    r: random(0.008, 0.034),
+    phase: random(TWO_PI)
+  }));
+  midRibs = Array.from({ length: 11 }, (_, i) => ({
+    p: i / 10,
+    phase: random(TWO_PI),
+    weight: random(0.7, 1.25)
+  }));
+  makeGrain();
+}
+
+function makeGrain() {
+  grain = createGraphics(width, height);
+  grain.pixelDensity(1);
+  grain.background(...HAZE);
+  grain.noStroke();
+  const count = constrain(floor(width * height / 390), 1400, 6200);
+  for (let i = 0; i < count; i++) {
+    const c = random() < 0.78 ? NEAR : APERTURE;
+    grain.fill(c[0], c[1], c[2], random(2, 7));
+    grain.circle(random(width), random(height), random(0.25, 1.15));
+  }
+}
+
+function draw() {
+  image(grain, 0, 0);
+  const t = frameCount * 0.0105;
+  const breath = 0.5 - 0.5 * cos(TWO_PI * ((frameCount % 720) / 720));
+  const focus = createVector(width * 0.305, height * 0.665);
+
+  drawFarField(t, focus);
+  drawMiddlePlane(t, breath, focus);
+  drawAperture(t, breath, focus);
+  drawNearOcclusion(t, focus);
+  drawFocusTicks(t, breath, focus);
+}
+
+function drawFarField(t, focus) {
+  noStroke();
+  for (const m of farMarks) {
+    const driftX = sin(t * 0.32 + m.phase) * unit * 0.005;
+    const driftY = cos(t * 0.27 + m.phase) * unit * 0.003;
+    const x = m.x * width + driftX;
+    const y = m.y * height + driftY;
+    const d = dist(x, y, focus.x, focus.y) / max(width, height);
+    const r = unit * m.r * (0.75 + d * 0.7);
+    fill(DISTANT[0], DISTANT[1], DISTANT[2], 34 + d * 36);
+    rect(x - r * 1.8, y - r * 0.38, r * 3.6, r * 0.76, r * 0.15);
+  }
+
+  // Broad distant horizon: low spatial frequency and almost no movement.
+  fill(DISTANT[0], DISTANT[1], DISTANT[2], 54);
+  beginShape();
+  vertex(width * 0.52, -2);
+  vertex(width + 2, -2);
+  vertex(width + 2, height * 0.32);
+  vertex(width * 0.72, height * 0.42);
+  endShape(CLOSE);
+}
+
+function drawMiddlePlane(t, breath, focus) {
+  const vanish = createVector(width * 0.76, height * 0.27);
+  noFill();
+  strokeCap(SQUARE);
+
+  for (let i = 0; i < midRibs.length; i++) {
+    const rib = midRibs[i];
+    const p = rib.p;
+    const y0 = lerp(-unit * 0.16, height * 1.13, p);
+    const nearX = width * 0.48 + sin(t * 0.64 + rib.phase) * unit * 0.012;
+    const farX = vanish.x + sin(t * 0.22 + rib.phase) * unit * 0.004;
+    const c = i % 3 === 0 ? LIGHT : MID;
+    stroke(c[0], c[1], c[2], i % 3 === 0 ? 118 : 164);
+    strokeWeight(max(1, unit * 0.006 * rib.weight * (0.7 + p * 0.8)));
+    line(farX, vanish.y, nearX, y0);
+  }
+
+  // A moving mid-plane with a cut-out: parallax is visibly faster than the far field.
+  const slide = sin(t * 0.72) * unit * 0.018;
+  fill(MID[0], MID[1], MID[2], 228);
+  noStroke();
+  beginShape();
+  vertex(width * 0.44 + slide, height * 0.09);
+  vertex(width * 0.86 + slide, height * 0.22);
+  vertex(width * 0.72 + slide, height * 0.81);
+  vertex(width * 0.39 + slide, height * 0.96);
+  vertex(width * 0.43 + slide, height * 0.72);
+  vertex(width * 0.59 + slide, height * 0.62);
+  vertex(width * 0.61 + slide, height * 0.40);
+  vertex(width * 0.47 + slide, height * 0.30);
+  endShape(CLOSE);
+
+  stroke(LIGHT[0], LIGHT[1], LIGHT[2], 105 + breath * 60);
+  strokeWeight(max(1.2, unit * 0.0024));
+  line(width * 0.47 + slide, height * 0.30, width * 0.61 + slide, height * 0.40);
+  line(width * 0.59 + slide, height * 0.62, width * 0.43 + slide, height * 0.72);
+}
+
+function drawAperture(t, breath, focus) {
+  const pulse = 0.985 + sin(t * 1.25) * 0.015;
+  const w = unit * (0.245 + breath * 0.018) * pulse;
+  const h = unit * (0.305 + breath * 0.012) * pulse;
+
+  noStroke();
+  fill(APERTURE[0], APERTURE[1], APERTURE[2]);
+  beginShape();
+  vertex(focus.x - w * 0.58, focus.y - h * 0.50);
+  vertex(focus.x + w * 0.42, focus.y - h * 0.38);
+  vertex(focus.x + w * 0.54, focus.y + h * 0.42);
+  vertex(focus.x - w * 0.46, focus.y + h * 0.52);
+  endShape(CLOSE);
+
+  fill(LIGHT[0], LIGHT[1], LIGHT[2]);
+  beginShape();
+  vertex(focus.x - w * 0.31, focus.y - h * 0.29);
+  vertex(focus.x + w * 0.25, focus.y - h * 0.22);
+  vertex(focus.x + w * 0.31, focus.y + h * 0.25);
+  vertex(focus.x - w * 0.24, focus.y + h * 0.30);
+  endShape(CLOSE);
+}
+
+function drawNearOcclusion(t, focus) {
+  const sway = sin(t * 0.94) * unit * 0.009;
+  noStroke();
+  fill(...NEAR);
+
+  // Two hard, oversized foreground planes create the nearest depth layer.
+  beginShape();
+  vertex(-2, -2);
+  vertex(width * 0.40 + sway, -2);
+  vertex(width * 0.24 + sway, height * 0.48);
+  vertex(width * 0.10, height * 0.60);
+  vertex(-2, height * 0.57);
+  endShape(CLOSE);
+
+  beginShape();
+  vertex(width * 0.67 - sway, height + 2);
+  vertex(width + 2, height + 2);
+  vertex(width + 2, height * 0.46);
+  vertex(width * 0.87, height * 0.52);
+  vertex(width * 0.76 - sway, height * 0.77);
+  endShape(CLOSE);
+
+  // A crisp bridge aims the foreground toward the aperture without enclosing it.
+  beginShape();
+  vertex(width * 0.08, height * 0.82);
+  vertex(focus.x - unit * 0.16, focus.y + unit * 0.12);
+  vertex(focus.x - unit * 0.12, focus.y + unit * 0.17);
+  vertex(width * 0.03, height * 0.94);
+  endShape(CLOSE);
+}
+
+function drawFocusTicks(t, breath, focus) {
+  strokeCap(SQUARE);
+  const angles = [-2.82, -1.57, -0.38, 0.78, 2.05];
+  for (let i = 0; i < angles.length; i++) {
+    const a = angles[i];
+    const near = unit * (0.19 + i * 0.009);
+    const len = unit * (0.035 + breath * 0.018);
+    const c = i === 3 ? APERTURE : LIGHT;
+    stroke(c[0], c[1], c[2], 180);
+    strokeWeight(max(1.5, unit * 0.003));
+    line(
+      focus.x + cos(a) * near,
+      focus.y + sin(a) * near,
+      focus.x + cos(a) * (near + len),
+      focus.y + sin(a) * (near + len)
+    );
+  }
+}
+
+function mousePressed() {
+  initialise();
+  frameCount = 0;
+}
+
+function touchStarted() {
+  initialise();
+  frameCount = 0;
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
