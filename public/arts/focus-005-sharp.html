@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sharp 清晰</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #F4F2EA; }
+canvas { display: block; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+</head>
+<body>
+<script>
+// Focus 005 — Sharp 清晰
+// A small resolved cell sends certainty through a stepped field.
+// Clarity is represented by agreement: displaced fragments snap into one structure.
+
+const PAPER = [244, 242, 234];
+const CARBON = [18, 17, 15];
+const CYAN = [0, 174, 199];
+const SILVER = [177, 181, 177];
+
+let seed = 91505;
+let cells = [];
+let motes = [];
+let grain;
+let unit;
+let anchor;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  frameRate(36);
+  initialise();
+}
+
+function initialise() {
+  randomSeed(seed++);
+  noiseSeed(seed * 19);
+  unit = min(width, height);
+  anchor = createVector(width * 0.335, height * 0.455);
+  cells = [];
+  motes = [];
+
+  // An irregular, stepped territory. The field is intentionally left-heavy.
+  const cols = 15;
+  const rows = 11;
+  const step = unit * 0.054;
+  const ox = anchor.x - step * 4.4;
+  const oy = anchor.y - step * 4.3;
+  for (let gy = 0; gy < rows; gy++) {
+    for (let gx = 0; gx < cols; gx++) {
+      const x = ox + gx * step;
+      const y = oy + gy * step;
+      const nx = gx / (cols - 1);
+      const ny = gy / (rows - 1);
+      const boundary = 0.58 + 0.22 * sin(ny * PI * 1.7 - 0.6) +
+        0.08 * sin(ny * 8.2);
+      const leftCut = 0.06 + 0.09 * cos(ny * PI * 2.2);
+      if (nx < leftCut || nx > boundary) continue;
+      if (random() < 0.08 + nx * 0.08) continue;
+      const d = dist(x, y, anchor.x, anchor.y) / unit;
+      cells.push({
+        x, y,
+        size: step * random(0.53, 0.86),
+        phase: random(TWO_PI),
+        d,
+        delay: d * 1.72 + random(-0.055, 0.055),
+        drift: random(0.8, 1.35),
+        bar: random() < 0.22
+      });
+    }
+  }
+
+  for (let i = 0; i < 46; i++) {
+    motes.push({
+      x: random(0.07, 0.96),
+      y: random(0.08, 0.93),
+      length: random(0.008, 0.038),
+      phase: random(TWO_PI)
+    });
+  }
+  makeGrain();
+}
+
+function makeGrain() {
+  grain = createGraphics(width, height);
+  grain.pixelDensity(1);
+  grain.background(...PAPER);
+  grain.noStroke();
+  const count = constrain(floor(width * height / 360), 1600, 6800);
+  for (let i = 0; i < count; i++) {
+    const c = random() < 0.91 ? CARBON : CYAN;
+    grain.fill(c[0], c[1], c[2], random(2, 7));
+    grain.circle(random(width), random(height), random(0.2, 1.05));
+  }
+}
+
+function draw() {
+  image(grain, 0, 0);
+  const cycle = (frameCount % 720) / 720;
+  // Slow attack, long hold, then a clean reset.
+  const wave = cycle < 0.68
+    ? easeInOut(constrain(cycle / 0.68, 0, 1)) * 1.18
+    : cycle < 0.88
+      ? 1.18
+      : lerp(1.18, -0.08, easeInOut((cycle - 0.88) / 0.12));
+  const t = frameCount * 0.012;
+
+  drawRegistrationField(t, wave);
+  drawCells(t, wave);
+  drawAnchor(t, wave);
+  drawResolvedAxis(wave);
+}
+
+function easeInOut(v) {
+  return v * v * (3 - 2 * v);
+}
+
+function certainty(cell, wave) {
+  return smoothstep(cell.delay - 0.12, cell.delay + 0.08, wave);
+}
+
+function smoothstep(a, b, v) {
+  const x = constrain((v - a) / (b - a), 0, 1);
+  return x * x * (3 - 2 * x);
+}
+
+function drawRegistrationField(t, wave) {
+  strokeCap(SQUARE);
+  for (const m of motes) {
+    const x = m.x * width;
+    const y = m.y * height;
+    const localDistance = dist(x, y, anchor.x, anchor.y) / unit;
+    const c = smoothstep(localDistance - 0.08, localDistance + 0.05, wave);
+    const wobble = (1 - c) * sin(t * 1.7 + m.phase) * unit * 0.007;
+    stroke(SILVER[0], SILVER[1], SILVER[2], 38 + c * 54);
+    strokeWeight(max(1, unit * 0.00115));
+    line(x + wobble, y, x + unit * m.length, y);
+  }
+}
+
+function drawCells(t, wave) {
+  noStroke();
+  for (const cell of cells) {
+    const c = certainty(cell, wave);
+    const blur = 1 - c;
+    const wobbleX = sin(t * cell.drift + cell.phase) * unit * 0.014 * blur;
+    const wobbleY = cos(t * 0.83 + cell.phase * 1.7) * unit * 0.010 * blur;
+    const s = cell.size;
+
+    // Before resolution, three low-contrast registrations disagree.
+    if (blur > 0.015) {
+      fill(SILVER[0], SILVER[1], SILVER[2], 38 + blur * 46);
+      rect(cell.x - s * 0.5 - wobbleX * 1.7,
+        cell.y - s * 0.5 + wobbleY, s, s);
+      fill(CYAN[0], CYAN[1], CYAN[2], 18 + blur * 32);
+      rect(cell.x - s * 0.5 + wobbleX * 1.2,
+        cell.y - s * 0.5 - wobbleY * 1.5, s, s);
+    }
+
+    // Resolved cells lock to the shared lattice and gain full contrast.
+    const inkAlpha = 28 + c * 224;
+    fill(CARBON[0], CARBON[1], CARBON[2], inkAlpha);
+    if (cell.bar) {
+      rect(cell.x - s * 0.5 + wobbleX, cell.y - s * 0.16 + wobbleY,
+        s * (0.8 + c * 0.55), s * 0.32);
+    } else {
+      rect(cell.x - s * 0.5 + wobbleX, cell.y - s * 0.5 + wobbleY,
+        s, s);
+    }
+
+    // A thin cyan seam marks only the moving edge of resolution.
+    if (c > 0.12 && c < 0.88) {
+      const edgeAlpha = sin(c * PI) * 220;
+      fill(CYAN[0], CYAN[1], CYAN[2], edgeAlpha);
+      rect(cell.x - s * 0.5, cell.y + s * 0.36, s, max(1.5, unit * 0.003));
+    }
+  }
+}
+
+function drawAnchor(t, wave) {
+  const pulse = 0.94 + 0.06 * sin(t * 1.8);
+  const s = unit * 0.118 * pulse;
+  const resolved = smoothstep(-0.04, 0.09, wave);
+
+  noStroke();
+  fill(...CYAN);
+  rect(anchor.x - s * 0.62, anchor.y - s * 0.62, s * 1.24, s * 1.24);
+  fill(...PAPER);
+  rect(anchor.x - s * 0.28, anchor.y - s * 0.28, s * 0.56, s * 0.56);
+  fill(...CARBON);
+  rect(anchor.x - s * 0.13, anchor.y - s * 0.13,
+    s * 0.26 * resolved, s * 0.26 * resolved);
+
+  stroke(CARBON[0], CARBON[1], CARBON[2], 220);
+  strokeWeight(max(1.5, unit * 0.0025));
+  noFill();
+  const reach = s * (0.92 + resolved * 0.22);
+  line(anchor.x - reach, anchor.y, anchor.x - s * 0.72, anchor.y);
+  line(anchor.x + s * 0.72, anchor.y, anchor.x + reach, anchor.y);
+  line(anchor.x, anchor.y - reach, anchor.x, anchor.y - s * 0.72);
+  line(anchor.x, anchor.y + s * 0.72, anchor.x, anchor.y + reach);
+}
+
+function drawResolvedAxis(wave) {
+  // One long line proves that local certainty has become global alignment.
+  const amount = smoothstep(0.52, 1.04, wave);
+  const x0 = anchor.x + unit * 0.095;
+  const y0 = anchor.y + unit * 0.255;
+  const x1 = lerp(x0, width * 0.92, amount);
+  const y1 = lerp(y0, height * 0.80, amount);
+
+  stroke(...CYAN);
+  strokeWeight(max(2, unit * 0.005));
+  strokeCap(SQUARE);
+  line(x0, y0, x1, y1);
+  noStroke();
+  fill(...CARBON);
+  const tick = unit * 0.021;
+  for (let i = 0; i < 7; i++) {
+    const p = i / 6;
+    if (p > amount) continue;
+    const x = lerp(x0, width * 0.92, p);
+    const y = lerp(y0, height * 0.80, p);
+    rect(x - tick * 0.13, y - tick * 0.5, tick * 0.26, tick);
+  }
+}
+
+function mousePressed() {
+  initialise();
+  frameCount = 0;
+}
+
+function touchStarted() {
+  initialise();
+  frameCount = 0;
+  return false;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initialise();
+}
+</script>
+</body>
+</html>
